@@ -2,6 +2,8 @@
   用户管理
   ------------------------------------------------------------------
   后台用户列表：关键字/状态筛选、分页、新增/编辑、启停、角色分配。
+  字段与后端 AdminUserSummaryResponse / AdminUserCreateRequest 对齐：
+  列表字段 nickname（非 nickName）、无 username；创建必填 phone/nickname/gender/birthday。
 -->
 <template>
   <el-card shadow="never">
@@ -20,16 +22,26 @@
         <el-button type="primary" :icon="Search" @click="search">查询</el-button>
         <el-button :icon="Refresh" @click="reset">重置</el-button>
         <!-- 新增用户：按钮级权限示例 -->
-        <el-button v-permission="'system:user:create'" type="success" :icon="Plus" @click="openCreate">新增</el-button>
+        <el-button v-permission="'staff:manage'" type="success" :icon="Plus" @click="openCreate">新增</el-button>
       </el-form-item>
     </el-form>
 
     <!-- 列表区 -->
     <el-table v-loading="loading" :data="list" border stripe>
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="nickName" label="昵称" min-width="120" />
-      <el-table-column prop="username" label="账号" min-width="120" />
+      <el-table-column prop="id" label="ID" width="80" />
+      <el-table-column prop="nickname" label="昵称" min-width="120" />
+      <el-table-column label="性别" width="70">
+        <template #default="{ row }">{{ genderLabel(row.gender) }}</template>
+      </el-table-column>
       <el-table-column prop="phone" label="手机号" width="130" />
+      <el-table-column label="角色" min-width="150">
+        <template #default="{ row }">
+          <el-tag v-for="role in row.roles || []" :key="role.id" size="small" style="margin-right: 4px">
+            {{ role.name }}
+          </el-tag>
+          <span v-if="!row.roles?.length">-</span>
+        </template>
+      </el-table-column>
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
           <el-tag :type="row.status === 0 ? 'success' : 'danger'">
@@ -37,6 +49,7 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="createdAt" label="创建时间" min-width="160" />
       <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
@@ -54,22 +67,43 @@
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialog.visible" :title="dialog.isEdit ? '编辑用户' : '新增用户'" width="480px">
+    <el-dialog v-model="dialog.visible" :title="dialog.isEdit ? '编辑用户' : '新增用户'" width="520px">
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="90px">
-        <el-form-item label="账号" prop="username">
-          <el-input v-model="form.username" :disabled="dialog.isEdit" placeholder="登录账号" />
-        </el-form-item>
-        <el-form-item v-if="!dialog.isEdit" label="密码" prop="password">
-          <el-input v-model="form.password" type="password" show-password placeholder="初始密码" />
-        </el-form-item>
-        <el-form-item label="昵称" prop="nickName">
-          <el-input v-model="form.nickName" placeholder="显示昵称" />
-        </el-form-item>
         <el-form-item label="手机号" prop="phone">
           <el-input v-model="form.phone" placeholder="11 位手机号" maxlength="11" />
         </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="form.status" :active-value="0" :inactive-value="1" active-text="正常" inactive-text="禁用" />
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="form.nickname" placeholder="显示昵称" />
+        </el-form-item>
+        <el-form-item label="性别" prop="gender">
+          <el-radio-group v-model="form.gender">
+            <el-radio :value="1">男</el-radio>
+            <el-radio :value="2">女</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="生日" prop="birthday">
+          <el-date-picker
+            v-model="form.birthday"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="选择生日"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="国家">
+          <el-input v-model="form.country" placeholder="可选" />
+        </el-form-item>
+        <el-form-item label="省份">
+          <el-input v-model="form.province" placeholder="可选" />
+        </el-form-item>
+        <el-form-item label="城市">
+          <el-input v-model="form.city" placeholder="可选" />
+        </el-form-item>
+        <el-form-item label="职业">
+          <el-input v-model="form.job" placeholder="可选" />
+        </el-form-item>
+        <el-form-item label="个性签名">
+          <el-input v-model="form.bio" type="textarea" :rows="2" placeholder="可选" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -97,8 +131,8 @@
 /**
  * 用户管理脚本
  * - 查询：关键字 + 状态，分页拉取
- * - 新增/编辑：表单校验后提交
- * - 角色分配：拉取后台角色并勾选保存
+ * - 新增/编辑：手机号/昵称/性别/生日 等字段校验后提交
+ * - 角色分配：拉取后台角色并整体替换保存
  */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
@@ -130,28 +164,41 @@ const total = ref(0)
 const query = reactive({ page: 1, size: 20, keyword: '', status: undefined as number | undefined })
 
 /** 新增/编辑弹窗状态 */
-const dialog = reactive({ visible: false, isEdit: false, id: 0 })
+const dialog = reactive({ visible: false, isEdit: false, id: '' })
 /** 表单实例与数据 */
 const formRef = ref<FormInstance>()
-const form = reactive<AdminUserPayload & { status: number }>({
-  username: '',
-  password: '',
-  nickName: '',
+const form = reactive<AdminUserPayload>({
   phone: '',
-  status: 0,
+  nickname: '',
+  gender: 1,
+  birthday: '',
+  country: '',
+  province: '',
+  city: '',
+  job: '',
+  bio: '',
 })
 
 /** 表单校验规则 */
 const formRules: FormRules = {
-  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入初始密码', trigger: 'blur' }],
-  phone: [{ pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' },
+  ],
+  nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
+  gender: [{ required: true, message: '请选择性别', trigger: 'change' }],
+  birthday: [{ required: true, message: '请选择生日', trigger: 'change' }],
 }
 
 /** 角色分配弹窗状态 */
-const roleDialog = reactive({ visible: false, userId: 0, roleIds: [] as number[] })
+const roleDialog = reactive({ visible: false, userId: '', roleIds: [] as string[] })
 /** 后台角色选项 */
 const roleOptions = ref<StaffRole[]>([])
+
+/** 性别文案 */
+function genderLabel(gender?: number): string {
+  return gender === 1 ? '男' : gender === 2 ? '女' : '-'
+}
 
 /**
  * 拉取用户列表（按当前查询条件）。
@@ -162,7 +209,7 @@ async function fetchList(): Promise<void> {
     const data = await listUsers({
       page: query.page,
       size: query.size,
-      keyword: query.keyword,
+      keyword: query.keyword || undefined,
       status: query.status,
     })
     list.value = data.list || []
@@ -197,8 +244,18 @@ function onPageChange(page: number, size: number): void {
 /** 打开新增弹窗 */
 function openCreate(): void {
   dialog.isEdit = false
-  dialog.id = 0
-  Object.assign(form, { username: '', password: '', nickName: '', phone: '', status: 0 })
+  dialog.id = ''
+  Object.assign(form, {
+    phone: '',
+    nickname: '',
+    gender: 1,
+    birthday: '',
+    country: '',
+    province: '',
+    city: '',
+    job: '',
+    bio: '',
+  })
   dialog.visible = true
 }
 
@@ -212,11 +269,15 @@ async function openEdit(row: AdminUser): Promise<void> {
   try {
     const detail = await getUserDetail(row.id)
     Object.assign(form, {
-      username: detail.username,
-      password: '',
-      nickName: detail.nickName,
       phone: detail.phone,
-      status: detail.status ?? 0,
+      nickname: detail.nickname,
+      gender: detail.gender ?? 1,
+      birthday: detail.birthday || '',
+      country: detail.country || '',
+      province: detail.province || '',
+      city: detail.city || '',
+      job: detail.profileDetails?.job || '',
+      bio: detail.profileDetails?.bio || '',
     })
     dialog.visible = true
   } catch (error) {
@@ -235,12 +296,16 @@ async function submit(): Promise<void> {
   saving.value = true
   try {
     const payload: AdminUserPayload = {
-      username: form.username,
-      nickName: form.nickName,
       phone: form.phone,
-      status: form.status,
+      nickname: form.nickname,
+      gender: form.gender,
+      birthday: form.birthday,
+      country: form.country || undefined,
+      province: form.province || undefined,
+      city: form.city || undefined,
+      job: form.job || undefined,
+      bio: form.bio || undefined,
     }
-    if (!dialog.isEdit) payload.password = form.password
     if (dialog.isEdit) {
       await updateUser(dialog.id, payload)
       ElMessage.success('更新成功')
@@ -264,7 +329,7 @@ async function submit(): Promise<void> {
 async function toggleStatus(row: AdminUser): Promise<void> {
   const enable = row.status === 1
   try {
-    await ElMessageBox.confirm(`确认${enable ? '启用' : '禁用'}用户「${row.nickName || row.username}」？`, '提示', {
+    await ElMessageBox.confirm(`确认${enable ? '启用' : '禁用'}用户「${row.nickname}」？`, '提示', {
       type: 'warning',
     })
   } catch {
@@ -289,14 +354,14 @@ async function openAssignRole(row: AdminUser): Promise<void> {
     // 并行拉取详情（含已分配角色）与全部后台角色
     const [detail, roles] = await Promise.all([getUserDetail(row.id), listStaffRoles()])
     roleOptions.value = roles || []
-    roleDialog.roleIds = (detail.roleIds || []).slice()
+    roleDialog.roleIds = (detail.roles || []).map((r) => r.id)
     roleDialog.visible = true
   } catch (error) {
     showError(error)
   }
 }
 
-/** 提交角色分配 */
+/** 提交角色分配（整体替换） */
 async function submitRoles(): Promise<void> {
   saving.value = true
   try {
