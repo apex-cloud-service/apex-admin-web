@@ -1,0 +1,41 @@
+# 统一文本文件换行符为 LF，避免跨平台换行符混乱
+* text=auto eol=lf
+
+# ===== 前端源代码统一 LF =====
+*.vue text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.less text eol=lf
+*.md text eol=lf
+
+# ===== 无扩展名文本配置文件 =====
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+.env.development text eol=lf
+.env.production text eol=lf
+
+# ===== 二进制 / 静态资源（不入库做换行处理）=====
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.svg binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+
+# ===== 日志与锁文件 =====
+package-lock.json text eol=lf

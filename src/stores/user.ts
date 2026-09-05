@@ -6,7 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getToken, setToken, clearSession, setIdentity, getIdentity } from '@/utils/auth'
-import { login as loginApi, logout as logoutApi, getMyPermissions } from '@/api/auth'
+import { login as loginApi, logout as logoutApi, getMyPermissions, getMyRoles } from '@/api/auth'
 import { getCurrentUserInfo } from '@/api/user'
 import type { LoginResult, UserIdentity } from '@/types'
 
@@ -52,18 +52,26 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
-   * 拉取当前用户身份信息与权限码（刷新页面后恢复会话用）。
+   * 拉取当前用户身份信息、角色码与权限码（刷新页面后恢复会话用）。
+   * 后端 GET /api/v1/user/info 仅返回 UserDTO（无 roles/permissions），
+   * 角色与权限码需分别调用 /api/v1/auth/roles/my 与 /permissions/my 获取。
    */
   async function loadIdentity(): Promise<void> {
-    const info = await getCurrentUserInfo()
-    identity.value = info
-    setIdentity(info)
-    // 权限码优先取身份信息；身份缺失时回退查询权限接口
-    if (info.permissions && info.permissions.length > 0) {
-      permissions.value = info.permissions
-    } else {
-      permissions.value = await getMyPermissions().catch(() => [])
+    const [info, roles, perms] = await Promise.all([
+      getCurrentUserInfo(),
+      getMyRoles().catch(() => [] as string[]),
+      getMyPermissions().catch(() => [] as string[]),
+    ])
+    identity.value = {
+      ...info,
+      // 兼容旧字段：UserDTO 无 username，回退为手机号/昵称
+      username: info.username || info.nickName || info.phone || '',
+      nickname: info.nickname || info.nickName || '',
+      roles,
+      permissions: perms,
     }
+    setIdentity(identity.value)
+    permissions.value = perms
     initialized.value = true
   }
 

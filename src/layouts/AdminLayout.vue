@@ -2,7 +2,7 @@
   管理后台主布局
   ------------------------------------------------------------------
   左侧：菜单侧边栏（基于路由表渲染，目录/菜单树形展示）
-  顶部：折叠开关、明暗主题切换、用户信息与登出
+  顶部：折叠开关、全局搜索、明暗主题切换、用户信息与登出
   主体：<router-view> 渲染当前页面
 -->
 <template>
@@ -61,6 +61,8 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
+          <!-- 全局搜索 -->
+          <GlobalSearch />
           <!-- 明暗主题切换 -->
           <el-tooltip :content="appStore.theme === 'dark' ? '切换浅色' : '切换深色'">
             <el-icon class="theme-btn" @click="toggleTheme">
@@ -96,7 +98,7 @@
 /**
  * AdminLayout 脚本
  * - 菜单数据来源于路由表（动态路由由后端菜单驱动）
- * - 提供面包屑、主题切换、退出登录能力
+ * - 提供面包屑、全局搜索、主题切换、退出登录能力
  */
 import { computed } from 'vue'
 import { useRoute, useRouter, type RouteRecordRaw } from 'vue-router'
@@ -104,6 +106,7 @@ import { ElMessageBox } from 'element-plus'
 import { Expand, Fold, Moon, Sunny } from '@element-plus/icons-vue'
 import { useAppStore } from '@/stores/app'
 import { useUserStore } from '@/stores/user'
+import GlobalSearch from '@/components/GlobalSearch/index.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -111,12 +114,12 @@ const appStore = useAppStore()
 const userStore = useUserStore()
 
 /** 当前激活菜单路径（高亮） */
-const activeMenu = computed(() => route.path)
+const activeMenu = computed(() => (route.meta.activeMenu as string) || route.path)
 
-/** 布局下的菜单路由（过滤掉无标题项） */
+/** 布局下的菜单路由（过滤掉无标题项与隐藏菜单 visible=0） */
 const menuRoutes = computed(() => {
   const root = router.options.routes.find((r) => r.name === 'Root')
-  return (root?.children || []).filter((r) => r.meta?.title)
+  return (root?.children || []).filter((r) => r.meta?.title && !r.meta?.hidden)
 })
 
 /** 面包屑：从根到当前路由的标题链 */
@@ -227,6 +230,12 @@ function handleCommand(command: string): void {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 /* 折叠按钮与主题按钮：悬停高亮 */

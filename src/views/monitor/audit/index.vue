@@ -6,8 +6,11 @@
 <template>
   <el-card shadow="never">
     <el-form inline class="search-form">
-      <el-form-item label="关键字">
-        <el-input v-model="query.keyword" placeholder="操作人/模块/URL" clearable style="width: 220px" @keyup.enter="search" />
+      <el-form-item label="模块">
+        <el-input v-model="query.module" placeholder="操作模块（模糊）" clearable style="width: 160px" @keyup.enter="search" />
+      </el-form-item>
+      <el-form-item label="操作人">
+        <el-input v-model="query.operatorName" placeholder="操作人（模糊）" clearable style="width: 160px" @keyup.enter="search" />
       </el-form-item>
       <el-form-item>
         <el-button type="primary" :icon="Search" @click="search">查询</el-button>
@@ -58,8 +61,8 @@ const loading = ref(false)
 /** 列表与总数 */
 const list = ref<AuditLog[]>([])
 const total = ref(0)
-/** 查询参数 */
-const query = reactive({ page: 1, size: 20, keyword: '' })
+/** 查询参数（后端 module/operatorName 模糊） */
+const query = reactive({ page: 1, size: 20, module: '', operatorName: '' })
 
 /**
  * 分页拉取审计日志。
@@ -67,7 +70,12 @@ const query = reactive({ page: 1, size: 20, keyword: '' })
 async function fetchList(): Promise<void> {
   loading.value = true
   try {
-    const data = await listAuditLogs({ page: query.page, size: query.size, keyword: query.keyword })
+    const data = await listAuditLogs({
+      page: query.page,
+      size: query.size,
+      module: query.module || undefined,
+      operatorName: query.operatorName || undefined,
+    })
     list.value = data.list || []
     total.value = data.total || 0
   } catch (error) {
@@ -85,7 +93,8 @@ function search(): void {
 
 /** 重置 */
 function reset(): void {
-  query.keyword = ''
+  query.module = ''
+  query.operatorName = ''
   search()
 }
 

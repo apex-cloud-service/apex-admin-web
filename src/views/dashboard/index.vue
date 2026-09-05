@@ -1,8 +1,8 @@
 <!--
   工作台（仪表盘）
   ------------------------------------------------------------------
-  展示欢迎信息与系统概览指标卡片 + 访问趋势折线图（ECharts）。
-  指标数据来源：身份信息与静态示例，真实接口接入点见注释。
+  欢迎信息 + 系统概览指标卡片（来自 /admin-api/v1/monitor/overview 真实数据）
+  + 接口调用趋势（基于网关/接口计数器）。
 -->
 <template>
   <div class="dashboard">
@@ -16,7 +16,23 @@
     <el-row :gutter="16" class="stat-row">
       <el-col v-for="item in statCards" :key="item.label" :xs="12" :sm="6">
         <el-card shadow="hover" class="stat-card">
-          <div class="stat-value">{{ item.value }}</div>
+          <div class="stat-value" :class="{ warn: item.warn }">{{ item.value }}</div>
+          <div class="stat-label">{{ item.label }}</div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 资源占用 -->
+    <el-row :gutter="16" class="stat-row">
+      <el-col v-for="item in resourceCards" :key="item.label" :xs="12" :sm="6">
+        <el-card shadow="hover" class="stat-card">
+          <el-progress
+            v-if="!item.isTime"
+            type="dashboard"
+            :percentage="percentOf(item.value)"
+            :color="progressColor(percentOf(item.value))"
+          />
+          <div v-else class="stat-value">{{ item.value }}</div>
           <div class="stat-label">{{ item.label }}</div>
         </el-card>
       </el-col>
@@ -24,7 +40,7 @@
 
     <!-- 访问趋势图 -->
     <el-card shadow="never" class="chart-card">
-      <template #header>近 7 日接口调用趋势（示例数据）</template>
+      <template #header>接口调用趋势（进程启动以来，示例窗口）</template>
       <div ref="chartRef" class="chart" />
     </el-card>
   </div>
@@ -33,12 +49,15 @@
 <script setup lang="ts">
 /**
  * 工作台脚本
- * - 指标卡片：由后端身份与菜单数据派生（接入真实指标时替换 statCards）
- * - 趋势图：ECharts 折线图示例（对接 apex_api_* 指标接口后替换数据源）
+ * - 指标卡片：来自监控概览接口（真实数据，失败时回退占位符）
+ * - 趋势图：ECharts 折线图（真实接口计数器聚合，演示窗口）
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import * as echarts from 'echarts'
 import { useUserStore } from '@/stores/user'
+import { getMonitorOverview } from '@/api/monitor'
+import { showError } from '@/utils/request'
+import type { MonitorOverview } from '@/types'
 
 const userStore = useUserStore()
 
@@ -47,19 +66,58 @@ const chartRef = ref<HTMLElement>()
 /** ECharts 实例（卸载时销毁） */
 let chart: echarts.ECharts | null = null
 
-/**
- * 概览指标卡片。
- * 注：当前为身份派生数据；接入真实统计接口后替换为接口返回值。
- */
+/** 监控概览数据（加载失败时为空对象） */
+const overview = ref<Partial<MonitorOverview>>({})
+
+/** 概览指标卡片 */
 const statCards = computed(() => [
   { label: '角色数', value: userStore.identity?.roles?.length || '-' },
   { label: '权限码', value: userStore.permissions.length },
-  { label: '系统状态', value: '正常' },
-  { label: '当前版本', value: 'v1.1.4' },
+  { label: '累计请求', value: overview.value.totalRequests ?? '-' },
+  { label: '5xx 错误', value: overview.value.error5xx ?? '-', warn: (overview.value.error5xx ?? 0) > 0 },
 ])
 
+/** 资源占用卡片（0~1 归一化；响应时间为秒） */
+const resourceCards = computed(() => [
+  { label: '堆内存使用率', value: clamp01(overview.value.heapUsedPercent) },
+  { label: 'CPU 使用率', value: clamp01(overview.value.cpuUsage) },
+  { label: '系统 CPU', value: clamp01(overview.value.systemCpuUsage) },
+  {
+    label: '平均响应时间',
+    value: formatSeconds(overview.value.avgResponseTime ?? 0),
+    isTime: true,
+  },
+])
+
+/** 秒 → 可读时长 */
+function formatSeconds(seconds: number): string {
+  if (seconds === undefined || Number.isNaN(seconds)) return '-'
+  if (seconds < 1) return `${Math.round(seconds * 1000)} ms`
+  return `${seconds.toFixed(2)} s`
+}
+
+/** 进度条颜色：随占用率变化 */
+function progressColor(percent: number): string {
+  if (percent < 60) return '#67c23a'
+  if (percent < 85) return '#e6a23c'
+  return '#f56c6c'
+}
+
+/** 将值收敛到 0~1（NaN/负值归 0，>1 归 1） */
+function clamp01(value?: number): number {
+  if (value === undefined || Number.isNaN(value)) return 0
+  return Math.min(1, Math.max(0, value))
+}
+
+/** 数值转百分比（非数值返回 0，避免进度条 NaN） */
+function percentOf(value: number | string): number {
+  const num = typeof value === 'number' ? value : Number(value)
+  if (Number.isNaN(num)) return 0
+  return Math.round(num * 100)
+}
+
 /**
- * 渲染近 7 日访问趋势折线图（示例数据，颜色随主题适配）。
+ * 渲染接口调用趋势折线图。
  */
 function renderChart(): void {
   if (!chartRef.value) return
@@ -71,7 +129,7 @@ function renderChart(): void {
     grid: { left: 40, right: 20, top: 30, bottom: 30 },
     xAxis: {
       type: 'category',
-      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      data: ['累计请求', '4xx 错误', '5xx 错误', '网关请求', '限流拒绝', '熔断打开'],
       axisLine: { lineStyle: { color: axisColor } },
     },
     yAxis: {
@@ -80,11 +138,21 @@ function renderChart(): void {
     },
     series: [
       {
-        name: '调用量',
-        type: 'line',
-        smooth: true,
-        data: [320, 480, 390, 620, 540, 410, 360],
-        areaStyle: { opacity: 0.15 },
+        name: '计数',
+        type: 'bar',
+        barWidth: '45%',
+        data: [
+          overview.value.totalRequests ?? 0,
+          overview.value.error4xx ?? 0,
+          overview.value.error5xx ?? 0,
+          overview.value.gatewayRequests ?? 0,
+          overview.value.rateLimitRejected ?? 0,
+          overview.value.circuitBreakerOpened ?? 0,
+        ],
+        itemStyle: {
+          color: (params: { dataIndex: number }) =>
+            ['#409eff', '#e6a23c', '#f56c6c', '#67c23a', '#909399', '#f56c6c'][params.dataIndex],
+        },
       },
     ],
   })
@@ -95,9 +163,16 @@ function handleResize(): void {
   chart?.resize()
 }
 
-onMounted(() => {
+onMounted(async () => {
   renderChart()
   window.addEventListener('resize', handleResize)
+  try {
+    overview.value = await getMonitorOverview()
+  } catch (error) {
+    // 监控接口不可用时保留占位数据（不阻塞工作台展示）
+    showError(error)
+  }
+  renderChart()
 })
 
 onBeforeUnmount(() => {
@@ -136,6 +211,10 @@ onBeforeUnmount(() => {
   font-size: 28px;
   font-weight: 600;
   color: var(--el-color-primary);
+}
+
+.stat-value.warn {
+  color: var(--el-color-danger);
 }
 
 .stat-label {

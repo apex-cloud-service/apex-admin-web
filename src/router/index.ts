@@ -24,14 +24,38 @@ export const staticRoutes: RouteRecordRaw[] = [
     name: 'Root',
     component: AdminLayout,
     redirect: '/dashboard',
-    // 动态路由统一挂载到该布局的 children 下
-    children: [],
+    // 工作台为登录后默认页，不依赖后端菜单，须作为静态路由注册；
+    // 否则未登录访问 / 时因 dashboard 动态路由尚未生成而命中 404 而非跳转登录页。
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('@/views/dashboard/index.vue'),
+        meta: { title: '工作台', icon: 'Odometer' },
+      },
+      {
+        path: 'workflow/monitor/dashboard',
+        redirect: 'workflow/monitor',
+      },
+      {
+        path: 'workflow/monitor',
+        name: 'WorkflowMonitor',
+        component: () => import('@/views/workflow/monitor/index.vue'),
+        meta: { title: '工作流监控', hidden: true },
+      },
+      {
+        path: 'workflow/instances/:id',
+        name: 'WorkflowInstanceDetail',
+        component: () => import('@/views/workflow/monitor/InstanceDetail.vue'),
+        meta: { title: '流程详情', hidden: true, activeMenu: '/workflow/monitor' },
+      },
+    ],
   },
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/error/NotFound.vue'),
-    meta: { title: '页面不存在', public: true },
+    meta: { title: '页面不存在' },
   },
 ]
 
@@ -78,15 +102,19 @@ router.beforeEach(async (to) => {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
   const userStore = useUserStore()
-  // 已登录但身份未初始化 → 拉取身份并生成动态路由后重入
   if (!userStore.initialized) {
     try {
       await userStore.loadIdentity()
-      await setupDynamicRoutes()
-      return { ...to, replace: true }
     } catch {
       userStore.clearLocal()
       return { path: '/login' }
+    }
+  }
+  if (!dynamicRoutesAdded) {
+    await setupDynamicRoutes()
+    const resolved = router.resolve(to.fullPath)
+    if (resolved.name !== 'NotFound') {
+      return { path: to.fullPath, replace: true }
     }
   }
   return true

@@ -6,6 +6,12 @@
  * - 菜单（menuType=1）：挂载到 AdminLayout children
  * - 按钮（menuType=2）：不生成路由，仅用于权限码
  * 组件通过「组件名 → 视图模块」注册表解析，避免动态 import 路径逃逸。
+ *
+ * 状态语义说明：
+ * - 后端 MenuState 枚举定义 status：0=停用 1=正常；但历史种子数据（V2/V8）写入
+ *   的 status 取值与枚举不一致。为避免“全量菜单被丢弃导致页面 404”，路由生成
+ *   不按 status 过滤（目录/菜单且组件可解析即注册），停用/隐藏仅影响侧边栏展示：
+ * - visible：0=隐藏 1=显示，隐藏的菜单仍保留路由（可直接访问）但不出现在侧边栏
  */
 import type { RouteRecordRaw } from 'vue-router'
 import { listMenuTree } from '@/api/system'
@@ -22,9 +28,14 @@ const VIEW_REGISTRY: Record<string, () => Promise<unknown>> = {
   'system/job/index': () => import('@/views/system/job/index.vue'),
   'monitor/loginlog/index': () => import('@/views/monitor/loginlog/index.vue'),
   'monitor/audit/index': () => import('@/views/monitor/audit/index.vue'),
+  'monitor/api-call-log/index': () => import('@/views/monitor/api-call-log/index.vue'),
   'monitor/online/index': () => import('@/views/monitor/online/index.vue'),
+  'monitor/dashboard/index': () => import('@/views/monitor/dashboard/index.vue'),
+  'monitor/runtime-log/index': () => import('@/views/monitor/runtime-log/index.vue'),
+  'monitor/business-log/index': () => import('@/views/monitor/business-log/index.vue'),
   'profile/index': () => import('@/views/profile/index.vue'),
   'dashboard/index': () => import('@/views/dashboard/index.vue'),
+  'workflow/monitor/index': () => import('@/views/workflow/monitor/index.vue'),
 }
 
 /**
@@ -33,8 +44,8 @@ const VIEW_REGISTRY: Record<string, () => Promise<unknown>> = {
  * @returns 路由记录，或 null（按钮/无效组件不生成）
  */
 function toRouteRecord(node: MenuNode): RouteRecordRaw | null {
-  // 按钮（menuType=2）或停用菜单不生成路由
-  if (node.menuType === 2 || node.status !== 0) return null
+  // 按钮（menuType=2）不生成路由
+  if (node.menuType === 2) return null
   // 目录：作为纯分组，挂载子路由
   if (node.menuType === 0) {
     const children = (node.children || [])
@@ -44,7 +55,7 @@ function toRouteRecord(node: MenuNode): RouteRecordRaw | null {
     return {
       path: node.path || `/${node.id}`,
       redirect: children[0].path,
-      meta: { title: node.menuName, icon: node.icon },
+      meta: { title: node.menuName, icon: node.icon, hidden: node.visible === 0 },
       children,
     }
   }
@@ -56,7 +67,13 @@ function toRouteRecord(node: MenuNode): RouteRecordRaw | null {
     path: node.path || `/${node.id}`,
     name: `menu-${node.id}`,
     component: loader,
-    meta: { title: node.menuName, icon: node.icon, perms: node.perms },
+    meta: {
+      title: node.menuName,
+      icon: node.icon,
+      perms: node.perms,
+      // 隐藏菜单（visible=0）：路由仍注册，侧边栏不展示
+      hidden: node.visible === 0,
+    },
   }
 }
 

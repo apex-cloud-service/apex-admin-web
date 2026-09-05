@@ -2,19 +2,12 @@
  * 系统管理 API
  * ------------------------------------------------------------------
  * 覆盖：菜单、部门、字典、参数配置、定时任务五类系统管理资源。
+ * 口径说明：
+ * - 部门字段为 name/orderNum（与后端 DeptEntity/DeptDTO 对齐）
+ * - 参数配置/定时任务列表接口后端返回全量数组（非分页）
  */
 import { del, get, post, put } from '@/utils/request'
-import type {
-  DeptNode,
-  DictData,
-  DictType,
-  JobLog,
-  MenuNode,
-  PageQuery,
-  PageResponse,
-  SysConfig,
-  SysJob,
-} from '@/types'
+import type { DeptNode, DictData, DictType, JobLog, MenuNode, SysConfig, SysJob } from '@/types'
 
 /* ==================== 菜单管理 ==================== */
 
@@ -84,13 +77,17 @@ export function updateMenuStatus(id: number, enabled: boolean): Promise<void> {
 
 /* ==================== 部门管理 ==================== */
 
-/** 部门创建/更新请求体 */
+/** 部门创建/更新请求体（后端 DeptEntity 字段） */
 export interface DeptPayload {
-  parentId: number
-  deptName: string
+  parentId?: number
+  /** 部门名称 */
+  name: string
+  /** 显示顺序 */
+  orderNum?: number
   leader?: string
   phone?: string
-  sort?: number
+  email?: string
+  /** 0=停用 1=正常 */
   status?: number
 }
 
@@ -145,7 +142,7 @@ export interface DictDataPayload {
   remark?: string
 }
 
-/** 查询字典类型列表 */
+/** 查询字典类型列表（全量数组） */
 export function listDictTypes(): Promise<DictType[]> {
   return get<DictType[]>('/admin-api/v1/dict/types')
 }
@@ -170,7 +167,7 @@ export function updateDictTypeStatus(id: number, enabled: boolean): Promise<void
   return put<void>(`/admin-api/v1/dict/types/${id}/status`, { enabled })
 }
 
-/** 按字典类型编码查询字典数据 */
+/** 按字典类型编码查询字典数据（dictType 必填） */
 export function listDictData(dictType: string): Promise<DictData[]> {
   return get<DictData[]>('/admin-api/v1/dict/data', { dictType })
 }
@@ -205,9 +202,9 @@ export interface ConfigPayload {
   remark?: string
 }
 
-/** 分页查询参数配置 */
-export function listConfigs(params: PageQuery): Promise<PageResponse<SysConfig>> {
-  return get<PageResponse<SysConfig>>('/admin-api/v1/configs', params as unknown as Record<string, unknown>)
+/** 查询参数配置列表（后端返回全量数组） */
+export function listConfigs(): Promise<SysConfig[]> {
+  return get<SysConfig[]>('/admin-api/v1/configs')
 }
 
 /** 创建参数配置 */
@@ -235,15 +232,17 @@ export function updateConfigStatus(id: number, enabled: boolean): Promise<void> 
 /** 定时任务请求体 */
 export interface JobPayload {
   jobName: string
-  jobGroup: string
+  jobGroup?: string
   invokeTarget: string
   cronExpression: string
+  /** 0=允许并发 1=禁止并发 */
+  concurrent?: number
   remark?: string
 }
 
-/** 分页查询定时任务 */
-export function listJobs(params: PageQuery): Promise<PageResponse<SysJob>> {
-  return get<PageResponse<SysJob>>('/admin-api/v1/jobs', params as unknown as Record<string, unknown>)
+/** 查询定时任务列表（后端返回全量数组） */
+export function listJobs(): Promise<SysJob[]> {
+  return get<SysJob[]>('/admin-api/v1/jobs')
 }
 
 /** 创建定时任务 */

@@ -6,8 +6,8 @@
 <template>
   <el-card shadow="never">
     <el-form inline class="search-form">
-      <el-form-item label="关键字">
-        <el-input v-model="query.keyword" placeholder="账号/IP" clearable style="width: 200px" @keyup.enter="search" />
+      <el-form-item label="账号">
+        <el-input v-model="query.username" placeholder="登录账号（模糊）" clearable style="width: 200px" @keyup.enter="search" />
       </el-form-item>
       <el-form-item label="结果">
         <el-select v-model="query.status" placeholder="全部" clearable style="width: 120px">
@@ -57,8 +57,8 @@ const loading = ref(false)
 /** 列表与总数 */
 const list = ref<LoginLog[]>([])
 const total = ref(0)
-/** 查询参数 */
-const query = reactive({ page: 1, size: 20, keyword: '', status: undefined as number | undefined })
+/** 查询参数（后端 username 模糊 + status 精确） */
+const query = reactive({ page: 1, size: 20, username: '', status: undefined as number | undefined })
 
 /**
  * 分页拉取登录日志。
@@ -66,7 +66,7 @@ const query = reactive({ page: 1, size: 20, keyword: '', status: undefined as nu
 async function fetchList(): Promise<void> {
   loading.value = true
   try {
-    const data = await listLoginLogs({ page: query.page, size: query.size, keyword: query.keyword, status: query.status })
+    const data = await listLoginLogs({ page: query.page, size: query.size, username: query.username || undefined, status: query.status })
     list.value = data.list || []
     total.value = data.total || 0
   } catch (error) {
@@ -84,7 +84,7 @@ function search(): void {
 
 /** 重置 */
 function reset(): void {
-  query.keyword = ''
+  query.username = ''
   query.status = undefined
   search()
 }

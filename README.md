@@ -68,8 +68,11 @@ apex-admin-web/
 
 ## 部署方式
 
-- **独立部署**：`npm run build` 后将 `dist/` 交给 Nginx/静态服务器，反向代理 `/api`、`/admin-api` 到后端。
-- **与后端同域**：将 `dist/` 内容放入后端静态资源目录（后端 `static/admin/`），`VITE_API_BASE_URL` 留空走相对路径。
+> 本工程已与后端 Apex Scaffold 完成**前后端分离**：后端不再托管 `static/admin/` 静态前端，
+> 也不再提供 `/admin` 短入口重定向。完整构建与部署说明见 **`DEPLOYMENT.md`**。
+
+- **独立部署（推荐生产）**：`npm run build` 后将 `dist/` 交给 Nginx/静态服务器，反向代理 `/api`、`/admin-api` 到后端（详见 `DEPLOYMENT.md` §6）。
+- **与后端网关同域**：前端走相对路径（`VITE_API_BASE_URL` 留空），由 Nginx 按 `/api/`、`/admin-api/` 前缀分流到后端（详见 `DEPLOYMENT.md` §7）。
 
 ## 标准前端注释规范
 

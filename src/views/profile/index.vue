@@ -1,16 +1,20 @@
 <!--
   个人中心
   ------------------------------------------------------------------
-  当前登录用户信息展示与修改密码入口
-  （修改密码接口以后端 profile 能力为准，此处展示基础信息）。
+  当前登录用户信息展示（UserDTO + 角色码/权限码，由用户 store 合并）。
 -->
 <template>
   <el-card shadow="never" class="profile-card">
     <el-descriptions title="个人信息" :column="2" border>
       <el-descriptions-item label="用户 ID">{{ identity?.id ?? '-' }}</el-descriptions-item>
-      <el-descriptions-item label="账号">{{ identity?.username ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="账号">{{ identity?.username || identity?.phone || '-' }}</el-descriptions-item>
       <el-descriptions-item label="昵称">{{ identity?.nickName || identity?.nickname || '-' }}</el-descriptions-item>
       <el-descriptions-item label="手机号">{{ identity?.phone ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="性别">
+        {{ identity?.gender === 1 ? '男' : identity?.gender === 2 ? '女' : '-' }}
+      </el-descriptions-item>
+      <el-descriptions-item label="生日">{{ identity?.birthday ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="最后登录">{{ identity?.lastLoginTime ?? '-' }}</el-descriptions-item>
       <el-descriptions-item label="角色">
         <el-tag v-for="role in identity?.roles || []" :key="role" size="small" style="margin-right: 6px">
           {{ role }}
@@ -25,7 +29,7 @@
 <script setup lang="ts">
 /**
  * 个人中心脚本
- * - 展示当前登录用户身份信息（来自用户 store，登录时加载）
+ * - 展示当前登录用户身份信息（来自用户 store，登录时加载并合并角色/权限码）
  */
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'

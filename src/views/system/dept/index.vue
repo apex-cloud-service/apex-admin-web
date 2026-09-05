@@ -2,6 +2,7 @@
   部门管理
   ------------------------------------------------------------------
   部门树（数据权限基础）的查询、新增、编辑与删除。
+  字段与后端 DeptDTO/DeptEntity 对齐：name（部门名称）/orderNum（显示顺序）。
 -->
 <template>
   <el-card shadow="never">
@@ -18,10 +19,15 @@
       default-expand-all
       :tree-props="{ children: 'children' }"
     >
-      <el-table-column prop="deptName" label="部门名称" min-width="200" />
+      <el-table-column prop="name" label="部门名称" min-width="200" />
       <el-table-column prop="leader" label="负责人" min-width="120" />
       <el-table-column prop="phone" label="联系电话" min-width="140" />
-      <el-table-column prop="sort" label="排序" width="70" />
+      <el-table-column prop="orderNum" label="排序" width="70" />
+      <el-table-column label="状态" width="90">
+        <template #default="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openCreate(row.id)">新增子部门</el-button>
@@ -38,15 +44,15 @@
           <el-tree-select
             v-model="form.parentId"
             :data="treeOptions"
-            :props="{ label: 'deptName', value: 'id' }"
+            :props="{ label: 'name', value: 'id' }"
             check-strictly
             default-expand-all
             placeholder="选择上级部门"
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="部门名称" prop="deptName">
-          <el-input v-model="form.deptName" placeholder="部门名称" />
+        <el-form-item label="部门名称" prop="name">
+          <el-input v-model="form.name" placeholder="部门名称" />
         </el-form-item>
         <el-form-item label="负责人">
           <el-input v-model="form.leader" placeholder="负责人姓名" />
@@ -54,8 +60,11 @@
         <el-form-item label="联系电话">
           <el-input v-model="form.phone" placeholder="联系电话" />
         </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="form.email" placeholder="联系邮箱" />
+        </el-form-item>
         <el-form-item label="排序">
-          <el-input-number v-model="form.sort" :min="0" />
+          <el-input-number v-model="form.orderNum" :min="0" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -89,16 +98,16 @@ const tree = ref<DeptNode[]>([])
 const dialog = reactive({ visible: false, isEdit: false, id: 0 })
 const formRef = ref<FormInstance>()
 /** 表单数据 */
-const form = reactive<DeptPayload>({ parentId: 0, deptName: '', leader: '', phone: '', sort: 0 })
+const form = reactive<DeptPayload>({ parentId: 0, name: '', leader: '', phone: '', email: '', orderNum: 0 })
 
 /** 校验规则 */
 const formRules: FormRules = {
-  deptName: [{ required: true, message: '请输入部门名称', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入部门名称', trigger: 'blur' }],
 }
 
 /** 树选择器数据源 */
 const treeOptions = computed<DeptNode[]>(() => [
-  { id: 0, parentId: -1, deptName: '根部门', children: tree.value },
+  { id: 0, parentId: -1, name: '根部门', children: tree.value },
 ])
 
 /**
@@ -122,7 +131,7 @@ async function fetchTree(): Promise<void> {
 function openCreate(parentId: number): void {
   dialog.isEdit = false
   dialog.id = 0
-  Object.assign(form, { parentId, deptName: '', leader: '', phone: '', sort: 0 })
+  Object.assign(form, { parentId, name: '', leader: '', phone: '', email: '', orderNum: 0 })
   dialog.visible = true
 }
 
@@ -135,10 +144,11 @@ function openEdit(row: DeptNode): void {
   dialog.id = row.id
   Object.assign(form, {
     parentId: row.parentId ?? 0,
-    deptName: row.deptName,
+    name: row.name,
     leader: row.leader || '',
     phone: row.phone || '',
-    sort: row.sort ?? 0,
+    email: row.email || '',
+    orderNum: row.orderNum ?? 0,
   })
   dialog.visible = true
 }
@@ -175,7 +185,7 @@ async function submit(): Promise<void> {
  */
 async function remove(row: DeptNode): Promise<void> {
   try {
-    await ElMessageBox.confirm(`确认删除部门「${row.deptName}」？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(`确认删除部门「${row.name}」？`, '提示', { type: 'warning' })
   } catch {
     return
   }

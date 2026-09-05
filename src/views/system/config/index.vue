@@ -1,7 +1,8 @@
 <!--
   参数配置
   ------------------------------------------------------------------
-  系统参数（sys_config）的分页查询、新增、编辑、删除与启停。
+  系统参数（sys_config）的全量列表、新增、编辑、删除与启停。
+  后端 GET /admin-api/v1/configs 返回全量数组（非分页）。
 -->
 <template>
   <el-card shadow="never">
@@ -20,23 +21,19 @@
       <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
-          <el-tag :type="row.status === 0 ? 'success' : 'danger'">{{ row.status === 0 ? '正常' : '停用' }}</el-tag>
+          <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button link :type="row.status === 0 ? 'danger' : 'success'" @click="toggleStatus(row)">
-            {{ row.status === 0 ? '停用' : '启用' }}
+          <el-button link :type="row.status === 1 ? 'danger' : 'success'" @click="toggleStatus(row)">
+            {{ row.status === 1 ? '停用' : '启用' }}
           </el-button>
           <el-button link type="danger" @click="remove(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
-
-    <div class="pagination-wrap">
-      <Pagination :total="total" @change="onPageChange" />
-    </div>
 
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="dialog.visible" :title="dialog.isEdit ? '编辑参数' : '新增参数'" width="480px">
@@ -65,13 +62,12 @@
 <script setup lang="ts">
 /**
  * 参数配置脚本
- * - 分页查询 + 关键字无（后端当前支持分页）
+ * - 全量列表查询（后端非分页）
  * - 新增/编辑/启停/删除
  */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
-import Pagination from '@/components/Pagination.vue'
 import { showError } from '@/utils/request'
 import {
   createConfig,
@@ -86,11 +82,8 @@ import type { SysConfig } from '@/types'
 /** 状态 */
 const loading = ref(false)
 const saving = ref(false)
-/** 列表与总数 */
+/** 列表 */
 const list = ref<SysConfig[]>([])
-const total = ref(0)
-/** 分页参数 */
-const query = reactive({ page: 1, size: 20 })
 
 /** 弹窗状态 */
 const dialog = reactive({ visible: false, isEdit: false, id: 0 })
@@ -106,26 +99,17 @@ const formRules: FormRules = {
 }
 
 /**
- * 分页拉取参数列表。
+ * 拉取参数列表（全量）。
  */
 async function fetchList(): Promise<void> {
   loading.value = true
   try {
-    const data = await listConfigs({ page: query.page, size: query.size })
-    list.value = data.list || []
-    total.value = data.total || 0
+    list.value = (await listConfigs()) || []
   } catch (error) {
     showError(error)
   } finally {
     loading.value = false
   }
-}
-
-/** 分页变化回调 */
-function onPageChange(page: number, size: number): void {
-  query.page = page
-  query.size = size
-  fetchList()
 }
 
 /** 打开新增弹窗 */
@@ -175,9 +159,9 @@ async function submit(): Promise<void> {
   }
 }
 
-/** 启停 */
+/** 启停（后端 status: 0=停用 1=正常） */
 async function toggleStatus(row: SysConfig): Promise<void> {
-  const enable = row.status === 1
+  const enable = row.status !== 1
   try {
     await updateConfigStatus(row.id, enable)
     ElMessage.success('状态已更新')
@@ -207,14 +191,8 @@ onMounted(fetchList)
 </script>
 
 <style scoped>
-/* 工具栏与分页区 */
+/* 工具栏 */
 .toolbar {
   margin-bottom: 12px;
-}
-
-.pagination-wrap {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
 }
 </style>
