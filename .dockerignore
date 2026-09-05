@@ -1,0 +1,25 @@
+# 依赖与构建产物（由镜像内构建重新生成）
+node_modules
+dist
+dist-ssr
+
+# 版本库与 CI
+.git
+.gitignore
+.github
+
+# 编辑器与系统文件
+.vscode
+.idea
+.DS_Store
+*.local
+
+# 文档与日志（不进入构建上下文）
+*.md
+*.log
+npm-debug.log*
+
+# Docker 自身
+Dockerfile
+docker-compose*.yml
+.dockerignore

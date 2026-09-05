@@ -1,0 +1,39 @@
+# ============================================================
+# Apex Admin Web - Docker Compose 编排
+# ============================================================
+# 用法:
+#   docker compose up -d --build
+#   docker compose ps     # 等待 healthy
+# 访问:
+#   前端页面 http://localhost:80
+#   详细文档: DEPLOYMENT.md
+# ============================================================
+
+services:
+  apex-admin-web:
+    build:
+      context: .
+      args:
+        # 生产后端网关地址；同域（由本 Nginx 反代 /api、/admin-api）部署留空
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    image: apex-admin-web:${TAG:-latest}
+    container_name: apex-admin-web
+    environment:
+      # 前端 Nginx 反代后端 upstream：
+      #   - 与后端 compose 同一网络（默认）：http://apex-scaffold:8080（后端 compose 服务名）
+      #   - 独立部署：指向宿主后端，如 http://172.17.0.1:8080 或 http://<后端宿主机IP>:8080
+      API_PROXY_PASS: ${API_PROXY_PASS:-http://apex-scaffold:8080}
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "${WEB_PORT:-80}:80"
+    restart: unless-stopped
+    # 复用后端 compose 项目（apex-scaffold）创建的 bridge 网络，
+    # 使容器内可直接按后端 compose 服务名 apex-scaffold:8080 访问
+    networks:
+      - apex-network
+
+networks:
+  # 引用后端 compose 已创建的网络，compose 不会重建/重名冲突
+  apex-network:
+    external: true
+    name: apex-scaffold_apex-network
