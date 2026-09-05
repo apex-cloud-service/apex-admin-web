@@ -1,0 +1,810 @@
+<!--
+  监控大盘
+  ------------------------------------------------------------------
+  全量性能监控看板，数据来自 /admin-api/v1/monitor/* 聚合接口：
+  - 概览：应用状态/运行时长/堆内存/CPU/线程/活跃会话
+  - 系统：JVM 内存、CPU、磁盘、网络、线程、GC、阻塞 IO 池
+  - 中间件：MySQL、Redis、消息中间件、Zipkin
+  - 治理：Sentinel 熔断/限流规则与计数、网关流量
+  - 业务：核心业务指标
+  默认每 10 秒自动刷新。
+-->
+<template>
+  <div class="monitor-dashboard">
+    <!-- 顶部概览指标卡 -->
+    <el-row :gutter="16" class="stat-row">
+      <el-col v-for="item in overviewCards" :key="item.label" :xs="12" :sm="6" :lg="4">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-value" :class="{ warn: item.warn }">{{ item.value }}</div>
+          <div class="stat-label">{{ item.label }}</div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 自动刷新开关 -->
+    <div class="refresh-bar">
+      <el-switch v-model="autoRefresh" active-text="自动刷新（10s）" />
+      <el-button size="small" :icon="Refresh" :loading="loading" @click="loadAll">立即刷新</el-button>
+      <span class="update-time">最近更新：{{ lastUpdate }}</span>
+    </div>
+
+    <el-row :gutter="16">
+      <!-- JVM 内存 -->
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="never" class="panel">
+          <template #header>JVM 内存</template>
+          <div ref="memChartRef" class="chart" />
+          <div class="panel-meta">
+            <span>堆使用 {{ formatBytes(system?.jvm?.heapUsed) }} / {{ formatBytes(system?.jvm?.heapMax) }}</span>
+            <span>GC 次数 {{ system?.jvm?.gcPauseCount ?? 0 }} · 累计 {{ formatMs(system?.jvm?.gcPauseTotal) }}</span>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- CPU -->
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="never" class="panel">
+          <template #header>CPU 使用率（近 5 分钟）</template>
+          <div ref="cpuChartRef" class="chart" />
+          <div class="panel-meta">
+            <span>核数 {{ system?.cpu?.cores ?? '-' }}</span>
+            <span>负载均值 {{ system?.cpu?.loadAverage ?? '-' }}</span>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- 线程 -->
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="never" class="panel">
+          <template #header>JVM 线程</template>
+          <div ref="threadChartRef" class="chart" />
+          <div class="panel-meta">
+            <span>当前 {{ system?.threads?.live ?? 0 }} · 峰值 {{ system?.threads?.peak ?? 0 }}</span>
+            <span>守护线程 {{ system?.threads?.daemon ?? 0 }}</span>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- 磁盘 -->
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="never" class="panel">
+          <template #header>磁盘使用</template>
+          <div ref="diskChartRef" class="chart" />
+        </el-card>
+      </el-col>
+
+      <!-- 网络 -->
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="never" class="panel">
+          <template #header>网络收发（近 5 分钟）</template>
+          <div ref="netChartRef" class="chart" />
+        </el-card>
+      </el-col>
+
+      <!-- 阻塞 IO 线程池 -->
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="never" class="panel">
+          <template #header>阻塞 IO 线程池饱和度</template>
+          <div ref="poolChartRef" class="chart" />
+        </el-card>
+      </el-col>
+
+      <!-- MySQL -->
+      <el-col :xs="24" :lg="6">
+        <el-card shadow="never" class="panel">
+          <template #header>MySQL</template>
+          <div class="middleware-body">
+            <el-progress
+              type="dashboard"
+              :percentage="mysqlPercent"
+              :color="progressColor(mysqlPercent)"
+              :width="120"
+            />
+            <div class="kv-list">
+              <div><span>驱动</span><b>{{ middleware?.mysql?.driver || '-' }}</b></div>
+              <div><span>活动连接</span><b>{{ middleware?.mysql?.activeConnections ?? '-' }} / {{ middleware?.mysql?.maxConnections ?? '-' }}</b></div>
+              <div><span>空闲连接</span><b>{{ middleware?.mysql?.idleConnections ?? '-' }}</b></div>
+              <div><span>累计请求</span><b>{{ middleware?.mysql?.totalRequests ?? '-' }}</b></div>
+              <div><span>累计错误</span><b>{{ middleware?.mysql?.totalErrors ?? '-' }}</b></div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- Redis -->
+      <el-col :xs="24" :lg="6">
+        <el-card shadow="never" class="panel">
+          <template #header>Redis</template>
+          <div class="middleware-body">
+            <el-tag :type="redisHealthy ? 'success' : 'danger'" size="large">
+              {{ redisHealthy ? '健康' : '不可用' }}
+            </el-tag>
+            <div class="kv-list">
+              <div><span>节点数</span><b>{{ middleware?.redis?.nodes ?? '-' }}</b></div>
+              <div><span>活跃会话</span><b>{{ middleware?.redis?.activeSessions ?? '-' }}</b></div>
+              <div><span>IP 黑名单</span><b>{{ middleware?.redis?.ipBlacklistSize ?? '-' }}</b></div>
+              <div><span>Token 黑名单</span><b>{{ middleware?.redis?.tokenBlacklistSize ?? '-' }}</b></div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- 消息中间件 -->
+      <el-col :xs="24" :lg="6">
+        <el-card shadow="never" class="panel">
+          <template #header>消息中间件</template>
+          <div class="middleware-body">
+            <el-tag :type="mqAvailable ? 'success' : 'info'" size="large">
+              {{ mqAvailable ? (middleware?.mq?.type || 'RocketMQ') : '未接入' }}
+            </el-tag>
+            <div class="kv-list">
+              <div><span>NameServer</span><b>{{ middleware?.mq?.nameServer || '-' }}</b></div>
+              <div><span>生产组</span><b>{{ middleware?.mq?.producerGroup || '-' }}</b></div>
+              <div><span>生产者状态</span><b>{{ middleware?.mq?.producerStatus || '-' }}</b></div>
+              <div><span>Topic 数</span><b>{{ middleware?.mq?.topics ?? '-' }}</b></div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- Zipkin -->
+      <el-col :xs="24" :lg="6">
+        <el-card shadow="never" class="panel">
+          <template #header>链路追踪（Zipkin）</template>
+          <div class="middleware-body">
+            <el-tag :type="tracingAvailable ? 'success' : 'info'" size="large">
+              {{ tracingAvailable ? '已启用' : '未接入' }}
+            </el-tag>
+            <div class="kv-list">
+              <div><span>类型</span><b>{{ middleware?.tracing?.type || '-' }}</b></div>
+              <div><span>端点</span><b class="ellipsis">{{ middleware?.tracing?.endpoint || '-' }}</b></div>
+              <div><span>采样率</span><b>{{ middleware?.tracing?.samplingRate ?? '-' }}</b></div>
+              <div><span>待上报</span><b>{{ middleware?.tracing?.spansPending ?? '-' }}</b></div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <!-- Sentinel 治理 -->
+      <el-col :xs="24" :lg="12">
+        <el-card shadow="never" class="panel">
+          <template #header>Sentinel 流量治理（熔断 / 限流）</template>
+          <div ref="sentinelChartRef" class="chart chart-sm" />
+          <div class="gov-counts">
+            <el-tag type="warning" size="small">限流拒绝 {{ governance?.security?.rateLimitRejected ?? 0 }}</el-tag>
+            <el-tag type="danger" size="small">熔断打开 {{ governance?.security?.circuitBreakerOpened ?? 0 }}</el-tag>
+            <el-tag type="info" size="small">IP 封禁 {{ governance?.security?.ipBlocked ?? 0 }}</el-tag>
+            <el-tag type="danger" size="small">登录失败 {{ governance?.security?.loginFailed ?? 0 }}</el-tag>
+            <el-tag type="info" size="small">XSS {{ governance?.security?.xssIntercepted ?? 0 }}</el-tag>
+            <el-tag type="info" size="small">防重放 {{ governance?.security?.antiReplayRejected ?? 0 }}</el-tag>
+          </div>
+          <el-table :data="sentinelRules" size="small" border max-height="220" class="rule-table">
+            <el-table-column prop="resource" label="资源" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="grade" label="类型" width="90" />
+            <el-table-column prop="count" label="阈值" width="80" />
+            <el-table-column label="策略" width="120">
+              <template #default="{ row }">{{ row.strategy || row.controlBehavior || '-' }}</template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+
+      <!-- 网关流量 -->
+      <el-col :xs="24" :lg="12">
+        <el-card shadow="never" class="panel">
+          <template #header>网关 / API 流量</template>
+          <div class="gateway-summary">
+            <div class="g-item"><span>累计请求</span><b>{{ governance?.gateway?.totalRequests ?? 0 }}</b></div>
+            <div class="g-item"><span>4xx</span><b class="c-warn">{{ governance?.gateway?.error4xx ?? 0 }}</b></div>
+            <div class="g-item"><span>5xx</span><b class="c-danger">{{ governance?.gateway?.error5xx ?? 0 }}</b></div>
+            <div class="g-item"><span>平均耗时</span><b>{{ formatMs(governance?.gateway?.avgResponseTime ?? 0) }}</b></div>
+          </div>
+          <el-table :data="topPaths" size="small" border max-height="240">
+            <el-table-column prop="path" label="路径" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="count" label="请求数" width="90" />
+            <el-table-column prop="errorRate" label="错误率" width="90">
+              <template #default="{ row }">{{ (row.errorRate * 100).toFixed(2) }}%</template>
+            </el-table-column>
+            <el-table-column label="平均耗时" width="100">
+              <template #default="{ row }">{{ formatMs(row.avgTime) }}</template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+
+      <!-- 核心业务 -->
+      <el-col :span="24">
+        <el-card shadow="never" class="panel">
+          <template #header>核心业务监控</template>
+          <el-row :gutter="16">
+            <el-col v-for="m in businessMetrics" :key="m.key" :xs="12" :sm="6" :md="4">
+              <div class="biz-item">
+                <div class="biz-value">{{ m.value }}</div>
+                <div class="biz-name">{{ m.name }}</div>
+              </div>
+            </el-col>
+          </el-row>
+          <div ref="bizChartRef" class="chart chart-sm" />
+        </el-card>
+      </el-col>
+    </el-row>
+  </div>
+</template>
+
+<script setup lang="ts">
+/**
+ * 监控大盘脚本
+ * - 轮询 /admin-api/v1/monitor/{overview,system,middleware,governance,business}
+ * - 用 ECharts 渲染各板块图表；CPU/网络保留最近 30 个采样点绘制趋势
+ * - 所有指标接口失败时置灰展示，不阻塞页面
+ */
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import * as echarts from 'echarts'
+import { Refresh } from '@element-plus/icons-vue'
+import { showError } from '@/utils/request'
+import {
+  getMonitorBusiness,
+  getMonitorGovernance,
+  getMonitorMiddleware,
+  getMonitorOverview,
+  getMonitorSystem,
+} from '@/api/monitor'
+import type {
+  BusinessMetricPoint,
+  MonitorBusiness,
+  MonitorGovernance,
+  MonitorMiddleware,
+  MonitorOverview,
+  MonitorSystem,
+} from '@/types'
+
+/* ==================== 状态 ==================== */
+
+const loading = ref(false)
+const autoRefresh = ref(true)
+const lastUpdate = ref('-')
+const overview = ref<Partial<MonitorOverview>>({})
+const system = ref<MonitorSystem | null>(null)
+const middleware = ref<MonitorMiddleware | null>(null)
+const governance = ref<MonitorGovernance | null>(null)
+const business = ref<MonitorBusiness | null>(null)
+
+/** 趋势历史（近 30 点） */
+const cpuHistory = reactive<{ time: string; process: number; system: number }[]>([])
+const netHistory = reactive<{ time: string; rx: number; tx: number }[]>([])
+
+/** 定时器句柄 */
+let timer: ReturnType<typeof setInterval> | null = null
+
+/* ==================== 派生数据 ==================== */
+
+const overviewCards = computed(() => [
+  {
+    label: '应用状态',
+    value: overview.value.status === 'UP' ? '正常' : overview.value.status || '-',
+    warn: overview.value.status !== 'UP' && !!overview.value.status,
+  },
+  { label: '运行时长', value: formatDuration(overview.value.uptimeSeconds) },
+  { label: '堆内存', value: `${Math.round((overview.value.heapUsedPercent ?? 0) * 100)}%` },
+  { label: 'CPU', value: `${Math.round((overview.value.cpuUsage ?? 0) * 100)}%` },
+  { label: '线程数', value: overview.value.threadCount ?? '-' },
+  { label: '活跃会话', value: Number.isNaN(overview.value.activeSessions as number) ? '-' : overview.value.activeSessions ?? '-' },
+])
+
+const mysqlPercent = computed(() => {
+  const ratio = middleware.value?.mysql?.activeConnectionRatio ?? 0
+  return Math.round(Math.min(1, Math.max(0, ratio)) * 100)
+})
+
+const redisHealthy = computed(() => middleware.value?.redis?.available ?? false)
+
+const mqAvailable = computed(() => middleware.value?.mq?.available ?? false)
+
+const tracingAvailable = computed(() => middleware.value?.tracing?.available ?? false)
+
+const sentinelRules = computed(() => [
+  ...(governance.value?.sentinel?.flowRules || []),
+  ...(governance.value?.sentinel?.degradeRules || []),
+])
+
+const topPaths = computed(() => governance.value?.gateway?.topPaths || [])
+
+const businessMetrics = computed<BusinessMetricPoint[]>(() => business.value?.metrics || [])
+
+/* ==================== 图表 ==================== */
+
+const memChartRef = ref<HTMLElement>()
+const cpuChartRef = ref<HTMLElement>()
+const threadChartRef = ref<HTMLElement>()
+const diskChartRef = ref<HTMLElement>()
+const netChartRef = ref<HTMLElement>()
+const poolChartRef = ref<HTMLElement>()
+const sentinelChartRef = ref<HTMLElement>()
+const bizChartRef = ref<HTMLElement>()
+const charts: echarts.ECharts[] = []
+
+/** 初始化并记录实例（便于统一 resize/dispose） */
+function initChart(el: HTMLElement): echarts.ECharts {
+  const chart = echarts.init(el)
+  charts.push(chart)
+  return chart
+}
+
+/** 折线图通用配色 */
+function axisColor(): string {
+  return document.documentElement.classList.contains('dark') ? '#a3a6ad' : '#606266'
+}
+
+/** 渲染 JVM 内存图 */
+function renderMemChart(): void {
+  if (!memChartRef.value) return
+  const s = system.value?.jvm
+  const chart = initChart(memChartRef.value)
+  chart.setOption({
+    tooltip: { trigger: 'item' },
+    series: [
+      {
+        type: 'gauge',
+        startAngle: 210,
+        endAngle: -30,
+        min: 0,
+        max: 100,
+        radius: '95%',
+        progress: { show: true, width: 14 },
+        axisLine: { lineStyle: { width: 14 } },
+        pointer: { show: false },
+        axisTick: { show: false },
+        splitLine: { length: 8 },
+        axisLabel: { show: false },
+        detail: { formatter: '{value}%', fontSize: 20, color: axisColor() },
+        data: [{ value: Math.round((s?.heapUsedPercent ?? 0) * 100), name: '堆内存' }],
+        title: { show: true, color: axisColor(), fontSize: 12 },
+      },
+    ],
+  })
+}
+
+/** 渲染 CPU 趋势图 */
+function renderCpuChart(): void {
+  if (!cpuChartRef.value) return
+  const chart = initChart(cpuChartRef.value)
+  const color = axisColor()
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['进程 CPU', '系统 CPU'], textStyle: { color } },
+    grid: { left: 40, right: 16, top: 30, bottom: 24 },
+    xAxis: { type: 'category', data: cpuHistory.map((p) => p.time), axisLine: { lineStyle: { color } } },
+    yAxis: {
+      type: 'value',
+      max: 100,
+      axisLabel: { formatter: '{value}%' },
+      axisLine: { lineStyle: { color } },
+    },
+    series: [
+      { name: '进程 CPU', type: 'line', smooth: true, showSymbol: false, data: cpuHistory.map((p) => Math.round(p.process * 100)), areaStyle: { opacity: 0.12 } },
+      { name: '系统 CPU', type: 'line', smooth: true, showSymbol: false, data: cpuHistory.map((p) => Math.round(p.system * 100)) },
+    ],
+  })
+}
+
+/** 渲染线程图 */
+function renderThreadChart(): void {
+  if (!threadChartRef.value) return
+  const t = system.value?.threads
+  const color = axisColor()
+  const chart = initChart(threadChartRef.value)
+  chart.setOption({
+    tooltip: { trigger: 'item' },
+    legend: { textStyle: { color } },
+    xAxis: { type: 'category', data: ['存活', '峰值', '守护'], axisLine: { lineStyle: { color } } },
+    yAxis: { type: 'value', axisLine: { lineStyle: { color } } },
+    series: [
+      {
+        type: 'bar',
+        barWidth: '42%',
+        itemStyle: { color: '#409eff' },
+        data: [
+          { value: t?.live ?? 0, name: '存活' },
+          { value: t?.peak ?? 0, name: '峰值' },
+          { value: t?.daemon ?? 0, name: '守护' },
+        ],
+      },
+    ],
+  })
+}
+
+/** 渲染磁盘图 */
+function renderDiskChart(): void {
+  if (!diskChartRef.value) return
+  const disks = system.value?.disk || []
+  const color = axisColor()
+  const chart = initChart(diskChartRef.value)
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: unknown) => {
+        const arr = params as { name: string; value: number; seriesName: string }[]
+        return arr.map((p) => `${p.name} · ${p.seriesName}：${formatBytes(p.value)}`).join('<br/>')
+      },
+    },
+    legend: { textStyle: { color } },
+    grid: { left: 50, right: 16, top: 30, bottom: 40 },
+    xAxis: {
+      type: 'category',
+      data: disks.map((d) => d.mount),
+      axisLabel: { rotate: 30, color },
+      axisLine: { lineStyle: { color } },
+    },
+    yAxis: { type: 'value', axisLabel: { formatter: (v: number) => formatBytes(v) }, axisLine: { lineStyle: { color } } },
+    series: [
+      { name: '已用', type: 'bar', stack: 'disk', itemStyle: { color: '#e6a23c' }, data: disks.map((d) => d.total - d.free) },
+      { name: '可用', type: 'bar', stack: 'disk', itemStyle: { color: '#67c23a' }, data: disks.map((d) => d.usable) },
+    ],
+  })
+}
+
+/** 渲染网络趋势图 */
+function renderNetChart(): void {
+  if (!netChartRef.value) return
+  const chart = initChart(netChartRef.value)
+  const color = axisColor()
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      valueFormatter: (v: unknown) => formatBytes(v as number) + '/s',
+    },
+    legend: { data: ['接收', '发送'], textStyle: { color } },
+    grid: { left: 50, right: 16, top: 30, bottom: 24 },
+    xAxis: { type: 'category', data: netHistory.map((p) => p.time), axisLine: { lineStyle: { color } } },
+    yAxis: { type: 'value', axisLabel: { formatter: (v: number) => formatBytes(v) }, axisLine: { lineStyle: { color } } },
+    series: [
+      { name: '接收', type: 'line', smooth: true, showSymbol: false, data: netHistory.map((p) => p.rx), areaStyle: { opacity: 0.12 } },
+      { name: '发送', type: 'line', smooth: true, showSymbol: false, data: netHistory.map((p) => p.tx) },
+    ],
+  })
+}
+
+/** 渲染阻塞 IO 线程池图 */
+function renderPoolChart(): void {
+  if (!poolChartRef.value) return
+  const pools = system.value?.blockingIo || {}
+  const names = Object.keys(pools)
+  const color = axisColor()
+  const chart = initChart(poolChartRef.value)
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 40, right: 16, top: 20, bottom: 24 },
+    xAxis: { type: 'category', data: names, axisLine: { lineStyle: { color } } },
+    yAxis: { type: 'value', max: 100, axisLabel: { formatter: '{value}%' }, axisLine: { lineStyle: { color } } },
+    series: [
+      {
+        type: 'bar',
+        barWidth: '40%',
+        data: names.map((n) => Math.round((pools[n]?.saturation ?? 0) * 100)),
+        itemStyle: { color: '#409eff' },
+      },
+    ],
+  })
+}
+
+/** 渲染 Sentinel 治理图 */
+function renderSentinelChart(): void {
+  if (!sentinelChartRef.value) return
+  const sec = governance.value?.security
+  const color = axisColor()
+  const chart = initChart(sentinelChartRef.value)
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 40, right: 16, top: 20, bottom: 24 },
+    xAxis: {
+      type: 'category',
+      data: ['限流拒绝', '熔断打开', 'IP封禁', '登录失败', 'XSS', '防重放', '幂等拒绝'],
+      axisLabel: { rotate: 20, color },
+      axisLine: { lineStyle: { color } },
+    },
+    yAxis: { type: 'value', axisLine: { lineStyle: { color } } },
+    series: [
+      {
+        type: 'bar',
+        barWidth: '40%',
+        data: [
+          sec?.rateLimitRejected ?? 0,
+          sec?.circuitBreakerOpened ?? 0,
+          sec?.ipBlocked ?? 0,
+          sec?.loginFailed ?? 0,
+          sec?.xssIntercepted ?? 0,
+          sec?.antiReplayRejected ?? 0,
+          sec?.repeatSubmitRejected ?? 0,
+        ],
+        itemStyle: { color: '#f56c6c' },
+      },
+    ],
+  })
+}
+
+/** 渲染核心业务趋势图 */
+function renderBizChart(): void {
+  if (!bizChartRef.value) return
+  const trends = (business.value?.trends || []).filter((t) => t.points.length > 0)
+  const color = axisColor()
+  const chart = initChart(bizChartRef.value)
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: trends.map((t) => t.name), textStyle: { color } },
+    grid: { left: 40, right: 16, top: 30, bottom: 24 },
+    xAxis: { type: 'category', data: trends[0]?.points.map((p) => p.time) || [], axisLine: { lineStyle: { color } } },
+    yAxis: { type: 'value', axisLine: { lineStyle: { color } } },
+    series: trends.map((t) => ({
+      name: t.name,
+      type: 'line',
+      smooth: true,
+      showSymbol: false,
+      data: t.points.map((p) => p.value),
+    })),
+  })
+}
+
+/* ==================== 数据加载 ==================== */
+
+/**
+ * 汇总拉取全部监控数据并刷新图表。
+ */
+async function loadAll(): Promise<void> {
+  loading.value = true
+  try {
+    const [ov, sys, mid, gov, biz] = await Promise.all([
+      getMonitorOverview().catch(() => null),
+      getMonitorSystem().catch(() => null),
+      getMonitorMiddleware().catch(() => null),
+      getMonitorGovernance().catch(() => null),
+      getMonitorBusiness().catch(() => null),
+    ])
+    if (ov) overview.value = ov
+    if (sys) system.value = sys
+    if (mid) middleware.value = mid
+    if (gov) governance.value = gov
+    if (biz) business.value = biz
+
+    // 追加趋势采样（CPU / 网络）
+    if (sys?.cpu) {
+      const time = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+      cpuHistory.push({ time, process: sys.cpu.processUsage ?? 0, system: sys.cpu.systemUsage ?? 0 })
+      if (cpuHistory.length > 30) cpuHistory.shift()
+      const net = (sys.network || []).find((n) => n.available && n.up)
+      if (net) {
+        netHistory.push({ time, rx: net.rxBytesPerSec, tx: net.txBytesPerSec })
+        if (netHistory.length > 30) netHistory.shift()
+      }
+    }
+
+    renderAll()
+    lastUpdate.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+  } catch (error) {
+    showError(error)
+  } finally {
+    loading.value = false
+  }
+}
+
+/** 渲染全部图表 */
+function renderAll(): void {
+  charts.forEach((c) => c.dispose())
+  charts.length = 0
+  renderMemChart()
+  renderCpuChart()
+  renderThreadChart()
+  renderDiskChart()
+  renderNetChart()
+  renderPoolChart()
+  renderSentinelChart()
+  renderBizChart()
+}
+
+/* ==================== 工具函数 ==================== */
+
+/** 字节格式化 */
+function formatBytes(bytes?: number): string {
+  if (bytes === undefined || Number.isNaN(bytes)) return '-'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
+
+/** 毫秒格式化 */
+function formatMs(ms?: number): string {
+  if (ms === undefined || Number.isNaN(ms)) return '-'
+  if (ms < 1000) return `${ms.toFixed(1)} ms`
+  return `${(ms / 1000).toFixed(2)} s`
+}
+
+/** 秒 → 可读时长 */
+function formatDuration(seconds?: number): string {
+  if (seconds === undefined || Number.isNaN(seconds)) return '-'
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  return d > 0 ? `${d}天${h}时` : h > 0 ? `${h}时${m}分` : `${m}分${Math.floor(seconds % 60)}秒`
+}
+
+/** 进度条颜色 */
+function progressColor(percent: number): string {
+  if (percent < 60) return '#67c23a'
+  if (percent < 85) return '#e6a23c'
+  return '#f56c6c'
+}
+
+/* ==================== 生命周期 ==================== */
+
+onMounted(() => {
+  loadAll()
+  timer = setInterval(() => {
+    if (autoRefresh.value) loadAll()
+  }, 10000)
+})
+
+onBeforeUnmount(() => {
+  if (timer) clearInterval(timer)
+  charts.forEach((c) => c.dispose())
+  charts.length = 0
+})
+</script>
+
+<style scoped>
+/* 概览指标卡 */
+.stat-row {
+  margin-bottom: 12px;
+}
+
+.stat-card {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+}
+
+.stat-value.warn {
+  color: var(--el-color-danger);
+}
+
+.stat-label {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+/* 刷新栏 */
+.refresh-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.update-time {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+/* 面板 */
+.panel {
+  margin-bottom: 16px;
+}
+
+.chart {
+  height: 240px;
+}
+
+.chart-sm {
+  height: 200px;
+}
+
+.panel-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-top: 4px;
+}
+
+/* 中间件面板 */
+.middleware-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.kv-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kv-list > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.kv-list span {
+  color: var(--el-text-color-secondary);
+}
+
+.kv-list b {
+  font-weight: 500;
+  max-width: 60%;
+}
+
+.kv-list .ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 治理计数 */
+.gov-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.rule-table {
+  margin-top: 4px;
+}
+
+/* 网关汇总 */
+.gateway-summary {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
+.g-item {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.g-item span {
+  color: var(--el-text-color-secondary);
+}
+
+.g-item b {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.c-warn {
+  color: var(--el-color-warning);
+}
+
+.c-danger {
+  color: var(--el-color-danger);
+}
+
+/* 核心业务 */
+.biz-item {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.biz-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+}
+
+.biz-name {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+</style>
