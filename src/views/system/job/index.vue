@@ -1,8 +1,8 @@
 <!--
   定时任务
   ------------------------------------------------------------------
-  定时任务（sys_job）的分页查询、新增、编辑、删除、启停、
-  手动触发与执行日志查看。
+  定时任务（sys_job）的全量列表、新增、编辑、删除、启停、
+  手动触发与执行日志查看。后端 GET /admin-api/v1/jobs 返回全量数组。
 -->
 <template>
   <el-card shadow="never">
@@ -21,7 +21,7 @@
       </el-table-column>
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
-          <el-tag :type="row.status === 0 ? 'success' : 'danger'">{{ row.status === 0 ? '正常' : '停用' }}</el-tag>
+          <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="300" fixed="right">
@@ -29,17 +29,13 @@
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button link type="primary" @click="runOnce(row)">执行</el-button>
           <el-button link type="primary" @click="showLogs(row)">日志</el-button>
-          <el-button link :type="row.status === 0 ? 'danger' : 'success'" @click="toggleStatus(row)">
-            {{ row.status === 0 ? '停用' : '启用' }}
+          <el-button link :type="row.status === 1 ? 'danger' : 'success'" @click="toggleStatus(row)">
+            {{ row.status === 1 ? '停用' : '启用' }}
           </el-button>
           <el-button link type="danger" @click="remove(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
-
-    <div class="pagination-wrap">
-      <Pagination :total="total" @change="onPageChange" />
-    </div>
 
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="dialog.visible" :title="dialog.isEdit ? '编辑任务' : '新增任务'" width="520px">
@@ -47,7 +43,7 @@
         <el-form-item label="任务名称" prop="jobName">
           <el-input v-model="form.jobName" placeholder="任务名称" />
         </el-form-item>
-        <el-form-item label="任务分组" prop="jobGroup">
+        <el-form-item label="任务分组">
           <el-input v-model="form.jobGroup" placeholder="如 DEFAULT" />
         </el-form-item>
         <el-form-item label="调用目标" prop="invokeTarget">
@@ -93,7 +89,6 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
-import Pagination from '@/components/Pagination.vue'
 import { showError } from '@/utils/request'
 import {
   createJob,
@@ -110,11 +105,8 @@ import type { JobLog, SysJob } from '@/types'
 /** 状态 */
 const loading = ref(false)
 const saving = ref(false)
-/** 列表与总数 */
+/** 列表 */
 const list = ref<SysJob[]>([])
-const total = ref(0)
-/** 分页参数 */
-const query = reactive({ page: 1, size: 20 })
 
 /** 弹窗状态 */
 const dialog = reactive({ visible: false, isEdit: false, id: 0 })
@@ -125,7 +117,6 @@ const form = reactive<JobPayload>({ jobName: '', jobGroup: 'DEFAULT', invokeTarg
 /** 校验规则 */
 const formRules: FormRules = {
   jobName: [{ required: true, message: '请输入任务名称', trigger: 'blur' }],
-  jobGroup: [{ required: true, message: '请输入任务分组', trigger: 'blur' }],
   invokeTarget: [{ required: true, message: '请输入调用目标', trigger: 'blur' }],
   cronExpression: [{ required: true, message: '请输入 Cron 表达式', trigger: 'blur' }],
 }
@@ -135,26 +126,17 @@ const logDialog = reactive({ visible: false, jobName: '' })
 const logs = ref<JobLog[]>([])
 
 /**
- * 分页拉取任务列表。
+ * 拉取任务列表（全量）。
  */
 async function fetchList(): Promise<void> {
   loading.value = true
   try {
-    const data = await listJobs({ page: query.page, size: query.size })
-    list.value = data.list || []
-    total.value = data.total || 0
+    list.value = (await listJobs()) || []
   } catch (error) {
     showError(error)
   } finally {
     loading.value = false
   }
-}
-
-/** 分页变化回调 */
-function onPageChange(page: number, size: number): void {
-  query.page = page
-  query.size = size
-  fetchList()
 }
 
 /** 打开新增弹窗 */
@@ -171,7 +153,7 @@ function openEdit(row: SysJob): void {
   dialog.id = row.id
   Object.assign(form, {
     jobName: row.jobName,
-    jobGroup: row.jobGroup,
+    jobGroup: row.jobGroup || 'DEFAULT',
     invokeTarget: row.invokeTarget,
     cronExpression: row.cronExpression,
     remark: row.remark || '',
@@ -237,9 +219,9 @@ async function showLogs(row: SysJob): Promise<void> {
   }
 }
 
-/** 启停 */
+/** 启停（后端 status: 0=停用 1=正常） */
 async function toggleStatus(row: SysJob): Promise<void> {
-  const enable = row.status === 1
+  const enable = row.status !== 1
   try {
     await updateJobStatus(row.id, enable)
     ElMessage.success('状态已更新')
@@ -269,14 +251,8 @@ onMounted(fetchList)
 </script>
 
 <style scoped>
-/* 工具栏与分页区 */
+/* 工具栏 */
 .toolbar {
   margin-bottom: 12px;
-}
-
-.pagination-wrap {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
 }
 </style>

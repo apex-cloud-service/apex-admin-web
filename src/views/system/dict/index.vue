@@ -21,15 +21,15 @@
       <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
-          <el-tag :type="row.status === 0 ? 'success' : 'danger'">{{ row.status === 0 ? '正常' : '停用' }}</el-tag>
+          <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="280" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openDataDrawer(row)">数据</el-button>
           <el-button link type="primary" @click="openTypeDialog(row)">编辑</el-button>
-          <el-button link :type="row.status === 0 ? 'danger' : 'success'" @click="toggleType(row)">
-            {{ row.status === 0 ? '停用' : '启用' }}
+          <el-button link :type="row.status === 1 ? 'danger' : 'success'" @click="toggleType(row)">
+            {{ row.status === 1 ? '停用' : '启用' }}
           </el-button>
           <el-button link type="danger" @click="removeType(row)">删除</el-button>
         </template>
@@ -206,9 +206,9 @@ async function submitType(): Promise<void> {
   }
 }
 
-/** 启停类型 */
+/** 启停类型（后端 status: 0=停用 1=正常） */
 async function toggleType(row: DictType): Promise<void> {
-  const enable = row.status === 1
+  const enable = row.status !== 1
   try {
     await updateDictTypeStatus(row.id, enable)
     ElMessage.success('状态已更新')

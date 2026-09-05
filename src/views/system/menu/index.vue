@@ -31,7 +31,7 @@
       <el-table-column prop="sort" label="排序" width="70" />
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
-          <el-tag :type="row.status === 0 ? 'success' : 'danger'">{{ row.status === 0 ? '正常' : '停用' }}</el-tag>
+          <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="260" fixed="right">
@@ -39,8 +39,8 @@
           <el-button v-if="row.menuType !== 2" link type="primary" @click="openCreate(row.id)">新增子项</el-button>
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button link type="danger" @click="remove(row)">删除</el-button>
-          <el-button link :type="row.status === 0 ? 'danger' : 'success'" @click="toggleStatus(row)">
-            {{ row.status === 0 ? '停用' : '启用' }}
+          <el-button link :type="row.status === 1 ? 'danger' : 'success'" @click="toggleStatus(row)">
+            {{ row.status === 1 ? '停用' : '启用' }}
           </el-button>
         </template>
       </el-table-column>
@@ -247,11 +247,11 @@ async function remove(row: MenuNode): Promise<void> {
 }
 
 /**
- * 启停菜单。
+ * 启停菜单（后端 status: 0=停用 1=正常）。
  * @param row 菜单节点
  */
 async function toggleStatus(row: MenuNode): Promise<void> {
-  const enable = row.status === 1
+  const enable = row.status !== 1
   try {
     await updateMenuStatus(row.id, enable)
     ElMessage.success('状态已更新')
