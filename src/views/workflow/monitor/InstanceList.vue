@@ -1,3 +1,14 @@
+<!--
+  工作流实例列表组件
+  
+  展示和管理所有工作流实例，提供以下功能：
+  - 按状态筛选流程实例
+  - 展示实例的基本信息（ID、标题、编码、状态、发起人、时间等）
+  - 分页展示
+  - 查看实例详情
+  
+  @module views/workflow/monitor/InstanceList
+-->
 <template>
   <div class="workflow-instance-list">
     <el-form :inline="true" :model="queryParams" style="margin-bottom: 20px">
@@ -71,16 +82,23 @@ import type { WorkflowInstance, InstanceQueryParams } from '@/types/workflow'
 
 const router = useRouter()
 
+/** 查询参数 */
 const queryParams = ref<InstanceQueryParams>({
   pageNum: 1,
   pageSize: 10,
   status: undefined
 })
 
+/** 流程实例列表 */
 const list = ref<WorkflowInstance[]>([])
+/** 总数 */
 const total = ref(0)
+/** 加载状态 */
 const loading = ref(false)
 
+/**
+ * 加载流程实例列表
+ */
 const loadList = async () => {
   loading.value = true
   try {
@@ -94,11 +112,19 @@ const loadList = async () => {
   }
 }
 
+/**
+ * 处理查询操作
+ * 重置到第一页并重新加载列表
+ */
 const handleQuery = () => {
   queryParams.value.pageNum = 1
   loadList()
 }
 
+/**
+ * 处理重置操作
+ * 清空查询条件并重新加载列表
+ */
 const handleReset = () => {
   queryParams.value = {
     pageNum: 1,
@@ -108,10 +134,19 @@ const handleReset = () => {
   loadList()
 }
 
+/**
+ * 处理查看详情操作
+ * @param id - 流程实例ID
+ */
 const handleViewDetail = (id: number) => {
   router.push(`/workflow/instances/${id}`)
 }
 
+/**
+ * 获取状态标签类型
+ * @param status - 流程状态
+ * @returns Element Plus标签类型
+ */
 const getStatusType = (status: string) => {
   const map: Record<string, any> = {
     DRAFT: 'info',
@@ -124,6 +159,11 @@ const getStatusType = (status: string) => {
   return map[status] || ''
 }
 
+/**
+ * 获取状态显示文本
+ * @param status - 流程状态
+ * @returns 状态的中文显示文本
+ */
 const getStatusLabel = (status: string) => {
   const map: Record<string, string> = {
     DRAFT: '草稿',

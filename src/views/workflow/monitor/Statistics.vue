@@ -1,3 +1,13 @@
+<!--
+  工作流统计看板组件
+  
+  展示工作流系统的统计数据和趋势分析，包含：
+  - 4个关键指标卡片：今日发起、运行中、待办任务、平均完成时长
+  - 流程状态分布饼图（使用ECharts）
+  - 流程趋势折线图（支持近7天/近30天切换）
+  
+  @module views/workflow/monitor/Statistics
+-->
 <template>
   <div class="workflow-statistics">
     <el-row :gutter="20" style="margin-bottom: 20px">
@@ -93,6 +103,7 @@ import * as echarts from 'echarts'
 import { getWorkflowStatistics, getWorkflowTrend } from '@/api/workflow'
 import type { WorkflowStatistics, WorkflowTrend } from '@/types/workflow'
 
+/** 统计数据 */
 const statistics = ref<WorkflowStatistics>({
   todayStarted: 0,
   runningTotal: 0,
@@ -101,18 +112,27 @@ const statistics = ref<WorkflowStatistics>({
   statusDistribution: {}
 })
 
+/** 趋势数据 */
 const trend = ref<WorkflowTrend>({
   dates: [],
   startedCounts: [],
   completedCounts: []
 })
 
+/** 趋势图统计天数 */
 const trendDays = ref(7)
+/** 饼图DOM引用 */
 const pieChartRef = ref<HTMLDivElement>()
+/** 折线图DOM引用 */
 const lineChartRef = ref<HTMLDivElement>()
+/** ECharts饼图实例 */
 let pieChart: echarts.ECharts | null = null
+/** ECharts折线图实例 */
 let lineChart: echarts.ECharts | null = null
 
+/**
+ * 加载统计数据
+ */
 const loadStatistics = async () => {
   try {
     statistics.value = await getWorkflowStatistics()
@@ -122,6 +142,9 @@ const loadStatistics = async () => {
   }
 }
 
+/**
+ * 加载趋势数据
+ */
 const loadTrend = async () => {
   try {
     trend.value = await getWorkflowTrend(trendDays.value)
@@ -131,6 +154,10 @@ const loadTrend = async () => {
   }
 }
 
+/**
+ * 渲染饼图
+ * 展示流程状态分布（运行中、已通过、已拒绝、已取消等）
+ */
 const renderPieChart = () => {
   if (!pieChartRef.value) return
   
@@ -190,6 +217,10 @@ const renderPieChart = () => {
   })
 }
 
+/**
+ * 渲染折线图
+ * 展示流程发起和完成的趋势变化
+ */
 const renderLineChart = () => {
   if (!lineChartRef.value) return
   
@@ -249,6 +280,11 @@ const renderLineChart = () => {
   })
 }
 
+/**
+ * 格式化时长
+ * @param seconds - 秒数
+ * @returns 格式化后的时长字符串，如 "2h 30m"
+ */
 const formatDuration = (seconds: number): string => {
   if (seconds === 0) return '0h 0m'
   const hours = Math.floor(seconds / 3600)

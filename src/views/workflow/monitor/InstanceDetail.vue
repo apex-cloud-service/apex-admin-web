@@ -1,3 +1,13 @@
+<!--
+  工作流实例详情组件
+  
+  展示流程实例的完整信息和操作，包括：
+  - 基本信息：ID、标题、编码、状态、发起人、时间等
+  - 流程操作：挂起、恢复流程
+  - 任务列表：展示所有任务的状态、办理人、审批意见、超时信息等
+  
+  @module views/workflow/monitor/InstanceDetail
+-->
 <template>
   <div v-loading="loading" class="workflow-instance-detail">
     <el-page-header @back="handleBack">
@@ -149,21 +159,31 @@ import type { WorkflowInstanceDetail } from '@/types/workflow'
 const route = useRoute()
 const router = useRouter()
 
+/** 流程实例详情数据 */
 const detail = ref<WorkflowInstanceDetail | null>(null)
+/** 页面加载状态 */
 const loading = ref(false)
+/** 操作加载状态（挂起、恢复） */
 const operationLoading = ref(false)
 
+/** 挂起对话框可见性 */
 const suspendDialogVisible = ref(false)
+/** 恢复对话框可见性 */
 const resumeDialogVisible = ref(false)
 
+/** 挂起表单数据 */
 const suspendForm = ref({
   reason: ''
 })
 
+/** 恢复表单数据 */
 const resumeForm = ref({
   reason: ''
 })
 
+/**
+ * 加载流程实例详情
+ */
 const loadDetail = async () => {
   const id = Number(route.params.id)
   if (!id) return
@@ -178,16 +198,25 @@ const loadDetail = async () => {
   }
 }
 
+/**
+ * 处理返回操作
+ */
 const handleBack = () => {
   router.back()
 }
 
-// 挂起流程
+/**
+ * 处理挂起流程操作
+ * 打开挂起对话框
+ */
 const handleSuspend = () => {
   suspendForm.value.reason = ''
   suspendDialogVisible.value = true
 }
 
+/**
+ * 确认挂起流程
+ */
 const confirmSuspend = async () => {
   if (!suspendForm.value.reason) {
     ElMessage.warning('请输入挂起原因')
@@ -207,12 +236,18 @@ const confirmSuspend = async () => {
   }
 }
 
-// 恢复流程
+/**
+ * 处理恢复流程操作
+ * 打开恢复对话框
+ */
 const handleResume = () => {
   resumeForm.value.reason = ''
   resumeDialogVisible.value = true
 }
 
+/**
+ * 确认恢复流程
+ */
 const confirmResume = async () => {
   if (!resumeForm.value.reason) {
     ElMessage.warning('请输入恢复原因')
@@ -232,11 +267,20 @@ const confirmResume = async () => {
   }
 }
 
-// 判断是否超时
+/**
+ * 判断任务是否超时
+ * @param timeoutAt - 超时时间
+ * @returns 是否超时
+ */
 const isTimeout = (timeoutAt: string) => {
   return new Date(timeoutAt) < new Date()
 }
 
+/**
+ * 获取流程实例状态标签类型
+ * @param status - 流程实例状态
+ * @returns Element Plus标签类型
+ */
 const getStatusType = (status: string) => {
   const map: Record<string, any> = {
     DRAFT: 'info',
@@ -250,6 +294,11 @@ const getStatusType = (status: string) => {
   return map[status] || ''
 }
 
+/**
+ * 获取流程实例状态显示文本
+ * @param status - 流程实例状态
+ * @returns 状态的中文显示文本
+ */
 const getStatusLabel = (status: string) => {
   const map: Record<string, string> = {
     DRAFT: '草稿',
@@ -263,6 +312,11 @@ const getStatusLabel = (status: string) => {
   return map[status] || status
 }
 
+/**
+ * 获取任务状态标签类型
+ * @param status - 任务状态
+ * @returns Element Plus标签类型
+ */
 const getTaskStatusType = (status: string) => {
   const map: Record<string, any> = {
     PENDING: '',
@@ -275,6 +329,11 @@ const getTaskStatusType = (status: string) => {
   return map[status] || ''
 }
 
+/**
+ * 获取任务状态显示文本
+ * @param status - 任务状态
+ * @returns 状态的中文显示文本
+ */
 const getTaskStatusLabel = (status: string) => {
   const map: Record<string, string> = {
     PENDING: '待办',

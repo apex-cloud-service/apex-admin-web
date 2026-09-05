@@ -1,3 +1,13 @@
+<!--
+  任务操作组件
+  
+  提供工作流任务的各种操作按钮和对话框，包括：
+  - 基本操作：通过、驳回
+  - 高级操作：回退、转办、委派
+  - 每种操作都有对应的对话框和表单验证
+  
+  @module views/workflow/components/TaskActions
+-->
 <template>
   <div class="task-actions">
     <el-button type="primary" @click="$emit('approve')">通过</el-button>
@@ -127,41 +137,59 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { rollbackTask, transferTask, delegateTask } from '@/api/workflow'
-import { listUsers } from '@/api/system'
+import { listUsers } from '@/api/user'
 
+/**
+ * 组件属性
+ */
 interface Props {
+  /** 任务ID */
   taskId: number
+  /** 可回退的前置节点列表 */
   previousNodes?: Array<{ nodeCode: string; nodeName: string }>
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits(['approve', 'reject', 'success'])
 
+/** 操作加载状态 */
 const loading = ref(false)
+/** 用户搜索加载状态 */
 const userSearchLoading = ref(false)
+/** 回退对话框可见性 */
 const rollbackVisible = ref(false)
+/** 转办对话框可见性 */
 const transferVisible = ref(false)
+/** 委派对话框可见性 */
 const delegateVisible = ref(false)
 
+/** 回退表单数据 */
 const rollbackForm = ref({
   targetNodeCode: '',
   reason: ''
 })
 
+/** 转办表单数据 */
 const transferForm = ref({
   newAssigneeId: undefined as number | undefined,
   reason: ''
 })
 
+/** 委派表单数据 */
 const delegateForm = ref({
   delegateToId: undefined as number | undefined,
   reason: ''
 })
 
+/** 用户列表（用于转办和委派） */
 const userList = ref<Array<{ id: number; name: string }>>([])
+/** 前置节点列表 */
 const previousNodes = ref(props.previousNodes || [])
 
-// 处理更多操作
+/**
+ * 处理更多操作下拉菜单的命令
+ * @param command - 操作命令：rollback/transfer/delegate
+ */
 const handleMoreAction = (command: string) => {
   switch (command) {
     case 'rollback':
@@ -176,12 +204,19 @@ const handleMoreAction = (command: string) => {
   }
 }
 
-// 回退
+/**
+ * 处理回退操作
+ * 打开回退对话框
+ */
 const handleRollback = () => {
   rollbackForm.value = { targetNodeCode: '', reason: '' }
   rollbackVisible.value = true
 }
 
+/**
+ * 确认回退
+ * 验证表单并执行回退操作
+ */
 const confirmRollback = async () => {
   if (!rollbackForm.value.targetNodeCode) {
     ElMessage.warning('请选择回退节点')
@@ -205,13 +240,20 @@ const confirmRollback = async () => {
   }
 }
 
-// 转办
+/**
+ * 处理转办操作
+ * 打开转办对话框
+ */
 const handleTransfer = () => {
   transferForm.value = { newAssigneeId: undefined, reason: '' }
   userList.value = []
   transferVisible.value = true
 }
 
+/**
+ * 确认转办
+ * 验证表单并执行转办操作
+ */
 const confirmTransfer = async () => {
   if (!transferForm.value.newAssigneeId) {
     ElMessage.warning('请选择转办人')
@@ -238,13 +280,20 @@ const confirmTransfer = async () => {
   }
 }
 
-// 委派
+/**
+ * 处理委派操作
+ * 打开委派对话框
+ */
 const handleDelegate = () => {
   delegateForm.value = { delegateToId: undefined, reason: '' }
   userList.value = []
   delegateVisible.value = true
 }
 
+/**
+ * 确认委派
+ * 验证表单并执行委派操作
+ */
 const confirmDelegate = async () => {
   if (!delegateForm.value.delegateToId) {
     ElMessage.warning('请选择委派人')
@@ -271,7 +320,11 @@ const confirmDelegate = async () => {
   }
 }
 
-// 搜索用户
+/**
+ * 搜索用户
+ * 根据用户名模糊搜索用户列表（用于转办和委派）
+ * @param query - 搜索关键词
+ */
 const searchUsers = async (query: string) => {
   if (!query) {
     userList.value = []
@@ -280,10 +333,10 @@ const searchUsers = async (query: string) => {
   
   userSearchLoading.value = true
   try {
-    const { data } = await listUsers({ username: query, pageNum: 1, pageSize: 20 })
-    userList.value = data.records.map((user: any) => ({
+    const response = await listUsers({ keyword: query, page: 1, size: 20 })
+    userList.value = response.list.map((user: any) => ({
       id: user.id,
-      name: user.username
+      name: user.nickname || user.phone
     }))
   } catch (error) {
     console.error('搜索用户失败', error)
