@@ -25,6 +25,7 @@ const VIEW_REGISTRY: Record<string, () => Promise<unknown>> = {
   'system/dept/index': () => import('@/views/system/dept/index.vue'),
   'system/dict/index': () => import('@/views/system/dict/index.vue'),
   'system/config/index': () => import('@/views/system/config/index.vue'),
+  'system/database/index': () => import('@/views/system/database/index.vue'),
   'system/job/index': () => import('@/views/system/job/index.vue'),
   'monitor/loginlog/index': () => import('@/views/monitor/loginlog/index.vue'),
   'monitor/audit/index': () => import('@/views/monitor/audit/index.vue'),

@@ -542,3 +542,51 @@ export interface BusinessTrend {
   key: string
   points: { time: string; value: number }[]
 }
+
+/** 数据库配置（部署配置采集用） */
+export interface DatabaseConfig {
+  /** 数据库类型 */
+  dbType: 'mysql' | 'postgresql'
+  /** 主机地址 */
+  host: string
+  /** 端口 */
+  port: number
+  /** 数据库名 */
+  database: string
+  /** 用户名 */
+  username: string
+  /** 连接参数（可选） */
+  connectionParams?: string
+  /** 部署环境 */
+  environment: 'dev' | 'test' | 'prod'
+}
+
+/** 数据库连接测试结果 */
+export interface DatabaseTestResult {
+  /** 是否成功 */
+  success: boolean
+  /** 提示信息 */
+  message: string
+  /** 数据库版本（成功时返回） */
+  version?: string
+}
+
+/** 部署配置生成结果 */
+export interface DeploymentConfigResult {
+  /** YAML 格式配置 */
+  yaml: string
+  /** 环境变量格式配置 */
+  env: string
+  /** Docker Compose 配置（可选） */
+  dockerCompose?: string
+}
+
+/** 当前数据库信息 */
+export interface CurrentDatabaseInfo {
+  /** 数据库类型 */
+  type: string
+  /** 数据库版本 */
+  version: string
+  /** 驱动版本 */
+  driverVersion?: string
+}
