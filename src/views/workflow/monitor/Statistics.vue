@@ -166,10 +166,13 @@ const renderPieChart = () => {
   }
   
   const statusMap: Record<string, string> = {
+    DRAFT: '草稿',
     RUNNING: '运行中',
     APPROVED: '已通过',
     REJECTED: '已拒绝',
-    CANCELLED: '已取消'
+    CANCELLED: '已取消',
+    TERMINATED: '已终止',
+    SUSPENDED: '已挂起'
   }
   
   const data = Object.entries(statistics.value.statusDistribution).map(([key, value]) => ({

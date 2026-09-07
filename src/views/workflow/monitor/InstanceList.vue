@@ -14,10 +14,13 @@
     <el-form :inline="true" :model="queryParams" style="margin-bottom: 20px">
       <el-form-item label="状态">
         <el-select v-model="queryParams.status" placeholder="请选择" clearable style="width: 150px">
+          <el-option label="草稿" value="DRAFT" />
           <el-option label="运行中" value="RUNNING" />
           <el-option label="已通过" value="APPROVED" />
           <el-option label="已拒绝" value="REJECTED" />
           <el-option label="已取消" value="CANCELLED" />
+          <el-option label="已终止" value="TERMINATED" />
+          <el-option label="已挂起" value="SUSPENDED" />
         </el-select>
       </el-form-item>
       
@@ -154,7 +157,8 @@ const getStatusType = (status: string) => {
     APPROVED: 'success',
     REJECTED: 'danger',
     CANCELLED: 'info',
-    TERMINATED: 'warning'
+    TERMINATED: 'warning',
+    SUSPENDED: 'warning'
   }
   return map[status] || ''
 }
@@ -171,7 +175,8 @@ const getStatusLabel = (status: string) => {
     APPROVED: '已通过',
     REJECTED: '已拒绝',
     CANCELLED: '已取消',
-    TERMINATED: '已终止'
+    TERMINATED: '已终止',
+    SUSPENDED: '已挂起'
   }
   return map[status] || status
 }
