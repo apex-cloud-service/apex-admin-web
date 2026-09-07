@@ -59,3 +59,8 @@ test-results/
 
 # ===== 工具链本地状态 =====
 .workbuddy/
+.trae/
+
+# ===== 备份和临时文件 =====
+*.bak
+diagnostic.html
