@@ -590,3 +590,20 @@ export interface CurrentDatabaseInfo {
   /** 驱动版本 */
   driverVersion?: string
 }
+
+/* ==================== 文件上传类型（POST /api/v1/files/*） ==================== */
+
+/**
+ * 文件上传结果
+ * 对应后端 FileUploadResult
+ */
+export interface FileUploadResult {
+  /** 存储桶名称 */
+  bucketName: string
+  /** 对象存储路径（含性别目录，如 AF/uuid.jpg） */
+  objectName: string
+  /** 文件访问URL */
+  url: string
+  /** URL有效期（秒） */
+  expiresIn: number
+}
