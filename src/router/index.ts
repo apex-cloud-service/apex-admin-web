@@ -49,6 +49,18 @@ export const staticRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/workflow/monitor/InstanceDetail.vue'),
         meta: { title: '流程详情', hidden: true, activeMenu: '/workflow/monitor' },
       },
+      {
+        path: 'demo/file-upload',
+        name: 'FileUploadDemo',
+        component: () => import('@/views/demo/FileUploadDemo.vue'),
+        meta: { title: '文件上传测试', icon: 'Upload', hidden: true },
+      },
+      {
+        path: 'demo/file-upload-enhanced',
+        name: 'FileUploadEnhancedDemo',
+        component: () => import('@/views/demo/FileUploadEnhancedDemo.vue'),
+        meta: { title: '文件上传增强版', icon: 'Upload', hidden: true },
+      },
     ],
   },
   {
