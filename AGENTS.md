@@ -15,7 +15,7 @@
   - `/api/v1/**` — 业务（认证、当前用户等）
   - `/admin-api/v1/**` — 管理后台
   - `/api/workflow/**` — 工作流高级操作（回退/转办/委派/挂起/恢复，见 §3.6）
-- 部署/构建详见 `README.md` 与 `DEPLOYMENT.md`（已前后端分离，后端不再托管静态前端）。
+- 部署/构建详见 `README.md` 与 [`docs/guides/deployment.md`](docs/guides/deployment.md)（已前后端分离，后端不再托管静态前端）。
 
 ### 功能模块
 
