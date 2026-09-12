@@ -29,15 +29,80 @@ Apex Scaffold 管理后台前端（**前后端分离独立工程**）。
 # 1. 安装依赖（Node ≥ 18）
 npm install
 
-# 2. 启动开发服务器（默认 http://localhost:5173，代理 /api、/admin-api 到后端 8080）
+# 2. 配置环境变量（首次运行必须）
+cp .env.example .env.development
+
+# 3. 启动开发服务器（默认 http://localhost:5173，代理 /api、/admin-api 到后端 8080）
 npm run dev
 
-# 3. 生产构建（输出 dist/）
+# 4. 生产构建（输出 dist/）
 npm run build
 ```
 
 > 开发代理目标可在 `.env.development` 中通过 `VITE_API_PROXY_TARGET` 调整；
 > 生产网关地址在 `.env.production` 的 `VITE_API_BASE_URL` 配置（同域部署留空即可）。
+
+## 环境变量配置
+
+### 配置文件说明
+
+本项目使用环境变量文件管理不同环境的配置，**所有 `.env.*` 文件（除 `.env.example`）都不会被提交到 Git 仓库**。
+
+| 文件 | 用途 | 是否提交到 Git |
+|------|------|---------------|
+| `.env.example` | 配置模板，包含所有可用的环境变量说明 | ✅ 是 |
+| `.env.development` | 开发环境配置（本地开发使用） | ❌ 否 |
+| `.env.production` | 生产环境配置（部署时使用） | ❌ 否 |
+
+### 首次配置步骤
+
+1. **复制配置模板**：
+   ```bash
+   cp .env.example .env.development
+   ```
+
+2. **编辑 `.env.development`**，根据实际情况修改：
+   ```env
+   # 后端服务地址（开发环境）
+   VITE_API_PROXY_TARGET=http://127.0.0.1:8080
+   
+   # OAuth2 客户端 ID（需与后端配置一致）
+   VITE_OAUTH2_CLIENT_ID=apex-admin-web-dev
+   ```
+
+3. **生产环境配置**（部署前）：
+   ```bash
+   cp .env.example .env.production
+   ```
+   
+   编辑 `.env.production`：
+   ```env
+   # 生产环境后端网关地址（同域部署可留空）
+   VITE_API_BASE_URL=
+   
+   # OAuth2 客户端 ID（生产环境）
+   VITE_OAUTH2_CLIENT_ID=apex-admin-web-prod
+   ```
+
+### 可用环境变量
+
+| 变量名 | 说明 | 默认值 | 必填 |
+|--------|------|--------|------|
+| `VITE_API_PROXY_TARGET` | 开发环境后端代理目标地址 | `http://127.0.0.1:8080` | 开发环境必填 |
+| `VITE_API_BASE_URL` | 生产环境后端网关地址，同域部署留空 | `''` | 生产环境可选 |
+| `VITE_OAUTH2_CLIENT_ID` | OAuth2 客户端 ID，用于第三方登录 | `apex-admin-web` | 可选 |
+
+### 注意事项
+
+⚠️ **安全提醒**：
+- 不要将包含敏感信息的 `.env.development` 或 `.env.production` 文件提交到 Git 仓库
+- 团队成员需要从后端团队获取正确的 OAuth2 客户端 ID
+- 生产环境的配置应该通过 CI/CD 流程或环境变量注入，不要硬编码在代码中
+
+💡 **团队协作**：
+- 新成员加入时，参考 `.env.example` 创建自己的 `.env.development`
+- 如果添加了新的环境变量，务必同步更新 `.env.example` 文件
+- 配置变更应在团队内及时沟通
 
 ## 目录结构
 
