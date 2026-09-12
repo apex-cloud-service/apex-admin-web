@@ -6,6 +6,7 @@
  * - Pinia 状态管理
  * - Vue Router
  * - v-permission 按钮权限指令
+ * - Mock 数据服务（仅开发环境）
  */
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -17,6 +18,11 @@ import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
 import { permission } from './directives/permission'
+
+// Mock 数据服务（仅开发环境生效）
+if (import.meta.env.DEV) {
+  import('./mock')
+}
 
 // 应用根实例
 const app = createApp(App)
