@@ -590,15 +590,19 @@ const getFileList = (): UploadUserFile[] => {
   return fileList.value
 }
 
+const pasteHandler = (evt: Event): void => {
+  void handlePaste(evt as ClipboardEvent)
+}
+
 onMounted(() => {
   if (props.enablePaste) {
-    document.addEventListener('paste', handlePaste as EventListener)
+    document.addEventListener('paste', pasteHandler)
   }
 })
 
 onUnmounted(() => {
   if (props.enablePaste) {
-    document.removeEventListener('paste', handlePaste as EventListener)
+    document.removeEventListener('paste', pasteHandler)
   }
   if (cropperInstance.value) {
     cropperInstance.value.destroy()

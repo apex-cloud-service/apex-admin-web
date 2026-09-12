@@ -136,7 +136,7 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import FileUpload from '@/components/FileUploadEnhanced.vue'
-import { deleteFile } from '@/api/files'
+import { deleteFile } from '@/api/file'
 import type { FileUploadResult } from '@/types'
 import type { UploadUserFile } from 'element-plus'
 
@@ -165,7 +165,7 @@ const deleting = ref(false)
 const handleUpload1Success = (result: FileUploadResult): void => {
   console.log('示例1 上传成功：', result)
   upload1Result.value = result
-  ElMessage.success(`上传成功：${result.fileName}`)
+  ElMessage.success(`上传成功：${result.objectName}`)
 }
 
 /**
@@ -182,7 +182,7 @@ const handleUpload1Remove = (file: UploadUserFile): void => {
 const handleUpload2Success = (result: FileUploadResult): void => {
   console.log('示例2 上传成功：', result)
   upload2Results.value.push(result)
-  ElMessage.success(`上传成功：${result.fileName}`)
+  ElMessage.success(`上传成功：${result.objectName}`)
 }
 
 /**
@@ -202,7 +202,7 @@ const handleUpload2Remove = (file: UploadUserFile): void => {
 const handleUpload3Success = (result: FileUploadResult): void => {
   console.log('示例3 上传成功：', result)
   upload3Result.value = result
-  ElMessage.success(`上传成功：${result.fileName}`)
+  ElMessage.success(`上传成功：${result.objectName}`)
 }
 
 /**
@@ -219,7 +219,7 @@ const handleUpload3Remove = (file: UploadUserFile): void => {
 const handleUpload4Success = (result: FileUploadResult): void => {
   console.log('示例4 上传成功（已压缩）：', result)
   upload4Result.value = result
-  ElMessage.success(`上传成功（已压缩）：${result.fileName}`)
+  ElMessage.success(`上传成功（已压缩）：${result.objectName}`)
 }
 
 /**
@@ -236,7 +236,7 @@ const handleUpload4Remove = (file: UploadUserFile): void => {
 const handleUpload5Success = (result: FileUploadResult): void => {
   console.log('示例5 上传成功（已裁剪）：', result)
   upload5Result.value = result
-  ElMessage.success(`上传成功（已裁剪）：${result.fileName}`)
+  ElMessage.success(`上传成功（已裁剪）：${result.objectName}`)
 }
 
 /**
@@ -253,7 +253,7 @@ const handleUpload5Remove = (file: UploadUserFile): void => {
 const handleUpload6Success = (result: FileUploadResult): void => {
   console.log('示例6 上传成功（粘贴上传）：', result)
   upload6Result.value = result
-  ElMessage.success(`上传成功（粘贴上传）：${result.fileName}`)
+  ElMessage.success(`上传成功（粘贴上传）：${result.objectName}`)
 }
 
 /**
@@ -289,28 +289,18 @@ const handleClearAll = (): void => {
  * 删除第一个文件
  */
 const handleDeleteFile = async (): Promise<void> => {
-  const fileList = upload1Ref.value?.getFileList()
-  if (!fileList || fileList.length === 0) {
+  const result = upload1Result.value
+  if (!result) {
     ElMessage.warning('没有可删除的文件')
-    return
-  }
-  
-  const firstFile = fileList[0]
-  if (!firstFile.response?.data?.fileId) {
-    ElMessage.warning('文件 ID 不存在')
     return
   }
   
   deleting.value = true
   try {
-    await deleteFile(firstFile.response.data.fileId)
+    await deleteFile(result.bucketName, result.objectName)
     ElMessage.success('删除成功')
-    
-    if (upload1Ref.value) {
-      upload1Ref.value.clearFiles()
-    } else {
-      ElMessage.warning('文件不存在或已被删除')
-    }
+    upload1Ref.value?.clearFiles()
+    upload1Result.value = null
   } catch (error) {
     console.error('删除文件失败：', error)
     ElMessage.error('删除文件失败')
