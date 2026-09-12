@@ -20,6 +20,12 @@ export const staticRoutes: RouteRecordRaw[] = [
     meta: { title: '登录', public: true },
   },
   {
+    path: '/oauth2/callback',
+    name: 'OAuth2Callback',
+    component: () => import('@/views/oauth2/callback.vue'),
+    meta: { title: 'OAuth2 授权回调', public: true, hidden: true },
+  },
+  {
     path: '/',
     name: 'Root',
     component: AdminLayout,
