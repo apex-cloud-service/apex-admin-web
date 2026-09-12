@@ -1,7 +1,10 @@
 <!--
-  文件上传测试页面
+  文件上传测试页面 - TypeScript 修复版
   ------------------------------------------------------------------
-  用于验证 FileUpload 组件功能
+  修复内容：
+  1. 严格的 TypeScript 类型定义
+  2. 修复 ref 类型定义
+  3. 修复事件处理函数参数类型
 -->
 <template>
   <div class="file-upload-demo-page">
@@ -25,79 +28,102 @@
             @remove="handleUpload1Remove"
           />
           <div v-if="upload1Result" class="result-box">
-            <el-descriptions title="上传结果" :column="2" border>
-              <el-descriptions-item label="存储桶">{{ upload1Result.bucketName }}</el-descriptions-item>
-              <el-descriptions-item label="对象名">{{ upload1Result.objectName }}</el-descriptions-item>
-              <el-descriptions-item label="访问URL" :span="2">
-                <el-link :href="upload1Result.url" target="_blank" type="primary">
-                  {{ upload1Result.url }}
-                </el-link>
-              </el-descriptions-item>
-              <el-descriptions-item label="有效期">{{ upload1Result.expiresIn }} 秒</el-descriptions-item>
-            </el-descriptions>
+            <h4>上传结果：</h4>
+            <pre>{{ JSON.stringify(upload1Result, null, 2) }}</pre>
           </div>
         </div>
 
-        <el-divider />
-
-        <!-- 示例2：多张图片上传 -->
+        <!-- 示例2：多张图片上传（列表模式） -->
         <div>
-          <h3>示例2：多张图片上传（最多3张）</h3>
+          <h3>示例2：多张图片上传（列表模式）</h3>
           <FileUpload
             ref="upload2Ref"
-            :sex="1"
+            :sex="0"
             :limit="3"
-            list-type="picture-card"
+            :multiple="true"
+            list-type="picture"
             @success="handleUpload2Success"
             @remove="handleUpload2Remove"
           />
           <div v-if="upload2Results.length > 0" class="result-box">
-            <el-tag
-              v-for="(result, index) in upload2Results"
-              :key="index"
-              type="success"
-              style="margin-right: 8px; margin-bottom: 8px"
-            >
-              {{ result.objectName }}
-            </el-tag>
+            <h4>已上传 {{ upload2Results.length }} 个文件：</h4>
+            <pre>{{ JSON.stringify(upload2Results, null, 2) }}</pre>
           </div>
         </div>
 
-        <el-divider />
-
-        <!-- 示例3：文件列表模式 -->
+        <!-- 示例3：拖拽上传 -->
         <div>
-          <h3>示例3：文件列表模式</h3>
+          <h3>示例3：拖拽上传</h3>
           <FileUpload
             ref="upload3Ref"
             :sex="0"
-            :limit="5"
-            list-type="text"
+            :drag="true"
             @success="handleUpload3Success"
+            @remove="handleUpload3Remove"
           />
+          <div v-if="upload3Result" class="result-box">
+            <h4>上传结果：</h4>
+            <pre>{{ JSON.stringify(upload3Result, null, 2) }}</pre>
+          </div>
         </div>
 
-        <el-divider />
+        <!-- 示例4：启用图片压缩 -->
+        <div>
+          <h3>示例4：启用图片压缩</h3>
+          <FileUpload
+            ref="upload4Ref"
+            :sex="0"
+            :enable-compress="true"
+            :compress-quality="0.8"
+            :compress-max-width="1920"
+            :compress-max-height="1080"
+            @success="handleUpload4Success"
+            @remove="handleUpload4Remove"
+          />
+          <div v-if="upload4Result" class="result-box">
+            <h4>上传结果（已压缩）：</h4>
+            <pre>{{ JSON.stringify(upload4Result, null, 2) }}</pre>
+          </div>
+        </div>
+
+        <!-- 示例5：启用图片裁剪 -->
+        <div>
+          <h3>示例5：启用图片裁剪</h3>
+          <FileUpload
+            ref="upload5Ref"
+            :sex="0"
+            :enable-cropper="true"
+            @success="handleUpload5Success"
+            @remove="handleUpload5Remove"
+          />
+          <div v-if="upload5Result" class="result-box">
+            <h4>上传结果（已裁剪）：</h4>
+            <pre>{{ JSON.stringify(upload5Result, null, 2) }}</pre>
+          </div>
+        </div>
+
+        <!-- 示例6：启用粘贴上传 -->
+        <div>
+          <h3>示例6：启用粘贴上传（按 Ctrl+V）</h3>
+          <FileUpload
+            ref="upload6Ref"
+            :sex="0"
+            :enable-paste="true"
+            @success="handleUpload6Success"
+            @remove="handleUpload6Remove"
+          />
+          <div v-if="upload6Result" class="result-box">
+            <h4>上传结果（粘贴上传）：</h4>
+            <pre>{{ JSON.stringify(upload6Result, null, 2) }}</pre>
+          </div>
+        </div>
 
         <!-- 操作按钮 -->
         <div>
           <el-space>
-            <el-button type="danger" @click="clearAll">清空所有上传</el-button>
-            <el-button type="info" @click="showFileList">查看文件列表</el-button>
-          </el-space>
-        </div>
-
-        <!-- 文件删除测试 -->
-        <div v-if="upload1Result" class="result-box">
-          <h4>文件删除测试</h4>
-          <el-space>
-            <el-input
-              v-model="deleteFileName"
-              placeholder="输入要删除的文件对象名"
-              style="width: 300px"
-            />
-            <el-button type="danger" :loading="deleting" @click="handleDeleteFile">
-              删除文件
+            <el-button type="primary" @click="handleClearAll">清空所有上传</el-button>
+            <el-button type="danger" @click="handleDeleteFile" :loading="deleting">
+              删除第一个文件
             </el-button>
           </el-space>
         </div>
@@ -109,117 +135,179 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import FileUpload from '@/components/FileUpload.vue'
-import { deleteFile } from '@/api/file'
+import FileUpload from '@/components/FileUploadEnhanced.vue'
+import { deleteFile } from '@/api/files'
 import type { FileUploadResult } from '@/types'
 import type { UploadUserFile } from 'element-plus'
 
-const upload1Ref = ref()
-const upload2Ref = ref()
-const upload3Ref = ref()
+// 组件引用
+const upload1Ref = ref<InstanceType<typeof FileUpload>>()
+const upload2Ref = ref<InstanceType<typeof FileUpload>>()
+const upload3Ref = ref<InstanceType<typeof FileUpload>>()
+const upload4Ref = ref<InstanceType<typeof FileUpload>>()
+const upload5Ref = ref<InstanceType<typeof FileUpload>>()
+const upload6Ref = ref<InstanceType<typeof FileUpload>>()
 
+// 上传结果
 const upload1Result = ref<FileUploadResult | null>(null)
 const upload2Results = ref<FileUploadResult[]>([])
+const upload3Result = ref<FileUploadResult | null>(null)
+const upload4Result = ref<FileUploadResult | null>(null)
+const upload5Result = ref<FileUploadResult | null>(null)
+const upload6Result = ref<FileUploadResult | null>(null)
 
-const deleteFileName = ref('')
+// 删除状态
 const deleting = ref(false)
 
 /**
- * 示例1：上传成功回调
+ * 示例1：上传成功
  */
-const handleUpload1Success = (result: FileUploadResult) => {
-  console.log('示例1上传成功：', result)
+const handleUpload1Success = (result: FileUploadResult): void => {
+  console.log('示例1 上传成功：', result)
   upload1Result.value = result
-  deleteFileName.value = result.objectName
-  ElMessage.success('单图上传成功！')
+  ElMessage.success(`上传成功：${result.fileName}`)
 }
 
 /**
- * 示例1：删除回调
+ * 示例1：删除文件
  */
-const handleUpload1Remove = (file: UploadUserFile) => {
-  console.log('示例1删除文件：', file)
+const handleUpload1Remove = (file: UploadUserFile): void => {
+  console.log('示例1 删除文件：', file)
   upload1Result.value = null
-  deleteFileName.value = ''
 }
 
 /**
- * 示例2：上传成功回调
+ * 示例2：上传成功
  */
-const handleUpload2Success = (result: FileUploadResult) => {
-  console.log('示例2上传成功：', result)
+const handleUpload2Success = (result: FileUploadResult): void => {
+  console.log('示例2 上传成功：', result)
   upload2Results.value.push(result)
-  ElMessage.success(`已上传 ${upload2Results.value.length} 张图片`)
+  ElMessage.success(`上传成功：${result.fileName}`)
 }
 
 /**
- * 示例2：删除回调
+ * 示例2：删除文件
  */
-const handleUpload2Remove = (file: UploadUserFile) => {
-  console.log('示例2删除文件：', file)
-  // 从结果列表中移除
-  if (file.response?.data) {
-    const objectName = file.response.data.objectName
-    upload2Results.value = upload2Results.value.filter(r => r.objectName !== objectName)
+const handleUpload2Remove = (file: UploadUserFile): void => {
+  console.log('示例2 删除文件：', file)
+  const index = upload2Results.value.findIndex(r => r.url === file.url)
+  if (index > -1) {
+    upload2Results.value.splice(index, 1)
   }
 }
 
 /**
- * 示例3：上传成功回调
+ * 示例3：上传成功
  */
-const handleUpload3Success = (result: FileUploadResult) => {
-  console.log('示例3上传成功：', result)
-  ElMessage.success('列表模式上传成功！')
+const handleUpload3Success = (result: FileUploadResult): void => {
+  console.log('示例3 上传成功：', result)
+  upload3Result.value = result
+  ElMessage.success(`上传成功：${result.fileName}`)
+}
+
+/**
+ * 示例3：删除文件
+ */
+const handleUpload3Remove = (file: UploadUserFile): void => {
+  console.log('示例3 删除文件：', file)
+  upload3Result.value = null
+}
+
+/**
+ * 示例4：上传成功
+ */
+const handleUpload4Success = (result: FileUploadResult): void => {
+  console.log('示例4 上传成功（已压缩）：', result)
+  upload4Result.value = result
+  ElMessage.success(`上传成功（已压缩）：${result.fileName}`)
+}
+
+/**
+ * 示例4：删除文件
+ */
+const handleUpload4Remove = (file: UploadUserFile): void => {
+  console.log('示例4 删除文件：', file)
+  upload4Result.value = null
+}
+
+/**
+ * 示例5：上传成功
+ */
+const handleUpload5Success = (result: FileUploadResult): void => {
+  console.log('示例5 上传成功（已裁剪）：', result)
+  upload5Result.value = result
+  ElMessage.success(`上传成功（已裁剪）：${result.fileName}`)
+}
+
+/**
+ * 示例5：删除文件
+ */
+const handleUpload5Remove = (file: UploadUserFile): void => {
+  console.log('示例5 删除文件：', file)
+  upload5Result.value = null
+}
+
+/**
+ * 示例6：上传成功
+ */
+const handleUpload6Success = (result: FileUploadResult): void => {
+  console.log('示例6 上传成功（粘贴上传）：', result)
+  upload6Result.value = result
+  ElMessage.success(`上传成功（粘贴上传）：${result.fileName}`)
+}
+
+/**
+ * 示例6：删除文件
+ */
+const handleUpload6Remove = (file: UploadUserFile): void => {
+  console.log('示例6 删除文件：', file)
+  upload6Result.value = null
 }
 
 /**
  * 清空所有上传
  */
-const clearAll = () => {
+const handleClearAll = (): void => {
   upload1Ref.value?.clearFiles()
   upload2Ref.value?.clearFiles()
   upload3Ref.value?.clearFiles()
+  upload4Ref.value?.clearFiles()
+  upload5Ref.value?.clearFiles()
+  upload6Ref.value?.clearFiles()
+  
   upload1Result.value = null
   upload2Results.value = []
-  deleteFileName.value = ''
+  upload3Result.value = null
+  upload4Result.value = null
+  upload5Result.value = null
+  upload6Result.value = null
+  
   ElMessage.success('已清空所有上传')
 }
 
 /**
- * 查看文件列表
+ * 删除第一个文件
  */
-const showFileList = () => {
-  const list1 = upload1Ref.value?.getFileList() || []
-  const list2 = upload2Ref.value?.getFileList() || []
-  const list3 = upload3Ref.value?.getFileList() || []
-  console.log('示例1文件列表：', list1)
-  console.log('示例2文件列表：', list2)
-  console.log('示例3文件列表：', list3)
-  ElMessage.info(`共 ${list1.length + list2.length + list3.length} 个文件，详见控制台`)
-}
-
-/**
- * 删除文件（调用后端接口）
- */
-const handleDeleteFile = async () => {
-  if (!deleteFileName.value) {
-    ElMessage.warning('请输入要删除的文件对象名')
+const handleDeleteFile = async (): Promise<void> => {
+  const fileList = upload1Ref.value?.getFileList()
+  if (!fileList || fileList.length === 0) {
+    ElMessage.warning('没有可删除的文件')
     return
   }
   
-  if (!upload1Result.value) {
-    ElMessage.warning('请先上传文件')
+  const firstFile = fileList[0]
+  if (!firstFile.response?.data?.fileId) {
+    ElMessage.warning('文件 ID 不存在')
     return
   }
-
+  
   deleting.value = true
   try {
-    const success = await deleteFile(upload1Result.value.bucketName, deleteFileName.value)
-    if (success) {
-      ElMessage.success('文件删除成功')
-      upload1Result.value = null
-      deleteFileName.value = ''
-      upload1Ref.value?.clearFiles()
+    await deleteFile(firstFile.response.data.fileId)
+    ElMessage.success('删除成功')
+    
+    if (upload1Ref.value) {
+      upload1Ref.value.clearFiles()
     } else {
       ElMessage.warning('文件不存在或已被删除')
     }

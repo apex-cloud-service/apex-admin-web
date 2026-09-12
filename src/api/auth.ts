@@ -91,3 +91,8 @@ export async function getMyPermissions(): Promise<string[]> {
     .map((p) => (typeof p === 'string' ? p : (p as PermissionCode).code))
     .filter((c): c is string => !!c)
 }
+
+
+export function refreshToken(refreshToken: string): Promise<LoginResult> {
+  return post<LoginResult>('/api/v1/auth/refresh', { refreshToken, deviceId: 'apex-admin-web', platform: 'web' })
+}

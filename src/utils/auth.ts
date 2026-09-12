@@ -4,7 +4,7 @@
  * 负责 Token / 用户身份 / 权限集合的 localStorage 读写，
  * 供 store 层与请求层共用。
  */
-import { TOKEN_KEY, IDENTITY_KEY } from '@/settings'
+import { REFRESH_TOKEN_KEY, TOKEN_KEY, IDENTITY_KEY } from '@/settings'
 import type { UserIdentity } from '@/types'
 
 /**
@@ -21,6 +21,18 @@ export function getToken(): string {
  */
 export function setToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token)
+}
+
+export function getRefreshToken(): string {
+  return localStorage.getItem(REFRESH_TOKEN_KEY) || ''
+}
+
+export function setRefreshToken(token: string): void {
+  localStorage.setItem(REFRESH_TOKEN_KEY, token)
+}
+
+export function removeRefreshToken(): void {
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
 }
 
 /**
@@ -66,5 +78,6 @@ export function removeIdentity(): void {
  */
 export function clearSession(): void {
   removeToken()
+  removeRefreshToken()
   removeIdentity()
 }

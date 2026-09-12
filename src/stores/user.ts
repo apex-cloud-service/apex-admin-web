@@ -5,7 +5,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getToken, setToken, clearSession, setIdentity, getIdentity } from '@/utils/auth'
+import { getToken, setToken, setRefreshToken, clearSession, setIdentity, getIdentity } from '@/utils/auth'
 import { login as loginApi, logout as logoutApi, getMyPermissions, getMyRoles } from '@/api/auth'
 import { getCurrentUserInfo } from '@/api/user'
 import type { LoginResult, UserIdentity } from '@/types'
@@ -46,6 +46,7 @@ export const useUserStore = defineStore('user', () => {
     })
     token.value = result.accessToken
     setToken(result.accessToken)
+    if (result.refreshToken) setRefreshToken(result.refreshToken)
     // 登录成功后拉取身份与权限
     await loadIdentity()
     return result

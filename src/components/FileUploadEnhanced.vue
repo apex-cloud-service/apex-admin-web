@@ -1,28 +1,11 @@
 <!--
-  文件上传组件（增强版）
+  文件上传组件（增强版）- TypeScript 修复版
   ------------------------------------------------------------------
-  基于 Element Plus el-upload 封装的增强版文件上传组件。
-  
-  增强功能：
-  - ✅ 图片预览放大（el-image-viewer）
-  - ✅ 上传进度条美化
-  - ✅ 上传前图片压缩
-  - ✅ 上传前图片裁剪（可选）
-  - ✅ 粘贴上传（Ctrl+V）
-  - ✅ 支持视频上传
-  - ✅ 拖拽上传
-  
-  使用示例：
-  ```vue
-  <FileUploadEnhanced 
-    :sex="0" 
-    :limit="3"
-    :enable-compress="true"
-    :enable-cropper="true"
-    :enable-paste="true"
-    @success="handleUploadSuccess"
-  />
-  ```
+  修复内容：
+  1. 严格的 TypeScript 类型定义
+  2. 修复 emit 事件类型
+  3. 修复 ref 类型定义
+  4. 修复事件处理函数参数类型
 -->
 <template>
   <div 
@@ -150,7 +133,7 @@ import { Plus, Upload, UploadFilled } from '@element-plus/icons-vue'
 import { getToken } from '@/utils/auth'
 import { MAX_UPLOAD_SIZE } from '@/settings'
 import type { FileUploadResult } from '@/types'
-import type { UploadProps, UploadUserFile, UploadProgressEvent } from 'element-plus'
+import type { UploadProps, UploadUserFile, UploadProgressEvent, UploadRawFile } from 'element-plus'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 
@@ -188,8 +171,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  success: [result: FileUploadResult]
-  remove: [file: UploadUserFile]
+  (e: 'success', result: FileUploadResult): void
+  (e: 'remove', file: UploadUserFile): void
 }>()
 
 const fileList = ref<UploadUserFile[]>([])
@@ -222,7 +205,7 @@ let pendingFile: File | null = null
 
 const progressVisible = ref(false)
 const uploadProgress = ref(0)
-const uploadStatus = ref<'success' | 'exception' | 'warning' | ''>('')
+const uploadStatus = ref<'' | 'success' | 'exception' | 'warning'>('')
 const uploadProgressText = ref('')
 
 /**
@@ -236,7 +219,7 @@ const compressImage = (file: File): Promise<File> => {
     }
 
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = (e: ProgressEvent<FileReader>) => {
       const img = new Image()
       img.onload = () => {
         const canvas = document.createElement('canvas')
@@ -301,12 +284,12 @@ const compressImage = (file: File): Promise<File> => {
 /**
  * 显示裁剪对话框
  */
-const showCropper = (file: File): Promise<File> => {
+const showCropper = (file: File): Promise<void> => {
   return new Promise((resolve, reject) => {
     pendingFile = file
     
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = (e: ProgressEvent<FileReader>) => {
       cropperImageSrc.value = e.target?.result as string
       cropperVisible.value = true
       
@@ -326,6 +309,7 @@ const showCropper = (file: File): Promise<File> => {
             toggleDragModeOnDblclick: false,
           })
         }
+        resolve()
       })
     }
     reader.onerror = () => reject(new Error('文件读取失败'))
@@ -336,7 +320,7 @@ const showCropper = (file: File): Promise<File> => {
 /**
  * 取消裁剪
  */
-const handleCropperCancel = () => {
+const handleCropperCancel = (): void => {
   cropperVisible.value = false
   if (cropperInstance.value) {
     cropperInstance.value.destroy()
@@ -348,7 +332,7 @@ const handleCropperCancel = () => {
 /**
  * 确认裁剪
  */
-const handleCropperConfirm = async () => {
+const handleCropperConfirm = async (): Promise<void> => {
   if (!cropperInstance.value || !pendingFile) return
   
   cropping.value = true
@@ -368,8 +352,10 @@ const handleCropperConfirm = async () => {
     })
     
     cropperVisible.value = false
-    cropperInstance.value.destroy()
-    cropperInstance.value = undefined
+    if (cropperInstance.value) {
+      cropperInstance.value.destroy()
+      cropperInstance.value = undefined
+    }
     
     await uploadProcessedFile(croppedFile)
   } catch (error) {
@@ -384,7 +370,7 @@ const handleCropperConfirm = async () => {
 /**
  * 上传处理后的文件
  */
-const uploadProcessedFile = async (file: File) => {
+const uploadProcessedFile = async (file: File): Promise<void> => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('sex', String(props.sex))
@@ -397,7 +383,7 @@ const uploadProcessedFile = async (file: File) => {
   try {
     const xhr = new XMLHttpRequest()
     
-    xhr.upload.addEventListener('progress', (e) => {
+    xhr.upload.addEventListener('progress', (e: ProgressEvent) => {
       if (e.lengthComputable) {
         uploadProgress.value = Math.round((e.loaded / e.total) * 100)
         uploadProgressText.value = `正在上传... ${uploadProgress.value}%`
@@ -459,26 +445,26 @@ const uploadProcessedFile = async (file: File) => {
 /**
  * 上传前校验和处理
  */
-const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
-  if (file.size > MAX_UPLOAD_SIZE) {
+const beforeUpload: UploadProps['beforeUpload'] = async (rawFile: UploadRawFile): Promise<boolean | File> => {
+  if (rawFile.size > MAX_UPLOAD_SIZE) {
     ElMessage.error(`文件大小不能超过 ${maxSizeMB} MB`)
     return false
   }
   
   const allowedTypes = props.accept.split(',').map(t => t.trim())
-  if (!allowedTypes.includes(file.type)) {
+  if (!allowedTypes.includes(rawFile.type)) {
     ElMessage.error(`仅支持上传 ${acceptText.value} 格式的文件`)
     return false
   }
   
   try {
-    let processedFile = file
+    let processedFile: File = rawFile
     
-    if (props.enableCompress && file.type.startsWith('image/')) {
-      processedFile = await compressImage(file)
+    if (props.enableCompress && rawFile.type.startsWith('image/')) {
+      processedFile = await compressImage(rawFile)
     }
     
-    if (props.enableCropper && file.type.startsWith('image/')) {
+    if (props.enableCropper && rawFile.type.startsWith('image/')) {
       await showCropper(processedFile)
       return false
     }
@@ -494,10 +480,10 @@ const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
 /**
  * 上传进度
  */
-const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent) => {
+const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent): void => {
   if (!props.enableCropper) {
     progressVisible.value = true
-    uploadProgress.value = Math.round(event.percent)
+    uploadProgress.value = Math.round(event.percent || 0)
     uploadStatus.value = ''
     uploadProgressText.value = `正在上传... ${uploadProgress.value}%`
   }
@@ -506,7 +492,7 @@ const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent) =
 /**
  * 上传成功
  */
-const handleSuccess: UploadProps['onSuccess'] = (response: any, uploadFile: any) => {
+const handleSuccess: UploadProps['onSuccess'] = (response: any, uploadFile: UploadUserFile): void => {
   if (!props.enableCropper) {
     if (response.code === 0) {
       uploadStatus.value = 'success'
@@ -542,7 +528,7 @@ const handleSuccess: UploadProps['onSuccess'] = (response: any, uploadFile: any)
 /**
  * 上传失败
  */
-const handleError: UploadProps['onError'] = (error: Error) => {
+const handleError: UploadProps['onError'] = (error: Error): void => {
   console.error('上传失败：', error)
   
   uploadStatus.value = 'exception'
@@ -557,14 +543,14 @@ const handleError: UploadProps['onError'] = (error: Error) => {
 /**
  * 删除文件
  */
-const handleRemove: UploadProps['onRemove'] = (file) => {
+const handleRemove: UploadProps['onRemove'] = (file: UploadUserFile): void => {
   emit('remove', file)
 }
 
 /**
  * 粘贴上传
  */
-const handlePaste = async (e: ClipboardEvent) => {
+const handlePaste = async (e: ClipboardEvent): Promise<void> => {
   if (!props.enablePaste) return
   
   const items = e.clipboardData?.items
@@ -577,7 +563,7 @@ const handlePaste = async (e: ClipboardEvent) => {
       if (file) {
         e.preventDefault()
         
-        const result = await beforeUpload(file)
+        const result = await beforeUpload(file as UploadRawFile)
         if (result === false) return
         
         const processedFile = result instanceof File ? result : file
@@ -593,26 +579,26 @@ const handlePaste = async (e: ClipboardEvent) => {
 /**
  * 清空文件列表
  */
-const clearFiles = () => {
+const clearFiles = (): void => {
   fileList.value = []
 }
 
 /**
  * 获取已上传文件列表
  */
-const getFileList = () => {
+const getFileList = (): UploadUserFile[] => {
   return fileList.value
 }
 
 onMounted(() => {
   if (props.enablePaste) {
-    document.addEventListener('paste', handlePaste)
+    document.addEventListener('paste', handlePaste as EventListener)
   }
 })
 
 onUnmounted(() => {
   if (props.enablePaste) {
-    document.removeEventListener('paste', handlePaste)
+    document.removeEventListener('paste', handlePaste as EventListener)
   }
   if (cropperInstance.value) {
     cropperInstance.value.destroy()

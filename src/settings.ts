@@ -8,6 +8,9 @@
 /** 会话 Token 的 localStorage 键 */
 export const TOKEN_KEY = 'apex.admin.token'
 
+/** 刷新令牌的 localStorage 键 */
+export const REFRESH_TOKEN_KEY = 'apex.admin.refresh-token'
+
 /** 用户身份缓存的 localStorage 键 */
 export const IDENTITY_KEY = 'apex.admin.identity'
 

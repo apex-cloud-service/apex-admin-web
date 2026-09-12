@@ -11,7 +11,8 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
 import { CODE_UNAUTHORIZED, RESULT_SUCCESS } from '@/settings'
-import { getToken, clearSession } from '@/utils/auth'
+import { getRefreshToken, getToken, setRefreshToken, setToken, clearSession } from '@/utils/auth'
+import { refreshToken } from '@/api/auth'
 import type { Result } from '@/types'
 
 /** 业务异常：携带后端错误码与链路追踪 ID */
@@ -28,6 +29,8 @@ export class ApiError extends Error {
 }
 
 /** axios 实例：baseURL 支持生产环境注入网关地址 */
+let refreshPromise: Promise<string> | null = null
+
 const service = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
   timeout: 30000,
@@ -58,6 +61,8 @@ function handleUnauthorized(): void {
 /** 响应拦截：统一解包 Result 结构 */
 service.interceptors.response.use(
   (response: AxiosResponse<Result>) => {
+    const newToken = response.headers['x-new-access-token']
+    if (newToken) setToken(newToken)
     const result = response.data
     // HTTP 200 且业务成功（code === 0）→ 直接返回业务数据
     if (result && typeof result.code === 'number') {
@@ -74,6 +79,23 @@ service.interceptors.response.use(
   (error) => {
     // HTTP 层错误处理
     const status = error.response?.status
+    if (status === CODE_UNAUTHORIZED && !error.config?.url?.includes('/auth/refresh') && getRefreshToken()) {
+      if (!refreshPromise) {
+        refreshPromise = refreshToken(getRefreshToken()).then((result) => {
+          setToken(result.accessToken)
+          if (result.refreshToken) setRefreshToken(result.refreshToken)
+          return result.accessToken
+        }).finally(() => { refreshPromise = null })
+      }
+      return refreshPromise.then((newToken) => {
+        const config = error.config
+        config.headers.Authorization = `Bearer ${newToken}`
+        return service.request(config)
+      }).catch(() => {
+        handleUnauthorized()
+        return Promise.reject(new ApiError('登录状态已失效，请重新登录', status))
+      })
+    }
     if (status === CODE_UNAUTHORIZED) {
       handleUnauthorized()
       return Promise.reject(new ApiError('登录状态已失效，请重新登录', status))
