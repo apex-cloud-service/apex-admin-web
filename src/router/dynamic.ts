@@ -37,6 +37,8 @@ const VIEW_REGISTRY: Record<string, () => Promise<unknown>> = {
   'profile/index': () => import('@/views/profile/index.vue'),
   'dashboard/index': () => import('@/views/dashboard/index.vue'),
   'workflow/monitor/index': () => import('@/views/workflow/monitor/index.vue'),
+  'data/document/index': () => import('@/views/data/document/index.vue'),
+  'data/chart/index': () => import('@/views/data/chart/index.vue'),
 }
 
 /**

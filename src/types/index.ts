@@ -267,6 +267,64 @@ export interface AuditLog {
   createTime?: string
 }
 
+/** 文档信息（/admin-api/v1/documents） */
+export interface Document {
+  id: string
+  title: string
+  docType: string
+  category?: string
+  content?: string
+  fileUrl?: string
+  fileSize?: number
+  authorId?: string
+  authorName?: string
+  status: number
+  tags?: string[]
+  viewCount?: number
+  downloadCount?: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 图表信息（/admin-api/v1/charts） */
+export interface Chart {
+  id: string
+  chartName: string
+  chartType: string
+  category?: string
+  description?: string
+  dataSource?: string
+  config?: Record<string, unknown>
+  status: number
+  creatorId?: string
+  creatorName?: string
+  viewCount?: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 图表数据（/admin-api/v1/charts/{id}/data） */
+export interface ChartData {
+  chartId: string
+  chartType: string
+  title?: string
+  xAxis?: string[]
+  series?: ChartSeries[]
+  legend?: string[]
+  tooltip?: Record<string, unknown>
+  grid?: Record<string, unknown>
+}
+
+/** 图表数据系列 */
+export interface ChartSeries {
+  name: string
+  type: string
+  data: (number | string | null)[]
+  itemStyle?: Record<string, unknown>
+  lineStyle?: Record<string, unknown>
+  areaStyle?: Record<string, unknown>
+}
+
 /** API 调用日志（/admin-api/v1/api-call-logs） */
 export interface ApiCallLog {
   id: number
