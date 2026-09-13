@@ -153,12 +153,13 @@ export function del<T = unknown>(url: string, params?: Record<string, unknown>):
 /**
  * 统一错误提示（业务异常展示 traceId 便于排障）。
  * @param error 捕获的异常对象
+ * @param defaultMsg 自定义默认错误提示
  */
-export function showError(error: unknown): void {
+export function showError(error: unknown, defaultMsg?: string): void {
   if (error instanceof ApiError) {
     const trace = error.traceId ? `（traceId: ${error.traceId}）` : ''
     ElMessage.error(`${error.message}${trace}`)
   } else {
-    ElMessage.error('操作失败，请稍后重试')
+    ElMessage.error(defaultMsg || '操作失败，请稍后重试')
   }
 }

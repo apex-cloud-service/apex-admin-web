@@ -7,7 +7,7 @@
  * - 参数配置/定时任务列表接口后端返回全量数组（非分页）
  */
 import { del, get, post, put } from '@/utils/request'
-import type { DeptNode, DictData, DictType, JobLog, MenuNode, SysConfig, SysJob } from '@/types'
+import type { DeptNode, DictData, DictType, JobLog, MenuNode, PageResponse, SysConfig, SysJob } from '@/types'
 
 /* ==================== 菜单管理 ==================== */
 
@@ -240,9 +240,56 @@ export interface JobPayload {
   remark?: string
 }
 
-/** 查询定时任务列表（后端返回全量数组） */
+
+/**
+ * 定时任务查询参数（支持分页和筛选）
+ */
+export interface JobQueryParams extends Record<string, unknown> {
+  /** 当前页码 */
+  pageNum: number
+  /** 每页条数 */
+  pageSize: number
+  /** 任务名称（模糊匹配） */
+  jobName?: string
+  /** 任务分组（精确匹配） */
+  jobGroup?: string
+  /** 任务状态（0-禁用，1-启用） */
+  status?: number
+}
+
+/**
+ * 查询定时任务列表（后端返回全量数组）
+ * @returns 定时任务列表
+ */
 export function listJobs(): Promise<SysJob[]> {
   return get<SysJob[]>('/admin-api/v1/jobs')
+}
+
+/**
+ * 分页查询定时任务列表
+ * 
+ * @param params 查询参数（支持分页、任务名称、分组、状态筛选）
+ * @returns 分页结果
+ * 
+ * @example
+ * ```typescript
+ * // 查询第1页，每页20条
+ * const result = await pageJobs({ pageNum: 1, pageSize: 20 })
+ * 
+ * // 按任务名称筛选
+ * const result = await pageJobs({ pageNum: 1, pageSize: 20, jobName: '数据同步' })
+ * 
+ * // 按分组和状态筛选
+ * const result = await pageJobs({ 
+ *   pageNum: 1, 
+ *   pageSize: 20, 
+ *   jobGroup: 'DEFAULT',
+ *   status: 1 
+ * })
+ * ```
+ */
+export function pageJobs(params: JobQueryParams): Promise<PageResponse<SysJob>> {
+  return get<PageResponse<SysJob>>('/admin-api/v1/jobs/page', params)
 }
 
 /** 创建定时任务 */
