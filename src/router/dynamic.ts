@@ -40,6 +40,14 @@ const VIEW_REGISTRY: Record<string, () => Promise<unknown>> = {
   'workflow/monitor/index': () => import('@/views/workflow/monitor/index.vue'),
   'data/document/index': () => import('@/views/data/document/index.vue'),
   'data/chart/index': () => import('@/views/data/chart/index.vue'),
+  'office/message/index': () => import('@/views/office/message/index.vue'),
+  'office/approval/index': () => import('@/views/office/approval/index.vue'),
+  'office/config/index': () => import('@/views/office/config/index.vue'),
+  'office/bindings/index': () => import('@/views/office/bindings/index.vue'),
+  'office/console/index': () => import('@/views/office/console/index.vue'),
+  'office/organization/index': () => import('@/views/office/organization/index.vue'),
+  'office/calendar/index': () => import('@/views/office/calendar/index.vue'),
+  'office/document/index': () => import('@/views/office/document/index.vue'),
 }
 
 /**
