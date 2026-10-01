@@ -36,10 +36,10 @@
 
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| 增强组件 | [src/components/FileUploadEnhanced.vue](file:///Users/work/apex-admin-web/src/components/FileUploadEnhanced.vue) | 增强版上传组件（588行） |
-| 测试页面 | [src/views/demo/FileUploadEnhancedDemo.vue](file:///Users/work/apex-admin-web/src/views/demo/FileUploadEnhancedDemo.vue) | 功能演示页面 |
-| 路由配置 | [src/router/index.ts](file:///Users/work/apex-admin-web/src/router/index.ts) | 路由注册 |
-| 依赖库 | package.json | cropperjs ^1.6.2 |
+| 增强组件 | [src/components/FileUploadEnhanced.vue](../../src/components/FileUploadEnhanced.vue) | 增强版上传组件 |
+| 测试页面 | [src/views/demo/FileUploadEnhancedDemo.vue](../../src/views/demo/FileUploadEnhancedDemo.vue) | 功能演示页面 |
+| 路由配置 | [src/router/index.ts](../../src/router/index.ts) | 路由注册 |
+| 依赖库 | package.json | cropperjs ^1.6.3 |
 
 ---
 
@@ -689,10 +689,8 @@ const addWatermark = (canvas: HTMLCanvasElement, text: string) => {
 
 | 对比项 | 基础版 | 增强版 |
 |--------|--------|--------|
-| 代码行数 | 209 | 588 |
 | 功能数量 | 7 | 13 |
 | 依赖库 | 0 | 1 (cropperjs) |
-| 文件大小 | 5.2KB | 14.8KB |
 | 用户体验 | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
 
 ### 11.2 推荐使用场景

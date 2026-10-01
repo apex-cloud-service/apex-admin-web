@@ -7,28 +7,42 @@ import { get, post } from '@/utils/request'
 import type { PageResponse } from '@/types'
 
 /**
- * 搜索结果接口
+ * 搜索结果项（后端 SearchHitResponse）
  */
 export interface SearchResult {
+  /** 资源类型（user/role/menu/dept/dict/config） */
   resourceType: string
+  /** 资源 ID（跳转定位用，随 ?id= 传递） */
   resourceId: string
+  /** 结果标题 */
   title: string
+  /** 副标题（如用户所属部门） */
   subtitle: string
+  /** 结果描述 */
   description: string
+  /** 命中关键词的高亮片段 */
   highlightSnippet: string
+  /** 相关度评分（Meilisearch 排序依据） */
   score: number
+  /** 资源状态 */
   status: number
+  /** 创建时间 */
   createdAt: string
+  /** 更新时间 */
   updatedAt: string
 }
 
 /**
- * 搜索参数
+ * 搜索请求参数
  */
 export interface SearchParams {
+  /** 搜索关键词（必填） */
   keyword: string
+  /** 限定搜索的资源类型（缺省搜全部类型） */
   types?: string[]
+  /** 页码（从 1 开始） */
   page?: number
+  /** 每页条数 */
   size?: number
 }
 

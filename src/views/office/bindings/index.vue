@@ -1,3 +1,13 @@
+<!--
+  办公平台绑定页面
+  ------------------------------------------------------------------
+  功能：用户与办公平台账号绑定、解绑操作
+  
+  权限：
+    - office:binding:view - 查看绑定状态
+    - office:binding:bind - 绑定账号
+    - office:binding:unbind - 解绑账号
+-->
 <template>
   <div class="office-bindings-container">
     <el-card class="header-card">
@@ -13,7 +23,7 @@
             <el-option
               v-for="platform in platforms"
               :key="platform"
-              :label="PLATFORM_NAMES[platform]"
+              :label="PLATFORM_NAMES[platform as OfficePlatform]"
               :value="platform"
             />
           </el-select>
@@ -38,7 +48,7 @@
         <el-table-column label="平台" width="120">
           <template #default="{ row }">
             <el-tag :type="getPlatformTagType(row.platform)">
-              {{ PLATFORM_NAMES[row.platform] }}
+              {{ PLATFORM_NAMES[row.platform as OfficePlatform] }}
             </el-tag>
           </template>
         </el-table-column>
@@ -105,6 +115,11 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 办公平台绑定审批页逻辑
+ * - 按平台+状态查询绑定申请，支持批准/拒绝（PENDING）与解绑（APPROVED）
+ * - 审批与解绑均携带 version 乐观锁，冲突时后端拒绝
+ */
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
@@ -117,30 +132,49 @@ import {
   type OfficeBindingResponse,
 } from '@/api/office-new'
 
+/** ========== 状态定义 ========== */
+
+/** 可选平台列表（与后端枚举一致） */
 const platforms: OfficePlatform[] = ['FEISHU', 'DINGTALK', 'WECOM']
+/** 列表请求进行中 */
 const loading = ref(false)
+/** 绑定记录列表 */
 const bindings = ref<OfficeBindingResponse[]>([])
 
+/** 查询条件（平台 + 状态） */
 const queryForm = reactive({
   platform: '' as OfficePlatform | '',
   status: '',
 })
 
+/** 分页状态（页码/条数/总数） */
 const pagination = reactive({
   page: 1,
   size: 20,
   total: 0,
 })
 
+/** ========== 展示辅助 ========== */
+
+/**
+ * 平台对应的标签颜色
+ * @param platform 平台类型
+ * @returns el-tag 类型
+ */
 const getPlatformTagType = (platform: OfficePlatform) => {
   const typeMap: Record<OfficePlatform, any> = {
     FEISHU: 'primary',
     DINGTALK: 'success',
     WECOM: 'warning',
   }
-  return typeMap[platform] || ''
+  return typeMap[platform as OfficePlatform] || ''
 }
 
+/**
+ * 绑定状态对应的标签颜色
+ * @param status 绑定状态
+ * @returns el-tag 类型
+ */
 const getStatusTagType = (status: string) => {
   const typeMap: Record<string, any> = {
     PENDING: 'warning',
@@ -151,6 +185,11 @@ const getStatusTagType = (status: string) => {
   return typeMap[status] || 'info'
 }
 
+/**
+ * 绑定状态的中文文案
+ * @param status 绑定状态
+ * @returns 中文文案（未知状态原样返回）
+ */
 const getStatusText = (status: string) => {
   const textMap: Record<string, string> = {
     PENDING: '待审批',
@@ -161,6 +200,11 @@ const getStatusText = (status: string) => {
   return textMap[status] || status
 }
 
+/** ========== 查询操作 ========== */
+
+/**
+ * 加载绑定列表（必须先选择平台；后端暂未返回 total，以当前页条数模拟）
+ */
 const loadBindings = async () => {
   if (!queryForm.platform) {
     ElMessage.warning('请选择平台')
@@ -184,11 +228,17 @@ const loadBindings = async () => {
   }
 }
 
+/**
+ * 查询：重置回第一页后加载
+ */
 const handleQuery = () => {
   pagination.page = 1
   loadBindings()
 }
 
+/**
+ * 重置查询条件并清空列表
+ */
 const handleReset = () => {
   queryForm.platform = ''
   queryForm.status = ''
@@ -196,10 +246,16 @@ const handleReset = () => {
   pagination.total = 0
 }
 
+/** ========== 审批与解绑操作 ========== */
+
+/**
+ * 批准绑定申请（二次确认 + version 乐观锁）
+ * @param row 目标绑定记录
+ */
 const handleApprove = async (row: OfficeBindingResponse) => {
   try {
     await ElMessageBox.confirm(
-      `确定要批准用户 ${row.userId} 与 ${PLATFORM_NAMES[row.platform]} 的绑定吗？`,
+      `确定要批准用户 ${row.userId} 与 ${PLATFORM_NAMES[row.platform as OfficePlatform]} 的绑定吗？`,
       '批准绑定',
       {
         type: 'success',
@@ -220,10 +276,14 @@ const handleApprove = async (row: OfficeBindingResponse) => {
   }
 }
 
+/**
+ * 拒绝绑定申请（二次确认 + version 乐观锁）
+ * @param row 目标绑定记录
+ */
 const handleReject = async (row: OfficeBindingResponse) => {
   try {
     await ElMessageBox.confirm(
-      `确定要拒绝用户 ${row.userId} 与 ${PLATFORM_NAMES[row.platform]} 的绑定吗？`,
+      `确定要拒绝用户 ${row.userId} 与 ${PLATFORM_NAMES[row.platform as OfficePlatform]} 的绑定吗？`,
       '拒绝绑定',
       {
         type: 'warning',
@@ -244,10 +304,14 @@ const handleReject = async (row: OfficeBindingResponse) => {
   }
 }
 
+/**
+ * 解除已批准的绑定（二次确认 + version 乐观锁，解绑后无法再通过该平台登录）
+ * @param row 目标绑定记录
+ */
 const handleUnbind = async (row: OfficeBindingResponse) => {
   try {
     await ElMessageBox.confirm(
-      `确定要解绑用户 ${row.userId} 与 ${PLATFORM_NAMES[row.platform]} 的账号吗？解绑后用户将无法通过该平台登录。`,
+      `确定要解绑用户 ${row.userId} 与 ${PLATFORM_NAMES[row.platform as OfficePlatform]} 的账号吗？解绑后用户将无法通过该平台登录。`,
       '解绑账号',
       {
         type: 'error',
@@ -264,6 +328,7 @@ const handleUnbind = async (row: OfficeBindingResponse) => {
   }
 }
 
+// 默认不加载列表，等用户先选择平台再查询
 onMounted(() => {
   // 默认不加载，等用户选择平台
 })

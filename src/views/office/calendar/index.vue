@@ -1,3 +1,14 @@
+<!--
+  办公平台日历管理页面
+  ------------------------------------------------------------------
+  功能：日历事件管理、会议预约、会议室预订
+  
+  权限：
+    - office:calendar:view - 查看日历事件
+    - office:calendar:create - 创建日历事件
+    - office:calendar:edit - 编辑日历事件
+    - office:calendar:delete - 删除日历事件
+-->
 <template>
   <div class="office-calendar-container">
     <el-card class="header-card">
@@ -55,7 +66,7 @@
         <el-table-column label="平台" width="100">
           <template #default="{ row }">
             <el-tag :type="getPlatformTagType(row.platform)">
-              {{ PLATFORM_NAMES[row.platform] }}
+              {{ PLATFORM_NAMES[row.platform as unknown as keyof typeof PLATFORM_NAMES] }}
             </el-tag>
           </template>
         </el-table-column>
@@ -241,6 +252,26 @@
   </div>
 </template>
 
+/**
+ * 日历管理页面
+ * ------------------------------------------------------------------
+ * 功能说明:
+ * 1. 日历视图 - 以月历形式展示日历事件
+ * 2. 事件列表 - 查看和管理日历事件
+ * 3. 创建事件 - 支持飞书、钉钉、企业微信三大平台
+ * 4. 编辑事件 - 修改事件时间、标题、参与者等信息
+ * 5. 删除事件 - 删除不需要的日历事件
+ * 6. 查看详情 - 查看事件的详细信息
+ * 
+ * 权限要求:
+ * - office:calendar:view - 查看权限(必需)
+ * - office:calendar:create - 创建日历事件
+ * - office:calendar:edit - 编辑日历事件
+ * - office:calendar:delete - 删除日历事件
+ * 
+ * @author system
+ * @date 2024
+ */
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
@@ -258,13 +289,16 @@ import {
   type UpdateEventRequest,
   type CalendarEventsQuery,
 } from '@/api/office'
+import { listUsers } from '@/api/user'
 
-// 响应式数据
+// ==================== 页面状态管理 ====================
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
 const detailVisible = ref(false)
 const isEdit = ref(false)
+
+// ==================== 日历相关数据 ====================
 const currentDate = ref(new Date())
 const eventList = ref<CalendarEvent[]>([])
 const allEvents = ref<CalendarEvent[]>([])
@@ -273,7 +307,7 @@ const currentEvent = ref<CalendarEvent>()
 const formRef = ref<FormInstance>()
 const userList = ref<Array<{ id: string; name: string }>>([])
 
-// 查询参数
+// ==================== 查询参数 ====================
 const queryParams = reactive<CalendarEventsQuery>({
   platform: undefined,
   status: undefined,
@@ -283,7 +317,8 @@ const queryParams = reactive<CalendarEventsQuery>({
   pageSize: 20,
 })
 
-// 表单数据
+// ==================== 表单数据 ====================
+// 默认表单数据生成器
 const defaultFormData = (): CreateEventRequest & Partial<UpdateEventRequest> => ({
   platform: 'FEISHU',
   title: '',
@@ -296,9 +331,10 @@ const defaultFormData = (): CreateEventRequest & Partial<UpdateEventRequest> => 
   reminderMinutes: 15,
 })
 
+// 日历事件表单数据
 const formData = reactive<CreateEventRequest & Partial<UpdateEventRequest>>(defaultFormData())
 
-// 表单验证规则
+// 日历事件表单验证规则
 const formRules: FormRules = {
   platform: [{ required: true, message: '请选择平台', trigger: 'change' }],
   title: [{ required: true, message: '请输入事件标题', trigger: 'blur' }],
@@ -310,7 +346,9 @@ const formRules: FormRules = {
 // 计算属性
 const dialogTitle = computed(() => (isEdit.value ? '编辑事件' : '创建事件'))
 
-// 方法
+/**
+ * 加载日历事件列表
+ */
 const handleQuery = async () => {
   loading.value = true
   try {
@@ -395,6 +433,9 @@ const handleView = async (row: CalendarEvent) => {
   }
 }
 
+/**
+ * 删除日历事件
+ */
 const handleDelete = async (row: CalendarEvent) => {
   try {
     await ElMessageBox.confirm(`确定要删除事件"${row.title}"吗？`, '提示', {
@@ -410,6 +451,9 @@ const handleDelete = async (row: CalendarEvent) => {
   }
 }
 
+/**
+ * 提交日历事件表单(新增或编辑)
+ */
 const handleSubmit = async () => {
   if (!formRef.value) return
   
@@ -501,9 +545,22 @@ const formatDateTime = (dateTime?: string) => {
 // 生命周期
 onMounted(() => {
   handleQuery()
-  // TODO: 加载用户列表
-  // loadUserList()
+  // 加载用户列表，供「参与人」下拉框选择（失败不阻断页面，下拉框留空）
+  loadUserList()
 })
+
+/**
+ * 加载用户列表（参与人选择器数据源）
+ * 取前 100 个用户，映射为 {id, name} 供下拉框渲染
+ */
+const loadUserList = async () => {
+  try {
+    const res = await listUsers({ page: 1, size: 100 })
+    userList.value = (res.list || []).map((u) => ({ id: u.id, name: u.nickname }))
+  } catch {
+    // 用户列表拉取失败时参与人下拉框为空，不阻断日程管理主流程
+  }
+}
 </script>
 
 <style scoped lang="scss">

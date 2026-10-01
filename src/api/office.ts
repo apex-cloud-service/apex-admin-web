@@ -423,7 +423,7 @@ export function getApprovals(
  * 查询日历日程列表（管理端）。
  * @param params 查询参数
  */
-export function getCalendarEvents(params: OfficeCalendarQuery): Promise<OfficeCalendarEvent[]> {
+export function getAdminCalendarEvents(params: OfficeCalendarQuery): Promise<OfficeCalendarEvent[]> {
   return get<OfficeCalendarEvent[]>(
     '/admin-api/v1/office/calendar/events',
     params as unknown as Record<string, unknown>,

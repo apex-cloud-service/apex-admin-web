@@ -81,6 +81,24 @@
         </el-card>
       </el-col>
 
+      <!-- 网络质量 -->
+      <el-col :xs="24" :lg="8">
+        <el-card shadow="never" class="panel">
+          <template #header>网络质量监控</template>
+          <div ref="netQualityChartRef" class="chart" />
+          <div class="panel-meta network-quality-meta">
+            <div v-for="net in activeNetworks" :key="net.name" class="network-item">
+              <div class="network-name">{{ net.name }}</div>
+              <div class="network-stats">
+                <span>错误率: <b :class="getErrorRateClass(net.errorRate)">{{ (net.errorRate * 100).toFixed(3) }}%</b></span>
+                <span>丢包: <b>{{ net.rxDropped + net.txDropped }}</b></span>
+                <span>带宽: <b>{{ (net.bandwidthUtilization * 100).toFixed(1) }}%</b></span>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
       <!-- 阻塞 IO 线程池 -->
       <el-col :xs="24" :lg="8">
         <el-card shadow="never" class="panel">
@@ -150,16 +168,47 @@
       <!-- Zipkin -->
       <el-col :xs="24" :lg="6">
         <el-card shadow="never" class="panel">
-          <template #header>链路追踪（Zipkin）</template>
+          <template #header>
+            <div class="middleware-header">
+              <span>Zipkin</span>
+              <el-tag v-if="!tracingAvailable" type="info" size="small">未接入</el-tag>
+              <el-tag v-else type="success" size="small">运行中</el-tag>
+            </div>
+          </template>
           <div class="middleware-body">
-            <el-tag :type="tracingAvailable ? 'success' : 'info'" size="large">
-              {{ tracingAvailable ? '已启用' : '未接入' }}
-            </el-tag>
-            <div class="kv-list">
-              <div><span>类型</span><b>{{ middleware?.tracing?.type || '-' }}</b></div>
-              <div><span>端点</span><b class="ellipsis">{{ middleware?.tracing?.endpoint || '-' }}</b></div>
-              <div><span>采样率</span><b>{{ middleware?.tracing?.samplingRate ?? '-' }}</b></div>
-              <div><span>待上报</span><b>{{ middleware?.tracing?.spansPending ?? '-' }}</b></div>
+            <div v-if="tracingAvailable" class="tracing-stats">
+              <div class="stat-item">
+                <span class="stat-label">采样率</span>
+                <span class="stat-value">{{ ((middleware?.tracing?.samplingRate ?? 0) * 100).toFixed(1) }}%</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">上报成功</span>
+                <span class="stat-value success">{{ formatNumber(middleware?.tracing?.reportedSpans ?? 0) }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">上报失败</span>
+                <span class="stat-value" :class="{ danger: (middleware?.tracing?.failedSpans ?? 0) > 0 }">
+                  {{ formatNumber(middleware?.tracing?.failedSpans ?? 0) }}
+                </span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">平均延迟</span>
+                <span class="stat-value">{{ (middleware?.tracing?.avgReportLatency ?? 0).toFixed(2) }} ms</span>
+              </div>
+              <div v-if="middleware?.tracing?.lastReportTime" class="stat-item">
+                <span class="stat-label">最近上报</span>
+                <span class="stat-value">{{ formatTime(middleware.tracing.lastReportTime) }}</span>
+              </div>
+            </div>
+            <div v-else class="middleware-placeholder">
+              <el-empty description="链路追踪未接入" :image-size="80" />
+            </div>
+            
+            <div v-if="tracingAvailable" class="trace-query-section">
+              <el-divider />
+              <el-button type="primary" size="small" @click="openTraceQuery" :icon="Search">
+                TraceId 查询
+              </el-button>
             </div>
           </div>
         </el-card>
@@ -192,20 +241,70 @@
       <!-- 网关流量 -->
       <el-col :xs="24" :lg="12">
         <el-card shadow="never" class="panel">
-          <template #header>网关 / API 流量</template>
-          <div class="gateway-summary">
-            <div class="g-item"><span>累计请求</span><b>{{ governance?.gateway?.totalRequests ?? 0 }}</b></div>
-            <div class="g-item"><span>4xx</span><b class="c-warn">{{ governance?.gateway?.error4xx ?? 0 }}</b></div>
-            <div class="g-item"><span>5xx</span><b class="c-danger">{{ governance?.gateway?.error5xx ?? 0 }}</b></div>
-            <div class="g-item"><span>平均耗时</span><b>{{ formatMs(governance?.gateway?.avgResponseTime ?? 0) }}</b></div>
+          <template #header>
+            <div class="panel-header">
+              <span>网关 / API 流量</span>
+              <el-tag :type="gatewayHealthType" size="small">
+                {{ gatewayHealthText }}
+              </el-tag>
+            </div>
+          </template>
+          
+          <div class="gateway-metrics">
+            <div class="metric-card">
+              <div class="metric-label">当前 QPS</div>
+              <div class="metric-value">{{ (governance?.gateway?.currentQps ?? 0).toFixed(2) }}</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">当前 TPS</div>
+              <div class="metric-value">{{ (governance?.gateway?.currentTps ?? 0).toFixed(2) }}</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">峰值 QPS</div>
+              <div class="metric-value highlight">{{ (governance?.gateway?.peakQps ?? 0).toFixed(2) }}</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">成功率</div>
+              <div class="metric-value" :class="successRateClass">
+                {{ ((governance?.gateway?.successRate ?? 1) * 100).toFixed(2) }}%
+              </div>
+            </div>
           </div>
-          <el-table :data="topPaths" size="small" border max-height="240">
+
+          <div class="response-time-section">
+            <div class="section-title">响应时间分位数</div>
+            <div class="response-metrics">
+              <div class="response-item">
+                <span class="response-label">P50</span>
+                <span class="response-value">{{ formatMs(governance?.gateway?.p50ResponseTime ?? 0) }}</span>
+              </div>
+              <div class="response-item">
+                <span class="response-label">P95</span>
+                <span class="response-value warn">{{ formatMs(governance?.gateway?.p95ResponseTime ?? 0) }}</span>
+              </div>
+              <div class="response-item">
+                <span class="response-label">P99</span>
+                <span class="response-value danger">{{ formatMs(governance?.gateway?.p99ResponseTime ?? 0) }}</span>
+              </div>
+              <div class="response-item">
+                <span class="response-label">累计请求</span>
+                <span class="response-value">{{ governance?.gateway?.totalRequests ?? 0 }}</span>
+              </div>
+            </div>
+          </div>
+
+          <el-table :data="topPaths" size="small" border max-height="240" class="top-paths-table">
             <el-table-column prop="path" label="路径" min-width="180" show-overflow-tooltip />
-            <el-table-column prop="count" label="请求数" width="90" />
-            <el-table-column prop="errorRate" label="错误率" width="90">
-              <template #default="{ row }">{{ (row.errorRate * 100).toFixed(2) }}%</template>
+            <el-table-column prop="method" label="方法" width="80" />
+            <el-table-column prop="count" label="请求数" width="90" align="right" />
+            <el-table-column prop="errorRate" label="错误率" width="90" align="right">
+              <template #default="{ row }">
+                <span :class="{ 'error-rate-high': row.errorRate > 0.05 }">
+                  {{ (row.errorRate * 100).toFixed(2) }}%
+                </span>
+              </template>
             </el-table-column>
-            <el-table-column label="平均耗时" width="100">
+            <el-table-column label="平均耗时" width="100" align="right">
               <template #default="{ row }">{{ formatMs(row.avgTime) }}</template>
             </el-table-column>
           </el-table>
@@ -239,8 +338,9 @@
  * - 所有指标接口失败时置灰展示，不阻塞页面
  */
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh, Search } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
 import {
   getMonitorBusiness,
@@ -311,13 +411,41 @@ const topPaths = computed(() => governance.value?.gateway?.topPaths || [])
 
 const businessMetrics = computed<BusinessMetricPoint[]>(() => business.value?.metrics || [])
 
+const gatewayHealthType = computed(() => {
+  const successRate = governance.value?.gateway?.successRate ?? 1
+  if (successRate >= 0.99) return 'success'
+  if (successRate >= 0.95) return 'warning'
+  return 'danger'
+})
+
+const gatewayHealthText = computed(() => {
+  const successRate = governance.value?.gateway?.successRate ?? 1
+  if (successRate >= 0.99) return '健康'
+  if (successRate >= 0.95) return '警告'
+  return '异常'
+})
+
+const successRateClass = computed(() => {
+  const rate = governance.value?.gateway?.successRate ?? 1
+  if (rate >= 0.99) return 'success'
+  if (rate >= 0.95) return 'warn'
+  return 'danger'
+})
+
+const activeNetworks = computed(() => {
+  return system.value?.network?.filter(n => n.available && n.up) || []
+})
+
 /* ==================== 图表 ==================== */
+
+const router = useRouter()
 
 const memChartRef = ref<HTMLElement>()
 const cpuChartRef = ref<HTMLElement>()
 const threadChartRef = ref<HTMLElement>()
 const diskChartRef = ref<HTMLElement>()
 const netChartRef = ref<HTMLElement>()
+const netQualityChartRef = ref<HTMLElement>()
 const poolChartRef = ref<HTMLElement>()
 const sentinelChartRef = ref<HTMLElement>()
 const bizChartRef = ref<HTMLElement>()
@@ -544,6 +672,54 @@ function renderBizChart(): void {
   })
 }
 
+/** 渲染网络质量图表 */
+function renderNetQualityChart(): void {
+  if (!netQualityChartRef.value || !activeNetworks.value.length) return
+  const chart = initChart(netQualityChartRef.value)
+  
+  const names = activeNetworks.value.map(n => n.name)
+  const errorRates = activeNetworks.value.map(n => (n.errorRate * 100).toFixed(3))
+  const bandwidthUtils = activeNetworks.value.map(n => (n.bandwidthUtilization * 100).toFixed(2))
+  
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    legend: {
+      data: ['错误率 (%)', '带宽利用率 (%)'],
+      textStyle: { color: axisColor() }
+    },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: names,
+      axisLabel: { color: axisColor() }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        formatter: '{value}%',
+        color: axisColor()
+      }
+    },
+    series: [
+      {
+        name: '错误率 (%)',
+        type: 'bar',
+        data: errorRates,
+        itemStyle: { color: '#f56c6c' }
+      },
+      {
+        name: '带宽利用率 (%)',
+        type: 'bar',
+        data: bandwidthUtils,
+        itemStyle: { color: '#409eff' }
+      }
+    ]
+  })
+}
+
 /* ==================== 数据加载 ==================== */
 
 /**
@@ -595,6 +771,7 @@ function renderAll(): void {
   renderThreadChart()
   renderDiskChart()
   renderNetChart()
+  renderNetQualityChart()
   renderPoolChart()
   renderSentinelChart()
   renderBizChart()
@@ -632,6 +809,24 @@ function progressColor(percent: number): string {
   if (percent < 60) return '#67c23a'
   if (percent < 85) return '#e6a23c'
   return '#f56c6c'
+}
+
+function getErrorRateClass(errorRate: number): string {
+  if (errorRate > 0.01) return 'danger'
+  if (errorRate > 0.001) return 'warn'
+  return 'success'
+}
+
+function formatNumber(num: number): string {
+  return num.toLocaleString('zh-CN')
+}
+
+function formatTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString('zh-CN')
+}
+
+function openTraceQuery() {
+  router.push('/monitor/trace')
 }
 
 /* ==================== 生命周期 ==================== */
@@ -806,5 +1001,200 @@ onBeforeUnmount(() => {
   margin-top: 2px;
   font-size: 13px;
   color: var(--el-text-color-secondary);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gateway-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+
+  .metric-card {
+    padding: 16px;
+    background: var(--el-fill-color-light);
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.3s;
+
+    &:hover {
+      background: var(--el-fill-color);
+      transform: translateY(-2px);
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+
+      &.highlight {
+        color: var(--el-color-primary);
+      }
+
+      &.success {
+        color: var(--el-color-success);
+      }
+
+      &.warn {
+        color: var(--el-color-warning);
+      }
+
+      &.danger {
+        color: var(--el-color-danger);
+      }
+    }
+  }
+}
+
+.response-time-section {
+  margin-bottom: 20px;
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    color: var(--el-text-color-regular);
+  }
+
+  .response-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+    padding: 12px;
+    background: var(--el-fill-color-light);
+    border-radius: 6px;
+
+    .response-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+
+      .response-label {
+        font-size: 12px;
+        color: var(--el-text-color-secondary);
+      }
+
+      .response-value {
+        font-size: 16px;
+        font-weight: 600;
+
+        &.warn {
+          color: var(--el-color-warning);
+        }
+
+        &.danger {
+          color: var(--el-color-danger);
+        }
+      }
+    }
+  }
+}
+
+.top-paths-table {
+  margin-top: 16px;
+
+  .error-rate-high {
+    color: var(--el-color-danger);
+    font-weight: 600;
+  }
+}
+
+.network-quality-meta {
+  margin-top: 12px;
+
+  .network-item {
+    padding: 8px;
+    margin-bottom: 8px;
+    background: var(--el-fill-color-light);
+    border-radius: 4px;
+
+    .network-name {
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: var(--el-text-color-primary);
+    }
+
+    .network-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+
+      b {
+        font-weight: 600;
+        margin-left: 4px;
+
+        &.success {
+          color: var(--el-color-success);
+        }
+
+        &.warn {
+          color: var(--el-color-warning);
+        }
+
+        &.danger {
+          color: var(--el-color-danger);
+        }
+      }
+    }
+  }
+}
+
+.middleware-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tracing-stats {
+  .stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: var(--el-text-color-secondary);
+      font-size: 14px;
+    }
+
+    .stat-value {
+      font-weight: 600;
+      font-size: 14px;
+
+      &.success {
+        color: var(--el-color-success);
+      }
+
+      &.danger {
+        color: var(--el-color-danger);
+      }
+    }
+  }
+}
+
+.trace-query-section {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.middleware-placeholder {
+  padding: 20px 0;
 }
 </style>

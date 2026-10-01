@@ -16,10 +16,10 @@
 
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| 类型定义 | [src/types/index.ts](file:///Users/work/apex-admin-web/src/types/index.ts#L593-L609) | FileUploadResult 接口定义 |
-| API接口 | [src/api/file.ts](file:///Users/work/apex-admin-web/src/api/file.ts) | 文件上传/删除/URL获取等接口封装 |
-| 上传组件 | [src/components/FileUpload.vue](file:///Users/work/apex-admin-web/src/components/FileUpload.vue) | 基于 el-upload 的上传组件 |
-| 测试页面 | [src/views/demo/FileUploadDemo.vue](file:///Users/work/apex-admin-web/src/views/demo/FileUploadDemo.vue) | 功能测试示例页面 |
+| 类型定义 | [src/types/index.ts](../../src/types/index.ts) | FileUploadResult 接口定义 |
+| API接口 | [src/api/file.ts](../../src/api/file.ts) | 文件上传/删除/URL获取等接口封装 |
+| 上传组件 | [src/components/FileUpload.vue](../../src/components/FileUpload.vue) | 基于 el-upload 的上传组件 |
+| 测试页面 | [src/views/demo/FileUploadDemo.vue](../../src/views/demo/FileUploadDemo.vue) | 功能测试示例页面 |
 
 ### 1.2 功能特性
 
@@ -553,8 +553,8 @@ Element Plus 的 `el-upload` 已内置拖拽上传功能：
 - [Element Plus Upload 组件](https://element-plus.org/zh-CN/component/upload.html)
 - [Axios 文档](https://axios-http.com/)
 - [MDN File API](https://developer.mozilla.org/zh-CN/docs/Web/API/File)
-- [后端文件上传流程](file:///Users/work/apex-scaffold/docs/architecture/business-flows.md#L562)
-- [后端 API 文档](file:///Users/work/apex-scaffold/docs/API_DOCUMENTATION_PREVIEW.md#L233)
+- 后端文件上传流程：`apex-scaffold/docs/architecture/business-flows.md`
+- 后端 API 文档：`apex-scaffold/docs/API_DOCUMENTATION_PREVIEW.md`
 
 ---
 

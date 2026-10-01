@@ -15,12 +15,12 @@
 
 | 序号 | 任务 | 文件 | 状态 |
 |------|------|------|------|
-| 1 | 类型定义 | [src/types/index.ts](file:///Users/work/apex-admin-web/src/types/index.ts#L593-L609) | ✅ 完成 |
-| 2 | API接口封装 | [src/api/file.ts](file:///Users/work/apex-admin-web/src/api/file.ts) | ✅ 完成 |
-| 3 | 上传组件 | [src/components/FileUpload.vue](file:///Users/work/apex-admin-web/src/components/FileUpload.vue) | ✅ 完成 |
-| 4 | 测试页面 | [src/views/demo/FileUploadDemo.vue](file:///Users/work/apex-admin-web/src/views/demo/FileUploadDemo.vue) | ✅ 完成 |
-| 5 | 路由配置 | [src/router/index.ts](file:///Users/work/apex-admin-web/src/router/index.ts#L52-L57) | ✅ 完成 |
-| 6 | 使用文档 | [FILE_UPLOAD_USAGE.md](file:///Users/work/apex-admin-web/FILE_UPLOAD_USAGE.md) | ✅ 完成 |
+| 1 | 类型定义 | [src/types/index.ts](../../src/types/index.ts) | ✅ 完成 |
+| 2 | API接口封装 | [src/api/file.ts](../../src/api/file.ts) | ✅ 完成 |
+| 3 | 上传组件 | [src/components/FileUpload.vue](../../src/components/FileUpload.vue) | ✅ 完成 |
+| 4 | 测试页面 | [src/views/demo/FileUploadDemo.vue](../../src/views/demo/FileUploadDemo.vue) | ✅ 完成 |
+| 5 | 路由配置 | [src/router/index.ts](../../src/router/index.ts) | ✅ 完成 |
+| 6 | 使用文档 | [docs/features/file-upload-basic.md](../features/file-upload-basic.md) | ✅ 完成 |
 
 ### 2.2 实现的功能特性
 
@@ -52,8 +52,9 @@ src/
     └── demo/
         └── FileUploadDemo.vue       # 文件上传测试页面
 
-项目根目录/
-└── FILE_UPLOAD_USAGE.md             # 使用文档
+docs/
+└── features/
+    └── file-upload-basic.md         # 使用文档
 ```
 
 ### 3.2 修改文件（2个）
@@ -73,12 +74,11 @@ src/
 | 文件 | 行数 | 说明 |
 |------|------|------|
 | src/types/index.ts | +17 | 类型定义 |
-| src/api/file.ts | 113 | API 接口封装 |
-| src/components/FileUpload.vue | 209 | 上传组件 |
-| src/views/demo/FileUploadDemo.vue | 228 | 测试页面 |
+| src/api/file.ts | 106 | API 接口封装 |
+| src/components/FileUpload.vue | 204 | 上传组件 |
+| src/views/demo/FileUploadDemo.vue | 343 | 测试页面 |
 | src/router/index.ts | +6 | 路由配置 |
-| FILE_UPLOAD_USAGE.md | 716 | 使用文档 |
-| **总计** | **~1,289 行** | - |
+| docs/features/file-upload-basic.md | - | 使用文档 |
 
 ---
 
@@ -370,16 +370,15 @@ sex: 0 | 1
 
 ### 12.1 项目文档
 
-- [使用文档](file:///Users/work/apex-admin-web/FILE_UPLOAD_USAGE.md)
-- [实施分析](file:///Users/work/apex-admin-web/.trae/documents/前端文件上传功能实现分析.md)
-- [前端规范](file:///Users/work/apex-admin-web/AGENT.md)
+- [使用文档](../features/file-upload-basic.md)
+- [前端规范](../../AGENTS.md)
 
-### 12.2 后端文档
+### 12.2 后端文档（apex-scaffold 仓库）
 
-- [文件上传流程](file:///Users/work/apex-scaffold/docs/architecture/business-flows.md#L562)
-- [API 文档](file:///Users/work/apex-scaffold/docs/API_DOCUMENTATION_PREVIEW.md#L233)
-- [StorageProvider SPI](file:///Users/work/apex-scaffold/apex-common/src/main/java/com/apex/scaffold/common/spi/StorageProvider.java)
-- [FileHandler](file:///Users/work/apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/FileHandler.java)
+- 后端文件上传流程：`apex-scaffold/docs/architecture/business-flows.md`
+- 后端 API 文档：`apex-scaffold/docs/API_DOCUMENTATION_PREVIEW.md`
+- StorageProvider SPI：`apex-scaffold/apex-common/src/main/java/com/apex/scaffold/common/spi/StorageProvider.java`
+- FileHandler：`apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/FileHandler.java`
 
 ### 12.3 第三方文档
 

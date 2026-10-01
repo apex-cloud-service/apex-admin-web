@@ -91,14 +91,24 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 运行时日志查询页逻辑
+ * - 按级别/Logger/关键词/时间范围查询 Loki 日志（无分页，默认最近 1 小时）
+ */
 import { onMounted, reactive, ref } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { queryRuntimeLogs, type RuntimeLog } from '@/api/log'
 import { showError } from '@/utils/request'
 
+/** ========== 查询状态 ========== */
+
+/** 查询请求进行中 */
 const loading = ref(false)
+/** 日志列表（无分页，一次返回） */
 const logList = ref<RuntimeLog[]>([])
+/** 时间范围（yyyy-MM-dd HH:mm:ss 字符串） */
 const timeRange = ref<string[]>([])
+/** 查询条件（级别/Logger/关键词/条数上限） */
 const query = reactive({
   level: '',
   logger: '',
@@ -106,9 +116,14 @@ const query = reactive({
   limit: 100,
 })
 
+/** ========== 详情弹窗 ========== */
+
+/** 详情弹窗是否可见 */
 const dialogVisible = ref(false)
+/** 当前查看的日志（含异常堆栈/TraceId） */
 const currentLog = ref<RuntimeLog>({} as RuntimeLog)
 
+// 挂载时默认查询最近 1 小时的日志
 onMounted(() => {
   // 默认查询最近1小时
   const now = new Date()
@@ -117,6 +132,11 @@ onMounted(() => {
   search()
 })
 
+/** ========== 查询操作 ========== */
+
+/**
+ * 拉取日志列表：合并查询条件与时间范围，失败统一提示
+ */
 async function fetchList(): Promise<void> {
   loading.value = true
   try {
@@ -133,10 +153,16 @@ async function fetchList(): Promise<void> {
   }
 }
 
+/**
+ * 执行查询（保持当前条件）
+ */
 function search(): void {
   fetchList()
 }
 
+/**
+ * 重置查询条件并回到默认的最近 1 小时范围
+ */
 function reset(): void {
   query.level = ''
   query.logger = ''
@@ -148,11 +174,20 @@ function reset(): void {
   search()
 }
 
+/**
+ * 打开日志详情弹窗
+ * @param row 目标日志行
+ */
 function handleDetail(row: RuntimeLog): void {
   currentLog.value = row
   dialogVisible.value = true
 }
 
+/**
+ * 日志级别对应的标签颜色
+ * @param level 日志级别
+ * @returns el-tag 类型
+ */
 function getLevelType(level: string): 'success' | 'info' | 'warning' | 'danger' | '' {
   const types: Record<string, 'success' | 'info' | 'warning' | 'danger' | ''> = {
     ERROR: 'danger',
@@ -163,6 +198,11 @@ function getLevelType(level: string): 'success' | 'info' | 'warning' | 'danger' 
   return types[level] || ''
 }
 
+/**
+ * 格式化日期为 yyyy-MM-dd HH:mm:ss（时间范围控件的 value-format）
+ * @param date 日期对象
+ * @returns 格式化后的字符串
+ */
 function formatDateTime(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`

@@ -9,7 +9,7 @@
 当前前端项目在认证授权方面的实现已经覆盖了后端提供的核心能力，包括：
 
 - ✅ 登录认证（账号密码 + 图形验证码）
-- ✅ JWT Token 管理（Access Token）
+- ✅ JWT Token 管理（Access Token + Refresh Token 无感刷新）
 - ✅ 用户身份管理
 - ✅ 角色与权限管理
 - ✅ 基于权限的按钮级控制
@@ -162,19 +162,20 @@ src/
 
 [src/utils/request.ts]
     - 请求拦截器自动携带 Authorization: Bearer <token>
-    - 响应拦截器处理 401 清理会话
+    - 401 时自动刷新 Token 并重放原请求（单次重试、并发共享刷新）
+    - 刷新失败才清理会话并跳转登录页
 ```
 
 ### 3.3 已实现的认证相关页面
 
 | 页面路径 | 功能 | 对应后端接口 | 实现文件 |
 |---------|------|------------|---------|
-| `/login` | 登录页 | POST /api/v1/auth/login | [src/views/login/index.vue](file:///Users/work/apex-admin-web/src/views/login/index.vue) |
-| `/system/user` | 用户管理 | /admin-api/v1/users | [src/views/system/user/index.vue](file:///Users/work/apex-admin-web/src/views/system/user/index.vue) |
-| `/system/role` | 角色管理 | /admin-api/v1/staff-roles | [src/views/system/role/index.vue](file:///Users/work/apex-admin-web/src/views/system/role/index.vue) |
-| `/system/menu` | 菜单管理 | /admin-api/v1/menus | [src/views/system/menu/index.vue](file:///Users/work/apex-admin-web/src/views/system/menu/index.vue) |
-| `/monitor/loginlog` | 登录日志 | /admin-api/v1/login-logs | [src/views/monitor/loginlog/index.vue](file:///Users/work/apex-admin-web/src/views/monitor/loginlog/index.vue) |
-| `/monitor/online` | 在线用户 | /admin-api/v1/online-users | [src/views/monitor/online/index.vue](file:///Users/work/apex-admin-web/src/views/monitor/online/index.vue) |
+| `/login` | 登录页 | POST /api/v1/auth/login | [src/views/login/index.vue](../../src/views/login/index.vue) |
+| `/system/user` | 用户管理 | /admin-api/v1/users | [src/views/system/user/index.vue](../../src/views/system/user/index.vue) |
+| `/system/role` | 角色管理 | /admin-api/v1/staff-roles | [src/views/system/role/index.vue](../../src/views/system/role/index.vue) |
+| `/system/menu` | 菜单管理 | /admin-api/v1/menus | [src/views/system/menu/index.vue](../../src/views/system/menu/index.vue) |
+| `/monitor/loginlog` | 登录日志 | /admin-api/v1/login-logs | [src/views/monitor/loginlog/index.vue](../../src/views/monitor/loginlog/index.vue) |
+| `/monitor/online` | 在线用户 | /admin-api/v1/online-users | [src/views/monitor/online/index.vue](../../src/views/monitor/online/index.vue) |
 
 ---
 
@@ -184,13 +185,13 @@ src/
 
 | 后端功能 | 前端实现 | 实现位置 |
 |---------|---------|---------|
-| JWT Token | ✅ 完整 | [src/utils/auth.ts](file:///Users/work/apex-admin-web/src/utils/auth.ts) |
-| 图形验证码 | ✅ 完整 | [src/views/login/index.vue](file:///Users/work/apex-admin-web/src/views/login/index.vue) |
-| 角色权限查询 | ✅ 完整 | [src/api/auth.ts](file:///Users/work/apex-admin-web/src/api/auth.ts) |
-| 按钮权限控制 | ✅ 完整 | [src/directives/permission.ts](file:///Users/work/apex-admin-web/src/directives/permission.ts) |
-| 动态路由 | ✅ 完整 | [src/router/dynamic.ts](file:///Users/work/apex-admin-web/src/router/dynamic.ts) |
-| 用户角色分配 | ✅ 完整 | [src/views/system/user/index.vue](file:///Users/work/apex-admin-web/src/views/system/user/index.vue) |
-| 强退在线用户 | ✅ 完整 | [src/views/monitor/online/index.vue](file:///Users/work/apex-admin-web/src/views/monitor/online/index.vue) |
+| JWT Token | ✅ 完整 | [src/utils/auth.ts](../../src/utils/auth.ts) |
+| 图形验证码 | ✅ 完整 | [src/views/login/index.vue](../../src/views/login/index.vue) |
+| 角色权限查询 | ✅ 完整 | [src/api/auth.ts](../../src/api/auth.ts) |
+| 按钮权限控制 | ✅ 完整 | [src/directives/permission.ts](../../src/directives/permission.ts) |
+| 动态路由 | ✅ 完整 | [src/router/dynamic.ts](../../src/router/dynamic.ts) |
+| 用户角色分配 | ✅ 完整 | [src/views/system/user/index.vue](../../src/views/system/user/index.vue) |
+| 强退在线用户 | ✅ 完整 | [src/views/monitor/online/index.vue](../../src/views/monitor/online/index.vue) |
 
 ### 4.2 前端无需实现的后端能力
 
@@ -212,7 +213,7 @@ src/
 
 | 功能 | 当前状态 | 扩展建议 | 优先级 |
 |------|---------|---------|--------|
-| Token 自动刷新 | 未实现 | 可在请求拦截器中检测 Token 过期并刷新 | P2 |
+| Token 自动刷新 | ✅ 已实现（[src/utils/request.ts](../../src/utils/request.ts)） | 401 时自动刷新并重放，无需额外扩展 | - |
 | 记住我 | 未实现 | 可添加"记住账号"功能 | P3 |
 | 密码修改 | 未实现 | 可在个人中心添加修改密码功能 | P2 |
 | 多点登录控制 | 未实现 | 可提示用户账号在其他地方登录 | P3 |
@@ -231,9 +232,9 @@ src/
 - JWT Token 生成与校验
 
 **前端实现：**
-- ✅ [src/views/login/index.vue](file:///Users/work/apex-admin-web/src/views/login/index.vue) - 登录页面
-- ✅ [src/api/auth.ts](file:///Users/work/apex-admin-web/src/api/auth.ts) - 登录接口封装
-- ✅ [src/stores/user.ts](file:///Users/work/apex-admin-web/src/stores/user.ts) - 登录状态管理
+- ✅ [src/views/login/index.vue](../../src/views/login/index.vue) - 登录页面
+- ✅ [src/api/auth.ts](../../src/api/auth.ts) - 登录接口封装
+- ✅ [src/stores/user.ts](../../src/stores/user.ts) - 登录状态管理
 
 **对齐程度：100%** - 前端完整实现了后端的 PASSWORD 登录方式（管理后台主要登录方式）
 
@@ -246,9 +247,9 @@ src/
 - sys_menu 表存储权限码
 
 **前端实现：**
-- ✅ [src/directives/permission.ts](file:///Users/work/apex-admin-web/src/directives/permission.ts) - v-permission 指令
-- ✅ [src/stores/user.ts](file:///Users/work/apex-admin-web/src/stores/user.ts#L60-L72) - 权限码管理
-- ✅ [src/router/dynamic.ts](file:///Users/work/apex-admin-web/src/router/dynamic.ts) - 动态路由权限过滤
+- ✅ [src/directives/permission.ts](../../src/directives/permission.ts) - v-permission 指令
+- ✅ [src/stores/user.ts]../../src/stores/user.ts - 权限码管理
+- ✅ [src/router/dynamic.ts](../../src/router/dynamic.ts) - 动态路由权限过滤
 
 **对齐程度：100%** - 前端完整实现了基于权限码的按钮级控制和路由级控制
 
@@ -261,8 +262,8 @@ src/
 - 强退用户会话
 
 **前端实现：**
-- ✅ [src/views/system/user/index.vue](file:///Users/work/apex-admin-web/src/views/system/user/index.vue) - 用户管理页面
-- ✅ [src/api/user.ts](file:///Users/work/apex-admin-web/src/api/user.ts) - 用户管理接口
+- ✅ [src/views/system/user/index.vue](../../src/views/system/user/index.vue) - 用户管理页面
+- ✅ [src/api/user.ts](../../src/api/user.ts) - 用户管理接口
 - ✅ 支持：列表查询、新增、编辑、启用/禁用、角色分配
 
 **对齐程度：100%** - 前端完整实现了用户管理的所有核心功能
@@ -275,8 +276,8 @@ src/
 - sys_role 表
 
 **前端实现：**
-- ✅ [src/views/system/role/index.vue](file:///Users/work/apex-admin-web/src/views/system/role/index.vue) - 角色管理页面
-- ✅ [src/api/user.ts](file:///Users/work/apex-admin-web/src/api/user.ts#L95-L97) - 角色查询接口
+- ✅ [src/views/system/role/index.vue](../../src/views/system/role/index.vue) - 角色管理页面
+- ✅ [src/api/user.ts]../../src/api/user.ts - 角色查询接口
 
 **对齐程度：100%** - 前端实现了角色的查询和展示，角色权限配置功能可按需扩展
 
@@ -288,8 +289,8 @@ src/
 - 菜单驱动路由
 
 **前端实现：**
-- ✅ [src/views/system/menu/index.vue](file:///Users/work/apex-admin-web/src/views/system/menu/index.vue) - 菜单管理页面
-- ✅ [src/router/dynamic.ts](file:///Users/work/apex-admin-web/src/router/dynamic.ts) - 动态路由生成
+- ✅ [src/views/system/menu/index.vue](../../src/views/system/menu/index.vue) - 菜单管理页面
+- ✅ [src/router/dynamic.ts](../../src/router/dynamic.ts) - 动态路由生成
 - ✅ VIEW_REGISTRY 组件注册机制
 
 **对齐程度：100%** - 前端完整实现了基于后端菜单树的动态路由机制
@@ -302,9 +303,9 @@ src/
 - OnlineUserHandler - 在线用户
 
 **前端实现：**
-- ✅ [src/views/monitor/loginlog/index.vue](file:///Users/work/apex-admin-web/src/views/monitor/loginlog/index.vue) - 登录日志
-- ✅ [src/views/monitor/audit/index.vue](file:///Users/work/apex-admin-web/src/views/monitor/audit/index.vue) - 审计日志
-- ✅ [src/views/monitor/online/index.vue](file:///Users/work/apex-admin-web/src/views/monitor/online/index.vue) - 在线用户
+- ✅ [src/views/monitor/loginlog/index.vue](../../src/views/monitor/loginlog/index.vue) - 登录日志
+- ✅ [src/views/monitor/audit/index.vue](../../src/views/monitor/audit/index.vue) - 审计日志
+- ✅ [src/views/monitor/online/index.vue](../../src/views/monitor/online/index.vue) - 在线用户
 
 **对齐程度：100%** - 前端完整实现了所有监控日志页面
 
@@ -317,11 +318,11 @@ src/
 前端项目在设计时已经充分考虑了后端的认证授权能力：
 
 1. **接口完整对接**
-   - [src/api/auth.ts](file:///Users/work/apex-admin-web/src/api/auth.ts) 完整封装了后端认证接口
+   - [src/api/auth.ts](../../src/api/auth.ts) 完整封装了后端认证接口
    - 登录、登出、权限、角色查询全部实现
 
 2. **状态管理完善**
-   - [src/stores/user.ts](file:///Users/work/apex-admin-web/src/stores/user.ts) 统一管理用户会话
+   - [src/stores/user.ts](../../src/stores/user.ts) 统一管理用户会话
    - Token、身份、权限集中存储
 
 3. **权限控制到位**
@@ -385,25 +386,25 @@ async function login(params: LoginParams): Promise<LoginResult> {
 
 如果未来需要增强用户体验，可以考虑以下优化：
 
-1. **Token 自动刷新**（P2）
-   - 在请求拦截器中检测 Token 即将过期
-   - 自动调用 refresh token 接口无感刷新
-   - 参考位置：[src/utils/request.ts](file:///Users/work/apex-admin-web/src/utils/request.ts)
+1. **Token 无感刷新**（✅ 已实现）
+   - [src/utils/request.ts](../../src/utils/request.ts) 响应拦截器已实现：401 且本地持有 refreshToken 时自动调用
+     `POST /api/v1/auth/refresh` 刷新令牌并重放原请求（单次重试防死循环，并发 401 共享同一刷新请求）；
+     同时识别响应头 `x-new-access-token` 更新本地 Token，刷新失败才清理会话跳转登录页。
 
 2. **密码修改功能**（P2）
    - 在个人中心添加修改密码表单
    - 调用后端密码修改接口
-   - 参考位置：[src/views/profile/index.vue](file:///Users/work/apex-admin-web/src/views/profile/index.vue)
+   - 参考位置：[src/views/profile/index.vue](../../src/views/profile/index.vue)
 
 3. **记住账号**（P3）
    - 登录页添加"记住账号"复选框
    - 使用 localStorage 缓存用户名
-   - 参考位置：[src/views/login/index.vue](file:///Users/work/apex-admin-web/src/views/login/index.vue)
+   - 参考位置：[src/views/login/index.vue](../../src/views/login/index.vue)
 
 4. **角色权限配置**（P2）
    - 角色管理页面添加权限树配置
    - 调用后端角色权限绑定接口
-   - 参考位置：[src/views/system/role/index.vue](file:///Users/work/apex-admin-web/src/views/system/role/index.vue)
+   - 参考位置：[src/views/system/role/index.vue](../../src/views/system/role/index.vue)
 
 ### 7.3 维护建议
 
@@ -412,9 +413,9 @@ async function login(params: LoginParams): Promise<LoginResult> {
    - 后端修改菜单结构时，前端同步更新 VIEW_REGISTRY
 
 2. **遵循既有规范**
-   - 新增管理页面必须在 [src/router/dynamic.ts](file:///Users/work/apex-admin-web/src/router/dynamic.ts) 注册
+   - 新增管理页面必须在 [src/router/dynamic.ts](../../src/router/dynamic.ts) 注册
    - 新增按钮权限必须与后端 @RequirePermission 对齐
-   - 参考：[AGENTS.md](file:///Users/work/apex-admin-web/AGENTS.md#L184-L188)
+   - 参考：[AGENTS.md]../../AGENTS.md
 
 3. **安全性检查**
    - 定期审查 Token 存储机制
@@ -429,24 +430,24 @@ async function login(params: LoginParams): Promise<LoginResult> {
 
 | 文件路径 | 作用 | 关键功能 |
 |---------|------|---------|
-| [src/api/auth.ts](file:///Users/work/apex-admin-web/src/api/auth.ts) | 认证接口 | 登录/登出/权限/角色查询 |
-| [src/stores/user.ts](file:///Users/work/apex-admin-web/src/stores/user.ts) | 用户会话 | Token/身份/权限管理 |
-| [src/utils/auth.ts](file:///Users/work/apex-admin-web/src/utils/auth.ts) | 本地存储 | Token/身份持久化 |
-| [src/utils/request.ts](file:///Users/work/apex-admin-web/src/utils/request.ts) | 请求封装 | Token 携带、401 拦截 |
-| [src/router/index.ts](file:///Users/work/apex-admin-web/src/router/index.ts) | 路由守卫 | 未登录拦截、身份加载 |
-| [src/router/dynamic.ts](file:///Users/work/apex-admin-web/src/router/dynamic.ts) | 动态路由 | 菜单树转路由 |
-| [src/directives/permission.ts](file:///Users/work/apex-admin-web/src/directives/permission.ts) | 权限指令 | 按钮级权限控制 |
+| [src/api/auth.ts](../../src/api/auth.ts) | 认证接口 | 登录/登出/权限/角色查询 |
+| [src/stores/user.ts](../../src/stores/user.ts) | 用户会话 | Token/身份/权限管理 |
+| [src/utils/auth.ts](../../src/utils/auth.ts) | 本地存储 | Token/身份持久化 |
+| [src/utils/request.ts](../../src/utils/request.ts) | 请求封装 | Token 携带、401 拦截 |
+| [src/router/index.ts](../../src/router/index.ts) | 路由守卫 | 未登录拦截、身份加载 |
+| [src/router/dynamic.ts](../../src/router/dynamic.ts) | 动态路由 | 菜单树转路由 |
+| [src/directives/permission.ts](../../src/directives/permission.ts) | 权限指令 | 按钮级权限控制 |
 
 ### 8.2 认证相关页面
 
 | 文件路径 | 页面功能 | 对应后端接口 |
 |---------|---------|------------|
-| [src/views/login/index.vue](file:///Users/work/apex-admin-web/src/views/login/index.vue) | 登录页 | POST /api/v1/auth/login |
-| [src/views/system/user/index.vue](file:///Users/work/apex-admin-web/src/views/system/user/index.vue) | 用户管理 | /admin-api/v1/users |
-| [src/views/system/role/index.vue](file:///Users/work/apex-admin-web/src/views/system/role/index.vue) | 角色管理 | /admin-api/v1/staff-roles |
-| [src/views/system/menu/index.vue](file:///Users/work/apex-admin-web/src/views/system/menu/index.vue) | 菜单管理 | /admin-api/v1/menus |
-| [src/views/monitor/loginlog/index.vue](file:///Users/work/apex-admin-web/src/views/monitor/loginlog/index.vue) | 登录日志 | /admin-api/v1/login-logs |
-| [src/views/monitor/online/index.vue](file:///Users/work/apex-admin-web/src/views/monitor/online/index.vue) | 在线用户 | /admin-api/v1/online-users |
+| [src/views/login/index.vue](../../src/views/login/index.vue) | 登录页 | POST /api/v1/auth/login |
+| [src/views/system/user/index.vue](../../src/views/system/user/index.vue) | 用户管理 | /admin-api/v1/users |
+| [src/views/system/role/index.vue](../../src/views/system/role/index.vue) | 角色管理 | /admin-api/v1/staff-roles |
+| [src/views/system/menu/index.vue](../../src/views/system/menu/index.vue) | 菜单管理 | /admin-api/v1/menus |
+| [src/views/monitor/loginlog/index.vue](../../src/views/monitor/loginlog/index.vue) | 登录日志 | /admin-api/v1/login-logs |
+| [src/views/monitor/online/index.vue](../../src/views/monitor/online/index.vue) | 在线用户 | /admin-api/v1/online-users |
 
 ---
 
@@ -471,7 +472,7 @@ async function login(params: LoginParams): Promise<LoginResult> {
   - 监控日志：✅
 
 可选功能建议：🔶 可按需扩展
-  - Token 自动刷新：未实现（P2）
+  - Token 无感刷新：✅ 已实现（src/utils/request.ts）
   - 密码修改：未实现（P2）
   - 记住账号：未实现（P3）
   - 角色权限配置：部分实现（P2）
@@ -482,7 +483,7 @@ async function login(params: LoginParams): Promise<LoginResult> {
 1. **保持现状** - 当前实现已满足生产需求
 2. **按需优化** - 根据实际业务需求选择性实现可选功能
 3. **保持同步** - 后端接口变更时及时更新前端对接代码
-4. **遵循规范** - 严格遵循 [AGENTS.md](file:///Users/work/apex-admin-web/AGENTS.md) 中的开发规范
+4. **遵循规范** - 严格遵循 [AGENTS.md](../../AGENTS.md) 中的开发规范
 
 ---
 

@@ -4,7 +4,7 @@
  * 管理 Token、当前用户身份与登录/登出动作。
  */
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { getToken, setToken, setRefreshToken, clearSession, setIdentity, getIdentity } from '@/utils/auth'
 import { login as loginApi, logout as logoutApi, getMyPermissions, getMyRoles } from '@/api/auth'
 import { getCurrentUserInfo } from '@/api/user'
@@ -100,5 +100,17 @@ export const useUserStore = defineStore('user', () => {
     initialized.value = false
   }
 
-  return { token, identity, permissions, initialized, login, loadIdentity, logout, clearLocal }
+  const userInfo = computed(() => identity.value)
+
+  return {
+    token,
+    identity,
+    permissions,
+    initialized,
+    login,
+    loadIdentity,
+    logout,
+    clearLocal,
+    userInfo
+  }
 })

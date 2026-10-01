@@ -47,13 +47,14 @@
 ```
 src/
 ├── components/
-│   └── FileUploadEnhanced.vue           # 增强版上传组件（588行）
+│   └── FileUploadEnhanced.vue           # 增强版上传组件
 └── views/
     └── demo/
-        └── FileUploadEnhancedDemo.vue   # 增强版测试页面（310行）
+        └── FileUploadEnhancedDemo.vue   # 增强版测试页面
 
-项目根目录/
-└── FILE_UPLOAD_ENHANCED.md              # 增强功能文档（650行）
+docs/
+└── features/
+    └── file-upload-enhanced.md          # 增强功能文档
 ```
 
 ### 3.2 修改文件（2个）
@@ -67,12 +68,11 @@ src/
 
 | 文件 | 行数 | 说明 |
 |------|------|------|
-| FileUploadEnhanced.vue | 588 | 增强版组件 |
-| FileUploadEnhancedDemo.vue | 310 | 测试页面 |
+| FileUploadEnhanced.vue | 810 | 增强版组件 |
+| FileUploadEnhancedDemo.vue | 416 | 测试页面 |
 | package.json | +1 | 依赖配置 |
 | router/index.ts | +6 | 路由配置 |
-| FILE_UPLOAD_ENHANCED.md | 650 | 功能文档 |
-| **总计** | **~1,555 行** | - |
+| docs/features/file-upload-enhanced.md | - | 功能文档 |
 
 ---
 
@@ -91,7 +91,7 @@ src/
 - 支持键盘左右切换
 
 **代码位置：**
-[FileUploadEnhanced.vue#L75-L87](file:///Users/work/apex-admin-web/src/components/FileUploadEnhanced.vue#L75-L87)
+`src/components/FileUploadEnhanced.vue` 模板中的 `el-image` 预览区（`preview-src-list`）
 
 ---
 
@@ -117,14 +117,14 @@ src/
 | 视觉效果 | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
 
 **代码位置：**
-[FileUploadEnhanced.vue#L280-L340](file:///Users/work/apex-admin-web/src/components/FileUploadEnhanced.vue#L280-L340)
+`src/components/FileUploadEnhanced.vue` 的 `handleProgress` 方法（基于 XMLHttpRequest 的上传进度）
 
 ---
 
 ### 4.3 上传前图片裁剪 ✨
 
 **实现方式：**
-- 集成 `cropperjs` 库（v1.6.2）
+- 集成 `cropperjs` 库（^1.6.3）
 - 在 `beforeUpload` 中拦截文件
 - 显示裁剪对话框
 - 使用 `getCroppedCanvas()` 获取结果
@@ -141,7 +141,7 @@ src/
 4. 自动上传裁剪后的图片
 
 **代码位置：**
-[FileUploadEnhanced.vue#L185-L250](file:///Users/work/apex-admin-web/src/components/FileUploadEnhanced.vue#L185-L250)
+`src/components/FileUploadEnhanced.vue` 的裁剪对话框（`new Cropper` 初始化与 `handleCropperConfirm` 方法）
 
 ---
 
@@ -167,7 +167,7 @@ src/
 | 专业相机 | 6000x4000, 8.5MB | 1920x1280, 720KB | 92% |
 
 **代码位置：**
-[FileUploadEnhanced.vue#L133-L183](file:///Users/work/apex-admin-web/src/components/FileUploadEnhanced.vue#L133-L183)
+`src/components/FileUploadEnhanced.vue` 的 `compressImage` 方法（Canvas 重绘压缩）
 
 ---
 
@@ -190,7 +190,7 @@ src/
 - 工单附件上传
 
 **代码位置：**
-[FileUploadEnhanced.vue#L498-L520](file:///Users/work/apex-admin-web/src/components/FileUploadEnhanced.vue#L498-L520)
+`src/components/FileUploadEnhanced.vue` 的 `handlePaste` 方法（ClipboardEvent 处理）
 
 ---
 
@@ -207,7 +207,7 @@ src/
 - 拖拽时显示高亮提示
 
 **代码位置：**
-[FileUploadEnhanced.vue#L30-L42](file:///Users/work/apex-admin-web/src/components/FileUploadEnhanced.vue#L30-L42)
+`src/components/FileUploadEnhanced.vue` 模板中 `el-upload` 的 `:drag` 属性
 
 ---
 
@@ -288,7 +288,7 @@ interface Props {
 ```json
 {
   "dependencies": {
-    "cropperjs": "^1.6.2"
+    "cropperjs": "^1.6.3"
   }
 }
 ```
@@ -297,7 +297,7 @@ interface Props {
 
 | 依赖 | 版本 | 用途 | 大小 |
 |------|------|------|------|
-| cropperjs | ^1.6.2 | 图片裁剪 | ~50KB |
+| cropperjs | ^1.6.3 | 图片裁剪 | ~50KB |
 
 ### 6.3 安装命令
 
@@ -430,15 +430,14 @@ http://localhost:5173/demo/file-upload-enhanced
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| 基础版使用文档 | [FILE_UPLOAD_USAGE.md](file:///Users/work/apex-admin-web/FILE_UPLOAD_USAGE.md) | 基础版完整使用指南 |
-| 增强版功能文档 | [FILE_UPLOAD_ENHANCED.md](file:///Users/work/apex-admin-web/FILE_UPLOAD_ENHANCED.md) | 增强功能详细说明 |
+| 基础版使用文档 | [docs/features/file-upload-basic.md](../features/file-upload-basic.md) | 基础版完整使用指南 |
+| 增强版功能文档 | [docs/features/file-upload-enhanced.md](../features/file-upload-enhanced.md) | 增强功能详细说明 |
 
 ### 10.2 实施文档
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| 功能分析 | [.trae/documents/前端文件上传功能实现分析.md](file:///Users/work/apex-admin-web/.trae/documents/前端文件上传功能实现分析.md) | 初始需求分析 |
-| 基础版实施总结 | [.trae/documents/文件上传功能实施总结.md](file:///Users/work/apex-admin-web/.trae/documents/文件上传功能实施总结.md) | MVP 实施记录 |
+| 基础版实施总结 | [docs/implementation/file-upload-implementation.md](file-upload-implementation.md) | MVP 实施记录 |
 | 增强版实施总结 | 本文档 | 增强功能实施记录 |
 
 ---

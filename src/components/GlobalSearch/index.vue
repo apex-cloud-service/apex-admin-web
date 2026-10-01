@@ -65,22 +65,38 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 全局搜索组件逻辑
+ * - 顶栏搜索入口，防抖调用 Meilisearch 全文搜索接口
+ * - 搜索结果按资源类型跳转到对应管理页（携带 ?id= 定位）
+ */
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import { search, type SearchResult } from '@/api/search'
 import { ElMessage } from 'element-plus'
 
+/** ========== 组件状态 ========== */
+
 const router = useRouter()
+/** 搜索弹层是否可见 */
 const visible = ref(false)
+/** 搜索关键词 */
 const keyword = ref('')
+/** 搜索请求进行中 */
 const loading = ref(false)
+/** 搜索结果列表 */
 const results = ref<SearchResult[]>([])
+/** 当前页码 */
 const page = ref(1)
+/** 每页结果条数 */
 const pageSize = ref(10)
+/** 结果总数 */
 const total = ref(0)
 
-// 防抖搜索
+/** ========== 关键词防抖 ========== */
+
+// 关键词变化后 300ms 内无新输入才触发搜索（防抖）
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 watch(keyword, (val) => {
   if (!val) {
@@ -96,6 +112,9 @@ watch(keyword, (val) => {
   }, 300)
 })
 
+/**
+ * 执行搜索：按当前关键词与页码请求后端，回填结果与总数
+ */
 async function handleSearch(): Promise<void> {
   if (!keyword.value) return
 
@@ -115,8 +134,13 @@ async function handleSearch(): Promise<void> {
   }
 }
 
+/**
+ * 点击搜索结果：按资源类型跳转到对应管理页并携带 id 定位
+ *
+ * @param item 被点击的搜索结果项
+ */
 function handleClick(item: SearchResult): void {
-  // 根据资源类型跳转到对应页面
+  // 资源类型 → 管理页路由映射（新增可搜索资源类型时需同步维护）
   const routes: Record<string, string> = {
     user: '/system/user',
     role: '/system/role',
@@ -133,6 +157,12 @@ function handleClick(item: SearchResult): void {
   visible.value = false
 }
 
+/**
+ * 资源类型显示名称
+ *
+ * @param type 后端资源类型标识（如 user/role/menu）
+ * @returns 中文类型名（未知类型原样返回）
+ */
 function getTypeName(type: string): string {
   const names: Record<string, string> = {
     user: '用户',
@@ -145,6 +175,12 @@ function getTypeName(type: string): string {
   return names[type] || type
 }
 
+/**
+ * 资源类型对应的标签颜色
+ *
+ * @param type 后端资源类型标识
+ * @returns el-tag 类型（未知类型返回默认色）
+ */
 function getTagType(type: string): 'success' | 'warning' | 'info' | 'primary' | 'danger' | '' {
   const types: Record<string, 'success' | 'warning' | 'info' | 'primary' | 'danger' | ''> = {
     user: 'success',

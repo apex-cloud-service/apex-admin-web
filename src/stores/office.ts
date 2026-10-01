@@ -1,95 +1,71 @@
 /**
- * 办公平台 Store
- * 管理办公平台的全局状态
+ * 办公平台状态管理
+ * ------------------------------------------------------------------
+ * 管理办公平台（飞书、钉钉、企业微信）的配置和绑定状态。
+ * 
+ * 状态包括：
+ *   - 平台配置信息（appId、appSecret 等）
+ *   - 用户绑定状态
+ *   - 当前选中的平台
  */
+
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { OfficePlatform } from '@/api/office'
+import { ref } from 'vue'
 
-export interface PlatformStatus {
-  platform: OfficePlatform
-  connected: boolean
-  bindingStatus: 'approved' | 'pending' | 'rejected' | 'none'
-  lastSyncTime?: string
-  deptCount?: number
-  memberCount?: number
-}
-
+/**
+ * 办公平台 Store
+ * 
+ * @description 管理办公平台的配置和用户绑定状态
+ */
 export const useOfficeStore = defineStore('office', () => {
-  // 状态
-  const platformStatuses = ref<PlatformStatus[]>([])
-  const currentPlatform = ref<OfficePlatform>()
-  const isLoading = ref(false)
+  /**
+   * 当前选中的平台类型
+   * 
+   * @description 可选值：'feishu' | 'dingtalk' | 'wechat'
+   */
+  const currentPlatform = ref<string>('')
 
-  // 计算属性
-  const connectedPlatforms = computed(() => 
-    platformStatuses.value.filter(s => s.connected)
-  )
+  /**
+   * 用户绑定状态
+   * 
+   * @description 记录用户在各平台的绑定状态
+   */
+  const bindingStatus = ref<Record<string, boolean>>({})
 
-  const approvedPlatforms = computed(() =>
-    platformStatuses.value.filter(s => s.bindingStatus === 'approved')
-  )
-
-  const hasConnectedPlatform = computed(() => 
-    connectedPlatforms.value.length > 0
-  )
-
-  // 方法
-  const setPlatformStatus = (status: PlatformStatus) => {
-    const index = platformStatuses.value.findIndex(s => s.platform === status.platform)
-    if (index >= 0) {
-      platformStatuses.value[index] = status
-    } else {
-      platformStatuses.value.push(status)
-    }
-  }
-
-  const updatePlatformConnection = (platform: OfficePlatform, connected: boolean) => {
-    const status = platformStatuses.value.find(s => s.platform === platform)
-    if (status) {
-      status.connected = connected
-    }
-  }
-
-  const updateBindingStatus = (platform: OfficePlatform, bindingStatus: PlatformStatus['bindingStatus']) => {
-    const status = platformStatuses.value.find(s => s.platform === platform)
-    if (status) {
-      status.bindingStatus = bindingStatus
-    }
-  }
-
-  const setCurrentPlatform = (platform: OfficePlatform) => {
+  /**
+   * 设置当前平台
+   * 
+   * @param platform 平台类型
+   */
+  const setCurrentPlatform = (platform: string) => {
     currentPlatform.value = platform
   }
 
-  const clearPlatformStatus = (platform: OfficePlatform) => {
-    const index = platformStatuses.value.findIndex(s => s.platform === platform)
-    if (index >= 0) {
-      platformStatuses.value.splice(index, 1)
-    }
+  /**
+   * 更新绑定状态
+   * 
+   * @param platform 平台类型
+   * @param status 绑定状态
+   */
+  const updateBindingStatus = (platform: string, status: boolean) => {
+    bindingStatus.value[platform] = status
   }
 
+  /**
+   * 清理所有状态
+   * 
+   * @description 用户登出时调用
+   */
   const reset = () => {
-    platformStatuses.value = []
-    currentPlatform.value = undefined
-    isLoading.value = false
+    currentPlatform.value = ''
+    bindingStatus.value = {}
   }
 
   return {
-    // 状态
-    platformStatuses,
     currentPlatform,
-    isLoading,
-    // 计算属性
-    connectedPlatforms,
-    approvedPlatforms,
-    hasConnectedPlatform,
-    // 方法
-    setPlatformStatus,
-    updatePlatformConnection,
-    updateBindingStatus,
+    bindingStatus,
     setCurrentPlatform,
-    clearPlatformStatus,
+    updateBindingStatus,
     reset
   }
 })

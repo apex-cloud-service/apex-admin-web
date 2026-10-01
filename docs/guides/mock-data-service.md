@@ -316,7 +316,7 @@ const MOCK_ENABLED = false  // 改为 false
 
 - [Mock.js 官方文档](http://mockjs.com/)
 - [ECharts 官方文档](https://echarts.apache.org/zh/index.html)
-- [功能说明文档](./document-chart-query.md)
+- [文档和图表管理功能说明](../features/document-chart-management.md)
 
 ## 📝 更新日志
 

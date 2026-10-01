@@ -224,9 +224,9 @@
 
 ## 📚 相关文档
 
-- [文档和图表查询功能说明](./document-chart-query.md)
-- [Mock 使用指南](../mock/README.md)
-- [后端实施进度报告](/Users/work/apex-scaffold/docs/DOCUMENT_CHART_IMPLEMENTATION_PROGRESS.md)
+- [文档和图表管理功能说明](../features/document-chart-management.md)
+- [Mock 数据服务使用指南](../guides/mock-data-service.md)
+- 后端实施进度报告：`apex-scaffold/docs/DOCUMENT_CHART_IMPLEMENTATION_PROGRESS.md`
 
 ---
 

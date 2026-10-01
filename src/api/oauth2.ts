@@ -9,7 +9,7 @@
  *   - GET /oauth2/userinfo - 获取已授权用户信息
  *   - POST /api/v1/auth/social/* - 第三方社交登录
  */
-import { get, post } from '@/utils/request'
+import { get, post, request as sendRequest } from '@/utils/request'
 import type { LoginResult } from '@/types'
 
 /**
@@ -39,11 +39,11 @@ export interface OAuth2TokenRequest {
   /** 回调地址（必须与授权时一致） */
   redirectUri: string
   /** 客户端 ID */
-  clientId?: string
+  clientId: string
   /** 客户端密钥 */
   clientSecret?: string
   /** PKCE 验证码（如启用 PKCE） */
-  codeVerifier?: string
+  codeVerifier: string
 }
 
 /**
@@ -73,11 +73,18 @@ function generateState(): string {
  * @param config OAuth2 配置
  * @returns 授权页面 URL
  */
-export function buildAuthUrl(config: OAuth2Config): string {
+export async function buildAuthUrl(config: OAuth2Config): Promise<string> {
+  if (!config.clientId) throw new Error("未配置 OAuth2 客户端 ID")
+  const codeVerifier = generateState() + generateState()
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(codeVerifier))
+  const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
   const state = config.state || generateState()
   sessionStorage.setItem('oauth2_state', state)
+  sessionStorage.setItem('oauth2_context', JSON.stringify({ clientId: config.clientId, redirectUri: config.redirectUri, codeVerifier }))
 
   const params = new URLSearchParams({
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
     response_type: 'code',
     client_id: config.clientId,
     redirect_uri: config.redirectUri,
@@ -97,15 +104,33 @@ export function buildAuthUrl(config: OAuth2Config): string {
  * @param request Token 请求参数
  * @returns 登录结果（包含 accessToken 和 refreshToken）
  */
-export function exchangeToken(request: OAuth2TokenRequest): Promise<LoginResult> {
-  return post<LoginResult>('/oauth2/token', {
+export async function exchangeToken(request: OAuth2TokenRequest): Promise<LoginResult> {
+  const data = new URLSearchParams({
     grant_type: request.grantType,
     code: request.code,
     redirect_uri: request.redirectUri,
     client_id: request.clientId,
-    client_secret: request.clientSecret,
     code_verifier: request.codeVerifier,
   })
+  const result = await sendRequest<{ access_token: string; refresh_token?: string; token_type?: string; expires_in?: number }>({
+    method: 'POST', url: '/oauth2/token', data: data.toString(),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  })
+  if (!result.access_token) throw new Error('授权响应缺少访问令牌')
+  return { accessToken: result.access_token, refreshToken: result.refresh_token, tokenType: result.token_type, expiresIn: result.expires_in }
+}
+
+export function consumeAuthorization(state: string): Pick<OAuth2TokenRequest, 'clientId' | 'redirectUri' | 'codeVerifier'> | null {
+  const raw = sessionStorage.getItem('oauth2_context')
+  sessionStorage.removeItem('oauth2_context')
+  if (!verifyState(state) || !raw) return null
+  try {
+    const context = JSON.parse(raw)
+    if (typeof context.clientId !== 'string' || !context.clientId || typeof context.redirectUri !== 'string' || typeof context.codeVerifier !== 'string') return null
+    return context
+  } catch {
+    return null
+  }
 }
 
 /**

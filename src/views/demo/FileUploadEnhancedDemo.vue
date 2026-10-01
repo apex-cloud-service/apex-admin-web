@@ -226,13 +226,18 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 增强版上传组件演示页逻辑
+ * - 四个示例场景分别对应不同 props 组合，展示压缩/裁剪/拖拽/批量能力
+ * - 通过 ref 调用组件暴露的 clearFiles 清空方法
+ */
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { 
-  Picture, 
-  Crop, 
-  Upload, 
-  VideoCamera, 
+import {
+  Picture,
+  Crop,
+  Upload,
+  VideoCamera,
   DataAnalysis,
   Select,
   Close,
@@ -242,16 +247,27 @@ import {
 import FileUploadEnhanced from '@/components/FileUploadEnhanced.vue'
 import type { FileUploadResult } from '@/types'
 
+/** ========== 示例组件与结果 ========== */
+
+/** 示例 1 组件实例（基础图片上传 + 压缩） */
 const upload1Ref = ref()
+/** 示例 2 组件实例（裁剪 + 进度弹窗） */
 const upload2Ref = ref()
+/** 示例 3 组件实例（批量 + 拖拽） */
 const upload3Ref = ref()
+/** 示例 4 组件实例（粘贴上传） */
 const upload4Ref = ref()
 
+/** 示例 1 的上传结果列表 */
 const upload1Results = ref<FileUploadResult[]>([])
+/** 示例 2 的最近一次上传结果 */
 const upload2Result = ref<FileUploadResult | null>(null)
+/** 示例 3 的上传结果列表 */
 const upload3Results = ref<FileUploadResult[]>([])
+/** 示例 4 的最近一次上传结果 */
 const upload4Result = ref<FileUploadResult | null>(null)
 
+/** 基础版 vs 增强版功能对照表 */
 const featureComparison = [
   { feature: '基础上传', basic: true, enhanced: true },
   { feature: '文件大小校验', basic: true, enhanced: true },
@@ -268,55 +284,85 @@ const featureComparison = [
   { feature: '批量上传', basic: true, enhanced: true },
 ]
 
+/** ========== 上传回调 ========== */
+
+/**
+ * 示例 1 上传成功回调：记录结果
+ * @param result 上传结果（存储路径与访问 URL）
+ */
 const handleUpload1Success = (result: FileUploadResult) => {
   console.log('示例1上传成功：', result)
   upload1Results.value.push(result)
 }
 
+/**
+ * 示例 2 上传成功回调：记录结果
+ * @param result 上传结果（存储路径与访问 URL）
+ */
 const handleUpload2Success = (result: FileUploadResult) => {
   console.log('示例2上传成功：', result)
   upload2Result.value = result
 }
 
+/**
+ * 示例 3 上传成功回调：记录结果
+ * @param result 上传结果（存储路径与访问 URL）
+ */
 const handleUpload3Success = (result: FileUploadResult) => {
   console.log('示例3上传成功：', result)
   upload3Results.value.push(result)
 }
 
+/**
+ * 示例 4 上传成功回调：记录结果
+ * @param result 上传结果（存储路径与访问 URL）
+ */
 const handleUpload4Success = (result: FileUploadResult) => {
   console.log('示例4上传成功：', result)
   upload4Result.value = result
 }
 
+/**
+ * 从示例 3 的结果列表中移除指定项
+ * @param index 待移除项下标
+ */
 const handleRemove3 = (index: number) => {
   upload3Results.value.splice(index, 1)
 }
 
+/** ========== 统一操作 ========== */
+
+/**
+ * 清空全部示例的组件文件列表与结果
+ */
 const clearAll = () => {
   upload1Ref.value?.clearFiles()
   upload2Ref.value?.clearFiles()
   upload3Ref.value?.clearFiles()
   upload4Ref.value?.clearFiles()
-  
+
   upload1Results.value = []
   upload2Result.value = null
   upload3Results.value = []
   upload4Result.value = null
-  
+
   ElMessage.success('已清空所有上传')
 }
 
+/**
+ * 统计并提示当前各示例的上传文件数
+ */
 const showStatistics = () => {
-  const total = upload1Results.value.length + 
-                (upload2Result.value ? 1 : 0) + 
-                upload3Results.value.length + 
+  const total = upload1Results.value.length +
+                (upload2Result.value ? 1 : 0) +
+                upload3Results.value.length +
                 (upload4Result.value ? 1 : 0)
-  
+
   ElMessage.info({
     message: `共上传 ${total} 个文件`,
     duration: 3000
   })
-  
+
   console.log('上传统计：', {
     示例1: upload1Results.value.length,
     示例2: upload2Result.value ? 1 : 0,

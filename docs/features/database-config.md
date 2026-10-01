@@ -51,9 +51,9 @@
 'system/database/index': () => import('@/views/system/database/index.vue')
 ```
 
-### 5. 菜单注册 (`database-menu.sql`)
+### 5. 菜单注册（SQL 脚本）
 
-提供完整的 SQL 脚本，包括：
+菜单 SQL 脚本位于 `scripts/database/menu-init.sql`（菜单初始化脚本），包括：
 
 - 数据库配置菜单项（在系统管理下）
 - 三个按钮权限：测试连接、生成配置、查询数据库信息
@@ -97,7 +97,7 @@
 
 ### 数据库部分（待执行）
 
-执行 `database-menu.sql` 脚本，将数据库配置菜单添加到 `sys_menu` 表。
+执行 `scripts/database/menu-init.sql` 脚本，将数据库配置菜单添加到 `sys_menu` 表。
 
 ## 使用流程
 
@@ -134,8 +134,8 @@ apex-admin-web/
 │   ├── api/database.ts                   # 新增 API 接口
 │   ├── views/system/database/index.vue   # 新增页面组件
 │   └── router/dynamic.ts                 # 修改（添加路由注册）
-├── database-menu.sql                      # 新增菜单注册 SQL
-└── DATABASE_CONFIG_IMPLEMENTATION.md      # 本文档
+├── scripts/database/menu-init.sql        # 菜单注册 SQL
+└── docs/features/database-config.md      # 本文档
 ```
 
 ## 注意事项
@@ -147,5 +147,6 @@ apex-admin-web/
 
 ## 参考文档
 
-- 方案文档：`/Users/work/apex-scaffold/.trae/documents/前端配置数据库多适配方案.md`
-- 前端规范：`/Users/work/apex-scaffold/docs/frontend-adjustment-guide.md`
+- 功能验证清单：`docs/guides/database-config-verification.md`
+- 后端方案文档：`apex-scaffold` 仓库 `.trae/documents/前端配置数据库多适配方案.md`
+- 前端规范：`AGENTS.md`

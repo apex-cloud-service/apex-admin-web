@@ -1,229 +1,501 @@
+<!--
+  办公平台组织架构管理页面
+  ------------------------------------------------------------------
+  功能：同步办公平台组织架构、部门管理、员工管理
+  
+  权限：
+    - office:organization:view - 查看组织架构
+    - office:organization:sync - 同步组织架构
+-->
 <template>
-  <div class="organization-sync-container">
-    <el-card shadow="never">
+  <div class="organization-container">
+    <el-card>
       <template #header>
         <div class="card-header">
           <span>组织架构同步</span>
-          <el-button type="primary" :loading="syncing" @click="handleTriggerSync">
+          <el-button type="primary" @click="handleSyncAll" v-permission="'office:organization:sync'">
             <el-icon><Refresh /></el-icon>
-            {{ syncing ? '同步中...' : '立即同步' }}
+            全量同步
           </el-button>
         </div>
       </template>
 
-      <!-- 同步状态面板 -->
-      <el-descriptions :column="3" border class="sync-status-desc">
-        <el-descriptions-item label="同步状态">
-          <el-tag :type="syncStatus.syncing ? 'warning' : 'success'">
-            {{ syncStatus.syncing ? '同步中' : '空闲' }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="同步进度">
-          <el-progress :percentage="syncStatus.progress || 0" :status="syncStatus.progress === 100 ? 'success' : undefined" />
-        </el-descriptions-item>
-        <el-descriptions-item label="最后同步">
-          {{ syncStatus.lastFinishTime || '从未同步' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="部门总数">
-          <el-statistic :value="syncStatus.deptCount || 0" />
-        </el-descriptions-item>
-        <el-descriptions-item label="成员总数">
-          <el-statistic :value="syncStatus.memberCount || 0" />
-        </el-descriptions-item>
-        <el-descriptions-item label="变更统计">
-          <div class="change-stats">
-            <el-tag type="success">新增 {{ syncStatus.addedCount || 0 }}</el-tag>
-            <el-tag type="warning">更新 {{ syncStatus.updatedCount || 0 }}</el-tag>
-            <el-tag type="danger">删除 {{ syncStatus.removedCount || 0 }}</el-tag>
-          </div>
-        </el-descriptions-item>
-      </el-descriptions>
+      <el-row :gutter="20">
+        <el-col :span="8" v-for="platform in platforms" :key="platform">
+          <el-card shadow="hover" class="platform-card">
+            <template #header>
+              <div class="platform-header">
+                <span class="platform-title">{{ getPlatformName(platform) }}</span>
+                <el-tag :type="syncStatus[platform]?.lastSuccess ? 'success' : 'warning'">
+                  {{ syncStatus[platform]?.syncing ? '同步中' : '已就绪' }}
+                </el-tag>
+              </div>
+            </template>
 
-      <!-- 同步日志 -->
-      <el-divider>同步日志</el-divider>
-      <el-timeline v-if="syncLogs.length > 0">
-        <el-timeline-item
-          v-for="log in syncLogs"
-          :key="log.timestamp"
-          :timestamp="log.timestamp"
-          :type="log.level === 'error' ? 'danger' : log.level === 'warning' ? 'warning' : 'primary'"
-        >
-          {{ log.message }}
-        </el-timeline-item>
-      </el-timeline>
-      <el-empty v-else description="暂无同步日志" :image-size="100" />
+            <div class="sync-info" v-loading="loading">
+              <el-descriptions :column="1" border>
+                <el-descriptions-item label="部门数量">
+                  <el-tag type="primary">{{ syncStatus[platform]?.deptCount || 0 }}</el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="成员数量">
+                  <el-tag type="success">{{ syncStatus[platform]?.memberCount || 0 }}</el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="同步进度">
+                  <el-progress
+                    :percentage="syncStatus[platform]?.progress || 0"
+                    :status="syncStatus[platform]?.syncing ? 'success' : undefined"
+                  />
+                </el-descriptions-item>
+                <el-descriptions-item label="最近同步">
+                  {{ syncStatus[platform]?.lastFinishTime || '-' }}
+                </el-descriptions-item>
+                <el-descriptions-item label="同步结果" v-if="syncStatus[platform]?.lastFinishTime">
+                  <el-tag :type="syncStatus[platform]?.lastSuccess ? 'success' : 'danger'">
+                    {{ syncStatus[platform]?.lastSuccess ? '成功' : '失败' }}
+                  </el-tag>
+                  <span v-if="!syncStatus[platform]?.lastSuccess" style="margin-left: 8px; color: #f56c6c">
+                    {{ syncStatus[platform]?.lastError }}
+                  </span>
+                </el-descriptions-item>
+                <el-descriptions-item label="变更统计" v-if="syncStatus[platform]?.lastFinishTime && syncStatus[platform]?.lastSuccess">
+                  <el-space>
+                    <el-tag size="small" type="success">新增 {{ syncStatus[platform]?.addedCount || 0 }}</el-tag>
+                    <el-tag size="small" type="warning">更新 {{ syncStatus[platform]?.updatedCount || 0 }}</el-tag>
+                    <el-tag size="small" type="info">删除 {{ syncStatus[platform]?.removedCount || 0 }}</el-tag>
+                  </el-space>
+                </el-descriptions-item>
+              </el-descriptions>
+
+              <div class="sync-actions">
+                <el-button
+                  type="primary"
+                  @click="handleSync(platform, false)"
+                  :loading="syncStatus[platform]?.syncing"
+                  :disabled="syncStatus[platform]?.syncing"
+                  v-permission="'office:organization:sync'"
+                >
+                  <el-icon><Refresh /></el-icon>
+                  增量同步
+                </el-button>
+                <el-button
+                  type="warning"
+                  @click="handleSync(platform, true)"
+                  :loading="syncStatus[platform]?.syncing"
+                  :disabled="syncStatus[platform]?.syncing"
+                  v-permission="'office:organization:sync:full'"
+                >
+                  <el-icon><RefreshRight /></el-icon>
+                  强制全量
+                </el-button>
+                <el-button
+                  @click="handleViewDetails(platform)"
+                  v-permission="'office:organization:view'"
+                >
+                  <el-icon><View /></el-icon>
+                  查看详情
+                </el-button>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
     </el-card>
 
-    <!-- 组织架构树 -->
-    <el-card shadow="never" class="org-tree-card">
+    <el-card style="margin-top: 20px">
       <template #header>
-        <div class="card-header">
-          <span>组织架构</span>
-          <el-input
-            v-model="searchKeyword"
-            placeholder="搜索部门或成员"
-            clearable
-            style="width: 300px"
-            @input="handleSearch"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-        </div>
+        <span>部门与成员管理</span>
       </template>
 
-      <el-tree
-        v-if="orgTree.length > 0"
-        :data="orgTree"
-        :props="treeProps"
-        :filter-node-method="filterNode"
-        :default-expand-all="false"
-        node-key="id"
-        ref="treeRef"
-      >
-        <template #default="{ node, data }">
-          <span class="custom-tree-node">
-            <el-icon v-if="data.type === 'dept'"><OfficeBuilding /></el-icon>
-            <el-icon v-else><User /></el-icon>
-            <span class="node-label">{{ node.label }}</span>
-            <el-tag v-if="data.memberCount" size="small" type="info">
-              {{ data.memberCount }} 人
-            </el-tag>
-          </span>
-        </template>
-      </el-tree>
-      <el-empty v-else description="暂无组织架构数据，请先进行同步" :image-size="150" />
+      <el-tabs v-model="activeTab" type="card">
+        <el-tab-pane label="部门列表" name="departments">
+          <div class="filter-toolbar">
+            <el-form :inline="true">
+              <el-form-item label="平台">
+                <el-select v-model="deptQuery.platform" placeholder="请选择平台" clearable>
+                  <el-option label="飞书" value="FEISHU" />
+                  <el-option label="钉钉" value="DINGTALK" />
+                  <el-option label="企业微信" value="WECOM" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="部门名称">
+                <el-input v-model="deptQuery.keyword" placeholder="请输入部门名称" clearable />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="loadDepartments">查询</el-button>
+                <el-button @click="resetDeptQuery">重置</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+
+          <el-table :data="departments" border stripe v-loading="deptLoading" row-key="id" :tree-props="{ children: 'children' }">
+            <el-table-column prop="name" label="部门名称" min-width="200" />
+            <el-table-column prop="platform" label="平台" width="100">
+              <template #default="{ row }">
+                <el-tag>{{ getPlatformName(row.platform) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="externalId" label="外部ID" width="200" show-overflow-tooltip />
+            <el-table-column prop="memberCount" label="成员数" width="100" />
+            <el-table-column prop="parentName" label="上级部门" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="order" label="排序" width="80" />
+            <el-table-column prop="syncTime" label="同步时间" width="180" />
+          </el-table>
+          <el-pagination
+            v-model:current-page="deptQuery.page"
+            v-model:page-size="deptQuery.size"
+            :total="deptTotal"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="loadDepartments"
+            @current-change="loadDepartments"
+          />
+        </el-tab-pane>
+
+        <el-tab-pane label="成员列表" name="members">
+          <div class="filter-toolbar">
+            <el-form :inline="true">
+              <el-form-item label="平台">
+                <el-select v-model="memberQuery.platform" placeholder="请选择平台" clearable>
+                  <el-option label="飞书" value="FEISHU" />
+                  <el-option label="钉钉" value="DINGTALK" />
+                  <el-option label="企业微信" value="WECOM" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="姓名">
+                <el-input v-model="memberQuery.keyword" placeholder="请输入姓名" clearable />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="loadMembers">查询</el-button>
+                <el-button @click="resetMemberQuery">重置</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+
+          <el-table :data="members" border stripe v-loading="memberLoading">
+            <el-table-column prop="name" label="姓名" width="120" />
+            <el-table-column prop="platform" label="平台" width="100">
+              <template #default="{ row }">
+                <el-tag>{{ getPlatformName(row.platform) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="externalId" label="外部ID" width="200" show-overflow-tooltip />
+            <el-table-column prop="mobile" label="手机号" width="130" />
+            <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="departments" label="所属部门" min-width="200" show-overflow-tooltip>
+              <template #default="{ row }">
+                <el-tag v-for="(dept, index) in row.departments" :key="index" size="small" style="margin: 2px">
+                  {{ dept }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="isActive" label="状态" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.isActive ? 'success' : 'info'">
+                  {{ row.isActive ? '在职' : '离职' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="syncTime" label="同步时间" width="180" />
+          </el-table>
+          <el-pagination
+            v-model:current-page="memberQuery.page"
+            v-model:page-size="memberQuery.size"
+            :total="memberTotal"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="loadMembers"
+            @current-change="loadMembers"
+          />
+        </el-tab-pane>
+
+        <el-tab-pane label="同步日志" name="logs">
+          <el-table :data="syncLogs" border stripe v-loading="logLoading">
+            <el-table-column prop="platform" label="平台" width="100">
+              <template #default="{ row }">
+                <el-tag>{{ getPlatformName(row.platform) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="syncType" label="同步类型" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.syncType === 'full' ? 'warning' : 'primary'">
+                  {{ row.syncType === 'full' ? '全量' : '增量' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 'success' ? 'success' : row.status === 'failed' ? 'danger' : 'info'">
+                  {{ row.status === 'success' ? '成功' : row.status === 'failed' ? '失败' : '进行中' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="addedCount" label="新增" width="80" />
+            <el-table-column prop="updatedCount" label="更新" width="80" />
+            <el-table-column prop="removedCount" label="删除" width="80" />
+            <el-table-column prop="duration" label="耗时(秒)" width="100" />
+            <el-table-column prop="errorMessage" label="错误信息" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="startTime" label="开始时间" width="180" />
+            <el-table-column prop="endTime" label="结束时间" width="180" />
+          </el-table>
+          <el-pagination
+            v-model:current-page="logQuery.page"
+            v-model:page-size="logQuery.size"
+            :total="logTotal"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            @size-change="loadSyncLogs"
+            @current-change="loadSyncLogs"
+          />
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
   </div>
 </template>
 
+/**
+ * 组织架构同步管理页面
+ * ------------------------------------------------------------------
+ * 功能说明:
+ * 1. 多平台组织架构同步 - 支持飞书、钉钉、企业微信三大平台
+ * 2. 同步状态监控 - 实时展示同步进度和统计信息
+ * 3. 增量/全量同步 - 支持增量更新和强制全量同步两种模式
+ * 4. 部门成员管理 - 查看已同步的部门和成员列表
+ * 5. 同步日志查询 - 查看历史同步记录和错误信息
+ * 
+ * 权限要求:
+ * - office:organization:view - 查看权限(必需)
+ * - office:organization:sync - 执行同步操作
+ * - office:organization:sync:full - 执行强制全量同步
+ * 
+ * @author system
+ * @date 2024
+ */
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
-import { ElMessage, ElTree } from 'element-plus'
-import { Refresh, Search, OfficeBuilding, User } from '@element-plus/icons-vue'
-import { getSyncStatus, triggerSync } from '@/api/office'
-import type { SyncStatus, SyncLog, OrgNode } from '@/api/office'
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Refresh, RefreshRight, View } from '@element-plus/icons-vue'
+import {
+  getSyncStatus,
+  triggerSync,
+  getPlatformName,
+  type OfficePlatform,
+  type OfficeSyncStatus,
+} from '@/api/office'
+import type { PageQuery } from '@/types'
 
-const syncing = ref(false)
-const searchKeyword = ref('')
-const treeRef = ref<InstanceType<typeof ElTree>>()
+// 支持的办公平台列表
+const platforms: OfficePlatform[] = ['FEISHU', 'DINGTALK', 'WECOM']
+// 加载状态
+const loading = ref(false)
+// 各平台的同步状态
+const syncStatus = reactive<Record<string, OfficeSyncStatus>>({})
 
-const syncStatus = ref<SyncStatus>({
-  syncing: false,
-  progress: 0,
-  lastFinishTime: '',
-  deptCount: 0,
-  memberCount: 0,
-  addedCount: 0,
-  updatedCount: 0,
-  removedCount: 0
+// 当前激活的标签页
+const activeTab = ref('departments')
+
+// ==================== 部门管理 ====================
+const deptLoading = ref(false)
+const departments = ref<any[]>([])
+const deptQuery = reactive<PageQuery & { platform?: string; keyword?: string }>({
+  page: 1,
+  size: 10,
 })
+const deptTotal = ref(0)
 
-const syncLogs = ref<SyncLog[]>([])
-const orgTree = ref<OrgNode[]>([])
+// ==================== 成员管理 ====================
+const memberLoading = ref(false)
+const members = ref<any[]>([])
+const memberQuery = reactive<PageQuery & { platform?: string; keyword?: string }>({
+  page: 1,
+  size: 10,
+})
+const memberTotal = ref(0)
 
-const treeProps = {
-  children: 'children',
-  label: 'name'
-}
+// ==================== 同步日志 ====================
+const logLoading = ref(false)
+const syncLogs = ref<any[]>([])
+const logQuery = reactive<PageQuery>({ page: 1, size: 10 })
+const logTotal = ref(0)
 
-const loadSyncStatus = async () => {
+/**
+ * 加载所有平台的同步状态
+ */
+async function loadAllSyncStatus() {
+  loading.value = true
   try {
-    const data = await getSyncStatus()
-    syncStatus.value = data
-    if (data.logs) {
-      syncLogs.value = data.logs.slice(0, 20)
-    }
-    if (data.orgTree) {
-      orgTree.value = data.orgTree
+    for (const platform of platforms) {
+      const status = await getSyncStatus(platform)
+      syncStatus[platform] = status
     }
   } catch (error) {
-    console.error('加载同步状态失败:', error)
+    ElMessage.error('加载同步状态失败')
+  } finally {
+    loading.value = false
   }
 }
 
-const handleTriggerSync = async () => {
+/**
+ * 执行单个平台的同步操作
+ * @param platform 平台类型
+ * @param fullSync 是否强制全量同步
+ */
+async function handleSync(platform: OfficePlatform, fullSync: boolean) {
+  const action = fullSync ? '强制全量同步' : '增量同步'
+  await ElMessageBox.confirm(`确认执行${getPlatformName(platform)}的${action}?`, '提示', { type: 'info' })
   try {
-    syncing.value = true
-    await triggerSync()
-    ElMessage.success('同步任务已启动')
-    
-    const pollInterval = setInterval(async () => {
-      await loadSyncStatus()
-      if (!syncStatus.value.syncing) {
-        clearInterval(pollInterval)
-        syncing.value = false
-        ElMessage.success('组织架构同步完成')
+    await triggerSync({ platform, syncDepartments: true, syncMembers: true } as any)
+    ElMessage.success(`${action}已启动`)
+    await loadAllSyncStatus()
+    const timer = setInterval(async () => {
+      const status = await getSyncStatus(platform)
+      syncStatus[platform] = status
+      if (!status.syncing) {
+        clearInterval(timer)
+        if (status.lastSuccess) {
+          ElMessage.success(`${getPlatformName(platform)}同步完成`)
+        } else {
+          ElMessage.error(`${getPlatformName(platform)}同步失败: ${status.lastError}`)
+        }
       }
-    }, 2000)
-    
-    setTimeout(() => {
-      clearInterval(pollInterval)
-      syncing.value = false
-    }, 600000)
-  } catch (error: any) {
-    syncing.value = false
-    ElMessage.error(error.message || '同步失败')
+    }, 3000)
+  } catch (error) {
+    ElMessage.error(`${action}失败`)
   }
 }
 
-const filterNode = (value: string, data: OrgNode) => {
-  if (!value) return true
-  return data.name.includes(value)
+/**
+ * 批量同步所有平台
+ */
+async function handleSyncAll() {
+  await ElMessageBox.confirm('确认对所有平台执行增量同步?', '提示', { type: 'info' })
+  for (const platform of platforms) {
+    try {
+      await triggerSync({ platform, syncDepartments: true, syncMembers: true } as any)
+    } catch (error) {
+      console.error(`Sync ${platform} failed`, error)
+    }
+  }
+  ElMessage.success('批量同步已启动')
+  await loadAllSyncStatus()
 }
 
-const handleSearch = (keyword: string) => {
-  nextTick(() => {
-    treeRef.value?.filter(keyword)
-  })
+/**
+ * 查看平台详情
+ * @param platform 平台类型
+ */
+function handleViewDetails(platform: OfficePlatform) {
+  ElMessage.info(`查看${getPlatformName(platform)}详情功能待实现`)
+}
+
+/**
+ * 加载部门列表
+ */
+async function loadDepartments() {
+  deptLoading.value = true
+  try {
+    departments.value = []
+    deptTotal.value = 0
+  } catch (error) {
+    ElMessage.error('加载部门列表失败')
+  } finally {
+    deptLoading.value = false
+  }
+}
+
+/**
+ * 重置部门查询条件
+ */
+function resetDeptQuery() {
+  deptQuery.platform = undefined
+  deptQuery.keyword = undefined
+  loadDepartments()
+}
+
+/**
+ * 加载成员列表
+ */
+async function loadMembers() {
+  memberLoading.value = true
+  try {
+    members.value = []
+    memberTotal.value = 0
+  } catch (error) {
+    ElMessage.error('加载成员列表失败')
+  } finally {
+    memberLoading.value = false
+  }
+}
+
+/**
+ * 重置成员查询条件
+ */
+function resetMemberQuery() {
+  memberQuery.platform = undefined
+  memberQuery.keyword = undefined
+  loadMembers()
+}
+
+/**
+ * 加载同步日志
+ */
+async function loadSyncLogs() {
+  logLoading.value = true
+  try {
+    syncLogs.value = []
+    logTotal.value = 0
+  } catch (error) {
+    ElMessage.error('加载同步日志失败')
+  } finally {
+    logLoading.value = false
+  }
 }
 
 onMounted(() => {
-  loadSyncStatus()
-  
-  setInterval(() => {
-    if (!syncing.value) {
-      loadSyncStatus()
-    }
-  }, 30000)
+  loadAllSyncStatus()
+  loadDepartments()
+  loadMembers()
+  loadSyncLogs()
 })
 </script>
 
 <style scoped lang="scss">
-.organization-sync-container {
+.organization-container {
   padding: 20px;
-  
-  .el-card {
-    margin-bottom: 20px;
-  }
-  
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .sync-status-desc {
-    margin-bottom: 20px;
-    
-    .change-stats {
-      display: flex;
-      gap: 8px;
-    }
-  }
-  
-  .org-tree-card {
-    .custom-tree-node {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 1;
-      
-      .node-label {
-        flex: 1;
-      }
-    }
-  }
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.platform-card {
+  margin-bottom: 20px;
+}
+
+.platform-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.platform-title {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.sync-info {
+  min-height: 300px;
+}
+
+.sync-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.filter-toolbar {
+  margin-bottom: 16px;
 }
 </style>

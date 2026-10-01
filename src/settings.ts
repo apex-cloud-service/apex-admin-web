@@ -14,6 +14,23 @@ export const REFRESH_TOKEN_KEY = 'apex.admin.refresh-token'
 /** 用户身份缓存的 localStorage 键 */
 export const IDENTITY_KEY = 'apex.admin.identity'
 
+/** ========== 本地存储键（UI 偏好） ========== */
+
+/** 侧边栏折叠状态的 localStorage 键 */
+export const SIDEBAR_KEY = 'apex.admin.sidebarCollapsed'
+
+/** 明暗主题的 localStorage 键 */
+export const THEME_KEY = 'apex.admin.theme'
+
+/** 表格配置存储键前缀（拼接表格唯一标识，如 table_config_user） */
+export const TABLE_CONFIG_KEY_PREFIX = 'table_config_'
+
+/** 表单草稿存储键前缀（拼接表单唯一标识，如 draft_user-create） */
+export const DRAFT_KEY_PREFIX = 'draft_'
+
+/** 表单草稿时间戳存储键后缀（拼接在草稿键之后，记录保存时间用于 TTL 过期） */
+export const DRAFT_TIMESTAMP_KEY_SUFFIX = '_timestamp'
+
 /** 后端业务成功错误码（Result.code） */
 export const RESULT_SUCCESS = 0
 

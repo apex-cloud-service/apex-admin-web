@@ -460,6 +460,15 @@ export interface NetworkUsage {
   txBytes: number
   rxBytesPerSec: number
   txBytesPerSec: number
+  rxPackets: number
+  txPackets: number
+  rxErrors: number
+  txErrors: number
+  rxDropped: number
+  txDropped: number
+  errorRate: number
+  bandwidthUtilization: number
+  activeConnections: number
   available: boolean
 }
 
@@ -506,14 +515,21 @@ export interface MonitorMiddleware {
     producerStatus?: string
     topics?: number
   }
-  tracing: {
-    available: boolean
-    type: string
-    endpoint?: string
-    samplingRate?: number
-    spansPending?: number
-    spansDropped?: number
-  }
+  tracing: TracingStats
+}
+
+/** 链路追踪统计 */
+export interface TracingStats {
+  available: boolean
+  type: string
+  endpoint: string | null
+  samplingRate: number
+  spansPending: number
+  spansDropped: number
+  reportedSpans: number
+  failedSpans: number
+  avgReportLatency: number
+  lastReportTime: number
 }
 
 /** 治理监控（governance）：Sentinel 熔断/限流 + 网关流量 */
@@ -536,14 +552,7 @@ export interface MonitorGovernance {
     repeatSubmitRejected: number
   }
   circuitBreakers: CircuitBreakerState[]
-  gateway: {
-    totalRequests: number
-    error4xx: number
-    error5xx: number
-    avgResponseTime: number
-    maxResponseTime: number
-    topPaths: GatewayPathTraffic[]
-  }
+  gateway: GatewayStats
 }
 
 /** Sentinel 规则摘要 */
@@ -568,6 +577,23 @@ export interface CircuitBreakerState {
   notPermittedCalls?: number
 }
 
+/** 网关统计 */
+export interface GatewayStats {
+  totalRequests: number
+  error4xx: number
+  error5xx: number
+  avgResponseTime: number
+  maxResponseTime: number
+  currentQps: number
+  currentTps: number
+  peakQps: number
+  successRate: number
+  p50ResponseTime: number
+  p95ResponseTime: number
+  p99ResponseTime: number
+  topPaths: PathTraffic[]
+}
+
 /** 网关路径流量 */
 export interface GatewayPathTraffic {
   path: string
@@ -576,6 +602,16 @@ export interface GatewayPathTraffic {
   avgTime: number
   maxTime: number
   errorCount: number
+  errorRate: number
+}
+
+export interface PathTraffic {
+  path: string
+  method?: string
+  count: number
+  avgTime: number
+  maxTime?: number
+  errorCount?: number
   errorRate: number
 }
 
@@ -647,6 +683,34 @@ export interface CurrentDatabaseInfo {
   version: string
   /** 驱动版本 */
   driverVersion?: string
+}
+
+/** 链路追踪 Span */
+export interface TraceSpan {
+  traceId: string
+  spanId: string
+  parentSpanId?: string
+  serviceName: string
+  operationName: string
+  startTime: number
+  duration: number
+  tags: Record<string, string>
+  logs: TraceLog[]
+}
+
+/** 链路追踪日志 */
+export interface TraceLog {
+  timestamp: number
+  fields: Record<string, string>
+}
+
+/** 链路追踪查询结果 */
+export interface TraceQueryResult {
+  traceId: string
+  spans: TraceSpan[]
+  duration: number
+  serviceCount: number
+  spanCount: number
 }
 
 /* ==================== 文件上传类型（POST /api/v1/files/*） ==================== */

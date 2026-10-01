@@ -10,7 +10,7 @@
 
 #### 前端实现
 
-**API 函数** ([src/api/database.ts](file:///Users/work/apex-admin-web/src/api/database.ts)):
+**API 函数** ([src/api/database.ts](../../src/api/database.ts)):
 ```typescript
 export function testDatabaseConnection(
   config: DatabaseConfig & { password: string }
@@ -19,7 +19,7 @@ export function testDatabaseConnection(
 }
 ```
 
-**页面调用** ([src/views/system/database/index.vue](file:///Users/work/apex-admin-web/src/views/system/database/index.vue)):
+**页面调用** ([src/views/system/database/index.vue](../../src/views/system/database/index.vue)):
 ```typescript
 const handleTest = async () => {
   if (!formRef.value) return
@@ -47,7 +47,7 @@ const handleTest = async () => {
 
 #### 后端实现
 
-**Handler** ([DatabaseConfigHandler.java](file:///Users/work/apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/DatabaseConfigHandler.java)):
+**Handler** (DatabaseConfigHandler.java：`apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/DatabaseConfigHandler.java`):
 ```java
 @RequirePermission("system:database:test")
 @Operation(operationId = "testDatabaseConnection", summary = "测试数据库连接")
@@ -120,7 +120,7 @@ public Mono<ServerResponse> testConnection(ServerRequest request) {
 
 #### 前端实现
 
-**API 函数** ([src/api/database.ts](file:///Users/work/apex-admin-web/src/api/database.ts)):
+**API 函数** ([src/api/database.ts](../../src/api/database.ts)):
 ```typescript
 export function generateDeploymentConfig(
   config: DatabaseConfig & { password: string }
@@ -129,7 +129,7 @@ export function generateDeploymentConfig(
 }
 ```
 
-**页面调用** ([src/views/system/database/index.vue](file:///Users/work/apex-admin-web/src/views/system/database/index.vue)):
+**页面调用** ([src/views/system/database/index.vue](../../src/views/system/database/index.vue)):
 ```typescript
 const handleGenerate = async () => {
   if (!formRef.value) return
@@ -157,7 +157,7 @@ const handleGenerate = async () => {
 
 #### 后端实现
 
-**Handler** ([DatabaseConfigHandler.java](file:///Users/work/apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/DatabaseConfigHandler.java)):
+**Handler** (DatabaseConfigHandler.java：`apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/DatabaseConfigHandler.java`):
 ```java
 @RequirePermission("system:database:generate")
 @Operation(operationId = "generateDeploymentConfig", summary = "生成部署配置")
@@ -207,14 +207,14 @@ public Mono<ServerResponse> generateConfig(ServerRequest request) {
 
 #### 前端实现
 
-**API 函数** ([src/api/database.ts](file:///Users/work/apex-admin-web/src/api/database.ts)):
+**API 函数** ([src/api/database.ts](../../src/api/database.ts)):
 ```typescript
 export function getCurrentDatabaseInfo(): Promise<CurrentDatabaseInfo> {
   return get<CurrentDatabaseInfo>('/admin-api/v1/database/current')
 }
 ```
 
-**页面调用** ([src/views/system/database/index.vue](file:///Users/work/apex-admin-web/src/views/system/database/index.vue)):
+**页面调用** ([src/views/system/database/index.vue](../../src/views/system/database/index.vue)):
 ```typescript
 const fetchCurrentDb = async () => {
   try {
@@ -231,7 +231,7 @@ onMounted(() => {
 
 #### 后端实现
 
-**Handler** ([DatabaseConfigHandler.java](file:///Users/work/apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/DatabaseConfigHandler.java)):
+**Handler** (DatabaseConfigHandler.java：`apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/DatabaseConfigHandler.java`):
 ```java
 @RequirePermission("system:database:info")
 @Operation(operationId = "getCurrentDatabaseInfo", summary = "获取当前数据库信息")
@@ -286,7 +286,7 @@ public Mono<ServerResponse> getCurrentInfo(ServerRequest request) {
 
 ## 类型定义对照
 
-### 前端类型 ([src/types/index.ts](file:///Users/work/apex-admin-web/src/types/index.ts))
+### 前端类型 ([src/types/index.ts](../../src/types/index.ts))
 
 ```typescript
 export interface DatabaseConfig {
@@ -318,7 +318,7 @@ export interface CurrentDatabaseInfo {
 }
 ```
 
-### 后端 DTO ([apex-application/dto/admin](file:///Users/work/apex-scaffold/apex-application/src/main/java/com/apex/scaffold/application/dto/admin))
+### 后端 DTO (apex-application/dto/admin：`apex-scaffold/apex-application/src/main/java/com/apex/scaffold/application/dto/admin`)
 
 ```java
 // DatabaseConfigRequest.java

@@ -109,16 +109,24 @@ npm run build
 ```
 apex-admin-web/
 ├── src/
-│   ├── api/            # 接口层（按业务域拆分：auth/user/system/monitor）
+│   ├── api/            # 接口层（按业务域拆分，见 docs/api/README.md 全量清单）
 │   ├── types/          # 与后端 DTO 对齐的类型定义
-│   ├── utils/          # 请求封装 / 会话存取 / 错误提示
-│   ├── stores/         # Pinia：用户会话 / 权限 / 应用 UI 状态
+│   ├── utils/          # 请求封装(含401无感刷新) / 会话存取 / 校验 / 脱敏 / XSS防护等
+│   ├── stores/         # Pinia：用户会话 / 权限 / 应用 UI 状态 / 办公平台
+│   ├── composables/    # 组合式函数（useCrud/useTableConfig/useFormDraft/useBreakpoint）
 │   ├── router/         # 静态路由 + 菜单驱动动态路由
 │   ├── directives/     # v-permission 按钮权限指令
 │   ├── layouts/        # 管理后台主布局（侧边栏/顶栏/面包屑）
-│   ├── components/     # 通用组件（Pagination）
-│   └── views/          # 页面（登录/工作台/系统管理/监控/个人中心）
+│   ├── components/     # 通用组件（Pagination/FileUpload/GlobalSearch 等）
+│   ├── mock/           # Mock 数据服务（仅开发环境加载）
+│   ├── test/           # 测试全局准备（setup.ts）
+│   └── views/          # 页面（登录/工作台/系统管理/监控/数据/办公/工作流/个人中心）
+├── docker/             # Nginx 模板与入口脚本（生产反代 /api /admin-api /oauth2）
+├── scripts/            # 构建/性能/安全扫描脚本
+├── sql/                # 菜单注册 SQL（SSO、代码生成器、办公平台）
+├── docs/               # 文档中心（架构/API/指南/功能/参考，见 docs/README.md）
 ├── vite.config.ts      # 构建与开发代理配置
+├── vitest.config.ts    # 单元测试配置
 ├── tsconfig.json       # TypeScript 配置
 └── package.json
 ```

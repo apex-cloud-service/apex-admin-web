@@ -1,3 +1,12 @@
+<!--
+  办公平台配置页面
+  ------------------------------------------------------------------
+  功能：飞书、钉钉、企业微信平台配置管理（AppId、AppSecret、回调 URL）
+  
+  权限：
+    - office:config:view - 查看办公平台配置
+    - office:config:edit - 编辑办公平台配置
+-->
 <template>
   <div class="office-config-container">
     <el-card class="header-card">
@@ -111,6 +120,11 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 办公平台配置页逻辑
+ * - 三平台配置卡片展示 + 创建/编辑/删除（密钥以环境变量引用，不回显明文）
+ * - 更新/删除均携带 version 乐观锁，冲突时后端拒绝
+ */
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
@@ -125,14 +139,24 @@ import {
   type OfficeAppRequest,
 } from '@/api/office-new'
 
+/** ========== 状态定义 ========== */
+
+/** 管理的三大平台（固定顺序渲染卡片） */
 const platforms: OfficePlatform[] = ['FEISHU', 'DINGTALK', 'WECOM']
+/** 各平台应用配置（keyed 查询见 getAppConfig） */
 const apps = ref<OfficeAppResponse[]>([])
+/** 创建/编辑弹窗是否可见 */
 const dialogVisible = ref(false)
+/** 提交按钮 loading */
 const submitLoading = ref(false)
+/** 弹窗模式：true=编辑已有配置，false=创建新配置 */
 const isEdit = ref(false)
+/** 当前操作的目标平台 */
 const currentPlatform = ref<OfficePlatform>('FEISHU')
+/** 表单实例（校验/重置用） */
 const formRef = ref<FormInstance>()
 
+/** 配置表单（密钥字段为环境变量引用，不回显明文） */
 const form = reactive<OfficeAppRequest>({
   appId: '',
   secretReference: '',
@@ -141,6 +165,7 @@ const form = reactive<OfficeAppRequest>({
   enabled: true,
 })
 
+/** 表单校验规则 */
 const rules: FormRules = {
   appId: [{ required: true, message: '请输入应用ID', trigger: 'blur' }],
   secretReference: [{ required: true, message: '请输入密钥环境变量', trigger: 'blur' }],
@@ -150,17 +175,29 @@ const rules: FormRules = {
   ],
 }
 
+/** 弹窗标题（区分创建/编辑模式） */
 const dialogTitle = computed(() => {
   const platformName = PLATFORM_NAMES[currentPlatform.value]
   return isEdit.value ? `编辑${platformName}配置` : `创建${platformName}配置`
 })
 
+/** 当前平台中文名称（表单内只读展示） */
 const currentPlatformName = computed(() => PLATFORM_NAMES[currentPlatform.value])
 
+/** ========== 配置读取与展示 ========== */
+
+/**
+ * 获取指定平台的配置项
+ * @param platform 平台类型
+ * @returns 对应配置（未配置时返回 undefined）
+ */
 const getAppConfig = (platform: OfficePlatform) => {
   return apps.value.find((app) => app.platform === platform)
 }
 
+/**
+ * 加载全部平台配置（挂载与增删改后调用）
+ */
 const loadApps = async () => {
   try {
     apps.value = await listApps()
@@ -169,12 +206,22 @@ const loadApps = async () => {
   }
 }
 
+/** ========== 配置维护操作 ========== */
+
+/**
+ * 打开创建配置弹窗
+ * @param platform 目标平台
+ */
 const openCreateDialog = (platform: OfficePlatform) => {
   isEdit.value = false
   currentPlatform.value = platform
   dialogVisible.value = true
 }
 
+/**
+ * 打开编辑配置弹窗（密钥引用不回显，需重新填写）
+ * @param platform 目标平台
+ */
 const openEditDialog = (platform: OfficePlatform) => {
   const app = getAppConfig(platform)
   if (!app) return
@@ -191,6 +238,9 @@ const openEditDialog = (platform: OfficePlatform) => {
   dialogVisible.value = true
 }
 
+/**
+ * 提交配置：按弹窗模式调用创建/更新接口（更新携带 version 乐观锁）
+ */
 const handleSubmit = async () => {
   if (!formRef.value) return
 
@@ -218,6 +268,10 @@ const handleSubmit = async () => {
   })
 }
 
+/**
+ * 删除平台配置（二次确认 + version 乐观锁）
+ * @param platform 目标平台
+ */
 const handleDelete = async (platform: OfficePlatform) => {
   const app = getAppConfig(platform)
   if (!app) return
@@ -236,6 +290,9 @@ const handleDelete = async (platform: OfficePlatform) => {
   }
 }
 
+/**
+ * 重置表单（弹窗关闭时由 @close 触发）
+ */
 const resetForm = () => {
   formRef.value?.resetFields()
   Object.assign(form, {
@@ -247,6 +304,7 @@ const resetForm = () => {
   })
 }
 
+// 挂载时加载全部平台配置
 onMounted(() => {
   loadApps()
 })

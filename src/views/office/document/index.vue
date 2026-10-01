@@ -1,3 +1,14 @@
+<!--
+  办公平台文档管理页面
+  ------------------------------------------------------------------
+  功能：办公平台在线文档管理、文档协作、文档权限控制
+  
+  权限：
+    - office:document:view - 查看文档列表
+    - office:document:create - 创建文档
+    - office:document:edit - 编辑文档
+    - office:document:delete - 删除文档
+-->
 <template>
   <div class="office-document-container">
     <el-card class="header-card">
@@ -61,7 +72,7 @@
         <el-table-column label="平台" width="100">
           <template #default="{ row }">
             <el-tag :type="getPlatformTagType(row.platform)">
-              {{ PLATFORM_NAMES[row.platform] }}
+              {{ PLATFORM_NAMES[row.platform as unknown as keyof typeof PLATFORM_NAMES] }}
             </el-tag>
           </template>
         </el-table-column>
@@ -285,6 +296,11 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 办公平台文档操作页逻辑
+ * - 文档列表查询（平台/类型/关键词筛选，统一分页口径）
+ * - 文档 CRUD + 复制 + 分享（分享对象来自用户列表）
+ */
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Search, Document } from '@element-plus/icons-vue'
@@ -306,25 +322,46 @@ import {
   type ShareDocumentRequest,
   type DocumentsQuery,
 } from '@/api/office'
+import { listUsers } from '@/api/user'
+
+/** ========== 弹窗与加载状态 ========== */
 
 // 响应式数据
+/** 列表查询进行中 */
 const loading = ref(false)
+/** 表单提交进行中（创建/编辑/复制/分享共用） */
 const submitting = ref(false)
+/** 创建文档弹窗 */
 const createDialogVisible = ref(false)
+/** 编辑文档弹窗 */
 const editDialogVisible = ref(false)
+/** 复制文档弹窗 */
 const copyDialogVisible = ref(false)
+/** 分享文档弹窗 */
 const shareDialogVisible = ref(false)
+/** 文档详情弹窗 */
 const detailVisible = ref(false)
+/** 文档列表（当前页） */
 const documentList = ref<DocumentInfo[]>([])
+/** 数据总条数 */
 const total = ref(0)
+/** 当前操作/查看的文档（编辑/复制/分享/详情共用） */
 const currentDocument = ref<DocumentInfo>()
+/** 创建表单实例 */
 const createFormRef = ref<FormInstance>()
+/** 编辑表单实例 */
 const editFormRef = ref<FormInstance>()
+/** 复制表单实例 */
 const copyFormRef = ref<FormInstance>()
+/** 分享表单实例 */
 const shareFormRef = ref<FormInstance>()
+/** 可选用户列表（分享对象选择，onMounted 时加载） */
 const userList = ref<Array<{ id: string; name: string }>>([])
 
+/** ========== 查询参数与表单定义 ========== */
+
 // 查询参数
+/** 文档查询条件（平台/类型/关键词/分页） */
 const queryParams = reactive<DocumentsQuery>({
   platform: undefined,
   documentType: undefined,
@@ -334,6 +371,7 @@ const queryParams = reactive<DocumentsQuery>({
 })
 
 // 创建表单
+/** 创建表单默认值工厂（每次打开弹窗重置） */
 const defaultCreateFormData = (): CreateDocumentRequest => ({
   platform: 'FEISHU',
   documentType: 'DOC',
@@ -342,8 +380,10 @@ const defaultCreateFormData = (): CreateDocumentRequest => ({
   content: '',
 })
 
+/** 创建文档表单 */
 const createFormData = reactive<CreateDocumentRequest>(defaultCreateFormData())
 
+/** 创建表单校验规则 */
 const createFormRules: FormRules = {
   platform: [{ required: true, message: '请选择平台', trigger: 'change' }],
   documentType: [{ required: true, message: '请选择文档类型', trigger: 'change' }],
@@ -351,36 +391,47 @@ const createFormRules: FormRules = {
 }
 
 // 编辑表单
+/** 编辑文档表单（仅标题与内容） */
 const editFormData = reactive<UpdateDocumentRequest>({
   title: '',
   content: '',
 })
 
+/** 编辑表单校验规则 */
 const editFormRules: FormRules = {
   title: [{ required: true, message: '请输入文档标题', trigger: 'blur' }],
 }
 
 // 复制表单
+/** 复制文档表单（目标目录 + 新标题） */
 const copyFormData = reactive<CopyDocumentRequest>({
   targetFolderId: '',
   newTitle: '',
 })
 
+/** 复制表单校验规则（当前无必填约束） */
 const copyFormRules: FormRules = {}
 
 // 分享表单
+/** 分享文档表单（目标用户 + 权限 + 过期时间） */
 const shareFormData = reactive<ShareDocumentRequest>({
   userIds: [],
   permission: 'VIEW',
   expiresAt: '',
 })
 
+/** 分享表单校验规则 */
 const shareFormRules: FormRules = {
   userIds: [{ required: true, message: '请选择用户', trigger: 'change' }],
   permission: [{ required: true, message: '请选择权限', trigger: 'change' }],
 }
 
+/** ========== 列表查询 ========== */
+
 // 方法
+/**
+ * 查询文档列表：按当前查询条件拉取并回填列表与总数
+ */
 const handleQuery = async () => {
   loading.value = true
   try {
@@ -394,17 +445,25 @@ const handleQuery = async () => {
   }
 }
 
+/** ========== 文档操作 ========== */
+
+/**
+ * 打开创建文档弹窗（表单恢复默认值）
+ */
 const handleCreate = () => {
   Object.assign(createFormData, defaultCreateFormData())
   createDialogVisible.value = true
 }
 
+/**
+ * 提交创建文档：校验通过后调用创建接口并刷新列表
+ */
 const handleCreateSubmit = async () => {
   if (!createFormRef.value) return
-  
+
   await createFormRef.value.validate(async (valid) => {
     if (!valid) return
-    
+
     submitting.value = true
     try {
       await createDocument(createFormData)
@@ -419,6 +478,10 @@ const handleCreateSubmit = async () => {
   })
 }
 
+/**
+ * 打开编辑文档弹窗（先拉取文档详情回填标题）
+ * @param row 目标文档行
+ */
 const handleEdit = async (row: DocumentInfo) => {
   try {
     const doc = await getDocument(row.id)
@@ -431,12 +494,15 @@ const handleEdit = async (row: DocumentInfo) => {
   }
 }
 
+/**
+ * 提交编辑文档：校验通过后调用更新接口并刷新列表
+ */
 const handleEditSubmit = async () => {
   if (!editFormRef.value || !currentDocument.value) return
-  
+
   await editFormRef.value.validate(async (valid) => {
     if (!valid) return
-    
+
     submitting.value = true
     try {
       await updateDocument(currentDocument.value!.id, editFormData)
@@ -451,6 +517,10 @@ const handleEditSubmit = async () => {
   })
 }
 
+/**
+ * 查看文档详情（先拉取详情再展示弹窗）
+ * @param row 目标文档行
+ */
 const handleView = async (row: DocumentInfo) => {
   try {
     const doc = await getDocument(row.id)
@@ -461,6 +531,10 @@ const handleView = async (row: DocumentInfo) => {
   }
 }
 
+/**
+ * 打开复制文档弹窗（重置目标目录与新标题）
+ * @param row 目标文档行
+ */
 const handleCopy = (row: DocumentInfo) => {
   currentDocument.value = row
   copyFormData.targetFolderId = ''
@@ -468,9 +542,12 @@ const handleCopy = (row: DocumentInfo) => {
   copyDialogVisible.value = true
 }
 
+/**
+ * 提交复制文档：复制到指定目录并刷新列表
+ */
 const handleCopySubmit = async () => {
   if (!currentDocument.value) return
-  
+
   submitting.value = true
   try {
     await copyDocument(currentDocument.value.id, copyFormData)
@@ -484,6 +561,10 @@ const handleCopySubmit = async () => {
   }
 }
 
+/**
+ * 打开分享文档弹窗（重置分享对象/权限/过期时间）
+ * @param row 目标文档行
+ */
 const handleShare = (row: DocumentInfo) => {
   currentDocument.value = row
   shareFormData.userIds = []
@@ -492,12 +573,15 @@ const handleShare = (row: DocumentInfo) => {
   shareDialogVisible.value = true
 }
 
+/**
+ * 提交分享文档：校验通过后调用分享接口
+ */
 const handleShareSubmit = async () => {
   if (!shareFormRef.value || !currentDocument.value) return
-  
+
   await shareFormRef.value.validate(async (valid) => {
     if (!valid) return
-    
+
     submitting.value = true
     try {
       await shareDocument(currentDocument.value!.id, shareFormData)
@@ -511,6 +595,10 @@ const handleShareSubmit = async () => {
   })
 }
 
+/**
+ * 删除文档（二次确认后删除并刷新列表）
+ * @param row 目标文档行
+ */
 const handleDelete = async (row: DocumentInfo) => {
   try {
     await ElMessageBox.confirm(`确定要删除文档"${row.title}"吗？`, '提示', {
@@ -526,14 +614,27 @@ const handleDelete = async (row: DocumentInfo) => {
   }
 }
 
+/**
+ * 创建弹窗关闭时重置表单校验状态
+ */
 const handleCreateDialogClose = () => {
   createFormRef.value?.resetFields()
 }
 
+/**
+ * 编辑弹窗关闭时重置表单校验状态
+ */
 const handleEditDialogClose = () => {
   editFormRef.value?.resetFields()
 }
 
+/** ========== 展示辅助 ========== */
+
+/**
+ * 平台对应的标签颜色
+ * @param platform 平台类型
+ * @returns el-tag 类型
+ */
 const getPlatformTagType = (platform: OfficePlatform) => {
   const typeMap: Record<OfficePlatform, any> = {
     FEISHU: 'primary',
@@ -543,6 +644,11 @@ const getPlatformTagType = (platform: OfficePlatform) => {
   return typeMap[platform] || ''
 }
 
+/**
+ * 文档类型对应的标签颜色
+ * @param type 文档类型
+ * @returns el-tag 类型
+ */
 const getDocTypeTagType = (type: DocumentType) => {
   const typeMap: Record<DocumentType, any> = {
     DOC: 'primary',
@@ -555,6 +661,11 @@ const getDocTypeTagType = (type: DocumentType) => {
   return typeMap[type] || ''
 }
 
+/**
+ * 文档类型的中文文案
+ * @param type 文档类型
+ * @returns 中文文案（未知类型原样返回）
+ */
 const getDocTypeText = (type: DocumentType) => {
   const textMap: Record<DocumentType, string> = {
     DOC: '文档',
@@ -587,9 +698,22 @@ const formatDateTime = (dateTime?: string) => {
 // 生命周期
 onMounted(() => {
   handleQuery()
-  // TODO: 加载用户列表
-  // loadUserList()
+  // 加载用户列表，供「分享给」下拉框选择（失败不阻断页面，下拉框留空）
+  loadUserList()
 })
+
+/**
+ * 加载用户列表（分享对象选择器数据源）
+ * 取前 100 个用户，映射为 {id, name} 供下拉框渲染
+ */
+const loadUserList = async () => {
+  try {
+    const res = await listUsers({ page: 1, size: 100 })
+    userList.value = (res.list || []).map((u) => ({ id: u.id, name: u.nickname }))
+  } catch {
+    // 用户列表拉取失败时分享对象下拉框为空，不阻断文档管理主流程
+  }
+}
 </script>
 
 <style scoped lang="scss">

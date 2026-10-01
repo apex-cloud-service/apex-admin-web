@@ -164,6 +164,11 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 数据库配置采集页逻辑
+ * - 填写连接参数 → 测试连接 → 生成 YAML/env/docker-compose 部署配置
+ * - 密码仅用于一次性测试与配置生成，不保存不回显
+ */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { CopyDocument } from '@element-plus/icons-vue'
@@ -175,10 +180,16 @@ import {
 } from '@/api/database'
 import type { DatabaseConfig, CurrentDatabaseInfo } from '@/types'
 
+/** ========== 状态定义 ========== */
+
+/** 表单实例（校验/重置用） */
 const formRef = ref<FormInstance>()
+/** 连接测试进行中 */
 const testing = ref(false)
+/** 配置生成进行中 */
 const generating = ref(false)
 
+/** 连接配置表单（密码仅前端暂存，不落库） */
 const form = reactive<DatabaseConfig & { password: string }>({
   dbType: 'mysql',
   host: 'localhost',
@@ -190,6 +201,7 @@ const form = reactive<DatabaseConfig & { password: string }>({
   environment: 'dev'
 })
 
+/** 表单校验规则 */
 const formRules: FormRules = {
   dbType: [{ required: true, message: '请选择数据库类型', trigger: 'change' }],
   host: [{ required: true, message: '请输入主机地址', trigger: 'blur' }],
@@ -200,8 +212,10 @@ const formRules: FormRules = {
   environment: [{ required: true, message: '请选择部署环境', trigger: 'change' }]
 }
 
+/** 当前环境数据库信息（只读展示，拉取失败不影响主流程） */
 const currentDb = ref<CurrentDatabaseInfo | null>(null)
 
+/** 配置导出弹窗（YAML/env/docker-compose 三种格式切换） */
 const exportDialog = reactive({
   visible: false,
   activeTab: 'yaml',
@@ -210,6 +224,11 @@ const exportDialog = reactive({
   dockerCompose: ''
 })
 
+/** ========== 交互处理 ========== */
+
+/**
+ * 数据库类型切换时联动默认端口（MySQL=3306，PostgreSQL=5432）
+ */
 const handleDbTypeChange = () => {
   if (form.dbType === 'mysql') {
     form.port = 3306
@@ -218,6 +237,9 @@ const handleDbTypeChange = () => {
   }
 }
 
+/**
+ * 测试数据库连接：校验通过后调用连接测试接口并提示结果
+ */
 const handleTest = async () => {
   if (!formRef.value) return
 
@@ -233,6 +255,7 @@ const handleTest = async () => {
       ElMessage.error(result.message || '连接失败')
     }
   } catch (error: any) {
+    // 表单校验失败抛出的 Error 已由表单提示，无需重复展示
     if (error?.constructor?.name !== 'Error') {
       showError(error)
     }
@@ -241,6 +264,9 @@ const handleTest = async () => {
   }
 }
 
+/**
+ * 生成部署配置：校验通过后生成三种格式并在弹窗中展示
+ */
 const handleGenerate = async () => {
   if (!formRef.value) return
 
@@ -264,12 +290,19 @@ const handleGenerate = async () => {
   }
 }
 
+/**
+ * 重置表单（含密码与连接参数）
+ */
 const handleReset = () => {
   formRef.value?.resetFields()
   form.password = ''
   form.connectionParams = ''
 }
 
+/**
+ * 复制配置内容到剪贴板
+ * @param text 待复制的配置文本
+ */
 const copyToClipboard = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text)
@@ -279,6 +312,9 @@ const copyToClipboard = async (text: string) => {
   }
 }
 
+/**
+ * 拉取当前环境数据库信息（只读展示，失败仅记录日志）
+ */
 const fetchCurrentDb = async () => {
   try {
     currentDb.value = await getCurrentDatabaseInfo()
@@ -287,6 +323,7 @@ const fetchCurrentDb = async () => {
   }
 }
 
+// 挂载时拉取当前数据库信息
 onMounted(() => {
   fetchCurrentDb()
 })

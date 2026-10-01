@@ -1,5 +1,9 @@
 # 前端文件上传功能实现分析
 
+> **时效性说明**：本文为 2026-09-08 的差距分析快照，所列缺失功能（上传组件、API 封装、演示页面等）大部分已落地，
+> 现状请以 [docs/features/file-upload-basic.md](../features/file-upload-basic.md) 与
+> [docs/features/file-upload-enhanced.md](../features/file-upload-enhanced.md) 为准。
+
 ## 1. 执行总结
 
 ### 1.1 分析结论
@@ -36,7 +40,7 @@
   - `TosStorageProvider` - 火山引擎 TOS
 - 配置切换：`storage.default-type` (LOCAL/MINIO/VOLCENGINE_TOS)
 
-**Handler：** [FileHandler.java](file:///Users/work/apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/FileHandler.java)
+**Handler：** `apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/FileHandler.java`
 
 ### 2.2 后端API清单
 
@@ -140,7 +144,7 @@
 
 #### 3.1.1 上传限制常量
 
-**文件：** [src/settings.ts](file:///Users/work/apex-admin-web/src/settings.ts#L29-L30)
+**文件：** [src/settings.ts](../../src/settings.ts)
 
 ```typescript
 /** 上传文件大小上限（字节，10MB） */
@@ -151,7 +155,7 @@ export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024
 
 #### 3.1.2 请求工具
 
-**文件：** [src/utils/request.ts](file:///Users/work/apex-admin-web/src/utils/request.ts)
+**文件：** [src/utils/request.ts](../../src/utils/request.ts)
 
 - ✅ 已封装 `post()` 方法，可用于文件上传
 - ✅ 请求拦截器自动携带 `Authorization: Bearer <token>`
@@ -339,12 +343,12 @@ const emit = defineEmits<{
 如果前端项目需要文件上传功能，必须实现：
 
 1. **API接口封装**（P0）
-   - 创建 [src/api/file.ts](file:///Users/work/apex-admin-web/src/api/)
+   - 创建 [src/api/file.ts](../../src/api/file.ts)
    - 封装 uploadFile/getFileUrl/deleteFile 方法
    - 定义 FileUploadResult 类型
 
 2. **上传组件**（P0）
-   - 创建 [src/components/FileUpload.vue](file:///Users/work/apex-admin-web/src/components/)
+   - 创建 [src/components/FileUpload.vue](../../src/components/FileUpload.vue)
    - 基于 Element Plus `<el-upload>` 实现
    - 支持基本校验和错误处理
 
@@ -732,10 +736,10 @@ const handleFileRemove = (file: UploadUserFile) => {
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| 文件上传流程 | [apex-scaffold/docs/architecture/business-flows.md](file:///Users/work/apex-scaffold/docs/architecture/business-flows.md#L562) | 详细业务流程 |
-| API文档 | [apex-scaffold/docs/API_DOCUMENTATION_PREVIEW.md](file:///Users/work/apex-scaffold/docs/API_DOCUMENTATION_PREVIEW.md#L233) | 接口说明 |
-| 存储SPI | [apex-scaffold/apex-common/src/main/java/com/apex/scaffold/common/spi/StorageProvider.java](file:///Users/work/apex-scaffold/apex-common/src/main/java/com/apex/scaffold/common/spi/StorageProvider.java) | 存储接口定义 |
-| FileHandler | [apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/FileHandler.java](file:///Users/work/apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/FileHandler.java) | 文件处理器实现 |
+| 文件上传流程 | `apex-scaffold/docs/architecture/business-flows.md` | 详细业务流程 |
+| API文档 | `apex-scaffold/docs/API_DOCUMENTATION_PREVIEW.md` | 接口说明 |
+| 存储SPI | `apex-scaffold/apex-common/src/main/java/com/apex/scaffold/common/spi/StorageProvider.java` | 存储接口定义 |
+| FileHandler | `apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/FileHandler.java` | 文件处理器实现 |
 
 ### 9.2 前端参考
 
@@ -781,7 +785,7 @@ const handleFileRemove = (file: UploadUserFile) => {
 1. **按需实现** - 如当前业务不需要文件上传，可暂不实现
 2. **MVP优先** - 先实现最小可行方案（API + 基础组件）
 3. **渐进增强** - 后续根据业务需求逐步完善
-4. **遵循规范** - 严格遵循 [AGENTS.md](file:///Users/work/apex-admin-web/AGENTS.md) 开发规范
+4. **遵循规范** - 严格遵循 [AGENTS.md](../../AGENTS.md) 开发规范
 
 ---
 

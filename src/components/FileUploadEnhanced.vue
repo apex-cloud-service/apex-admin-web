@@ -1,11 +1,34 @@
 <!--
-  文件上传组件（增强版）- TypeScript 修复版
+  增强版文件上传组件
   ------------------------------------------------------------------
-  修复内容：
-  1. 严格的 TypeScript 类型定义
-  2. 修复 emit 事件类型
-  3. 修复 ref 类型定义
-  4. 修复事件处理函数参数类型
+  在基础文件上传（FileUpload.vue）之上扩展：
+    - 拖拽上传（drag）
+    - 粘贴上传（Ctrl+V，enable-paste）
+    - 图片裁剪（cropperjs，enable-cropper）
+    - 图片压缩（canvas 重绘，enable-compress）
+    - 自定义上传进度弹窗
+
+  后端接口：
+    - POST /api/v1/files/generic - 通用文件上传（FormData：file + sex）
+
+  Props：
+    - sex: 性别路由参数（0=男/AM，1=女/AF），随 FormData 上送
+    - limit: 最大上传数量
+    - listType: 上传控件展示形态（text/picture/picture-card）
+    - accept: 允许的 MIME 类型（逗号分隔）
+    - tip: 提示文本（缺省按 accept 与大小上限自动生成）
+    - disabled: 是否禁用
+    - drag: 是否启用拖拽区域
+    - multiple: 是否允许多选
+    - enableCompress: 是否自动压缩图片（超过宽高上限按 compressQuality 压缩）
+    - enableCropper: 是否启用图片裁剪（裁剪确认后走独立 XHR 上传）
+    - enablePaste: 是否启用 Ctrl+V 粘贴图片上传（组件需持有焦点）
+    - compressQuality: 压缩质量（0~1）
+    - compressMaxWidth / compressMaxHeight: 压缩后最大宽/高（px）
+
+  Emits：
+    - success(result: FileUploadResult): 上传成功，返回存储路径与访问 URL
+    - remove(file: UploadUserFile): 从列表移除文件
 -->
 <template>
   <div 
@@ -127,6 +150,11 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 增强版文件上传组件逻辑
+ * - 基于 el-upload 完成基础上传，扩展压缩/裁剪/粘贴/进度能力
+ * - 裁剪与粘贴路径绕过 el-upload，走独立 XHR 上传（uploadProcessedFile）
+ */
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Upload, UploadFilled } from '@element-plus/icons-vue'
@@ -137,20 +165,35 @@ import type { UploadProps, UploadUserFile, UploadProgressEvent, UploadRawFile } 
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 
+/** 组件入参定义 */
 interface Props {
+  /** 性别路由参数（0=男/AM，1=女/AF） */
   sex?: 0 | 1
+  /** 最大上传数量 */
   limit?: number
+  /** 上传控件展示形态 */
   listType?: 'text' | 'picture' | 'picture-card'
+  /** 允许的 MIME 类型（逗号分隔） */
   accept?: string
+  /** 自定义提示文本（缺省自动生成） */
   tip?: string
+  /** 是否禁用 */
   disabled?: boolean
+  /** 是否启用拖拽区域 */
   drag?: boolean
+  /** 是否允许多选 */
   multiple?: boolean
+  /** 是否自动压缩图片 */
   enableCompress?: boolean
+  /** 是否启用图片裁剪 */
   enableCropper?: boolean
+  /** 是否启用 Ctrl+V 粘贴上传 */
   enablePaste?: boolean
+  /** 压缩质量（0~1） */
   compressQuality?: number
+  /** 压缩后最大宽度（px） */
   compressMaxWidth?: number
+  /** 压缩后最大高度（px） */
   compressMaxHeight?: number
 }
 
@@ -175,16 +218,24 @@ const emit = defineEmits<{
   (e: 'remove', file: UploadUserFile): void
 }>()
 
+/** ========== 上传基础状态 ========== */
+
+/** 已上传/待上传的文件列表（与 el-upload 双向绑定） */
 const fileList = ref<UploadUserFile[]>([])
+/** 上传接口地址（通用文件上传） */
 const uploadUrl = computed(() => '/api/v1/files/generic')
+/** 请求头（自动携带认证 Token） */
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${getToken()}`
 }))
+/** 额外表单参数（性别路由，供后端按目录归档） */
 const uploadData = computed(() => ({
   sex: props.sex
 }))
 
+/** 大小上限（MB，用于提示文案与校验提示） */
 const maxSizeMB = Math.floor(MAX_UPLOAD_SIZE / 1024 / 1024)
+/** accept 转换为可读的扩展名文案（如 JPEG/PNG/GIF/WEBP） */
 const acceptText = computed(() => {
   const types = props.accept.split(',').map(type => {
     const ext = type.split('/')[1]
@@ -193,23 +244,49 @@ const acceptText = computed(() => {
   return types.join('/')
 })
 
+/** ========== 图片预览 ========== */
+
+/** 预览弹窗是否可见 */
 const previewVisible = ref(false)
+/** 当前预览的图片 URL */
 const previewUrl = ref('')
 
+/** ========== 图片裁剪 ========== */
+
+/** 裁剪弹窗是否可见 */
 const cropperVisible = ref(false)
+/** 裁剪弹窗中的图片 DataURL */
 const cropperImageSrc = ref('')
+/** 裁剪弹窗中的 img 元素（cropperjs 挂载目标） */
 const cropperImageRef = ref<HTMLImageElement>()
+/** cropperjs 实例（弹窗关闭时销毁） */
 const cropperInstance = ref<Cropper>()
+/** 是否正在执行裁剪（确认按钮 loading） */
 const cropping = ref(false)
+/** 待裁剪的原始文件（裁剪确认后继续上传） */
 let pendingFile: File | null = null
 
+/** ========== 上传进度弹窗 ========== */
+
+/** 进度弹窗是否可见 */
 const progressVisible = ref(false)
+/** 上传进度百分比（0~100） */
 const uploadProgress = ref(0)
+/** 进度条状态（success/exception/warning） */
 const uploadStatus = ref<'' | 'success' | 'exception' | 'warning'>('')
+/** 进度文案（如「正在上传... 50%」） */
 const uploadProgressText = ref('')
 
+/** ========== 文件处理 ========== */
+
 /**
- * 压缩图片
+ * 压缩图片（canvas 重绘）
+ *
+ * 未启用压缩或非图片文件时原样返回；超过宽/高上限时等比缩放，
+ * 再按 compressQuality 质量导出为同类型 File。
+ *
+ * @param file 原始图片文件
+ * @returns 压缩后的文件（失败时 reject）
  */
 const compressImage = (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
@@ -282,7 +359,10 @@ const compressImage = (file: File): Promise<File> => {
 }
 
 /**
- * 显示裁剪对话框
+ * 打开裁剪对话框（cropperjs 初始化）
+ *
+ * @param file 待裁剪的图片文件，暂存到 pendingFile，确认后继续上传
+ * @returns 裁剪弹窗初始化完成后 resolve（失败时 reject）
  */
 const showCropper = (file: File): Promise<void> => {
   return new Promise((resolve, reject) => {
@@ -318,7 +398,7 @@ const showCropper = (file: File): Promise<void> => {
 }
 
 /**
- * 取消裁剪
+ * 取消裁剪：关闭弹窗、销毁 cropperjs 实例并清空暂存文件
  */
 const handleCropperCancel = (): void => {
   cropperVisible.value = false
@@ -330,7 +410,10 @@ const handleCropperCancel = (): void => {
 }
 
 /**
- * 确认裁剪
+ * 确认裁剪：导出裁剪区域为 File 后立即上传
+ *
+ * 流程：getCroppedCanvas → toBlob → 构造 File → uploadProcessedFile，
+ * 全程由 cropping 状态控制确认按钮 loading。
  */
 const handleCropperConfirm = async (): Promise<void> => {
   if (!cropperInstance.value || !pendingFile) return
@@ -367,8 +450,16 @@ const handleCropperConfirm = async (): Promise<void> => {
   }
 }
 
+/** ========== 上传执行 ========== */
+
 /**
- * 上传处理后的文件
+ * 独立 XHR 上传（裁剪/粘贴路径使用）
+ *
+ * el-upload 之外的上传通道：手动构造 FormData（file + sex），
+ * 通过 XMLHttpRequest 上报真实进度并驱动进度弹窗，
+ * 响应按 Result{code,msg,data} 解包，code=0 时 emit success。
+ *
+ * @param file 处理完成（压缩/裁剪后）的待上传文件
  */
 const uploadProcessedFile = async (file: File): Promise<void> => {
   const formData = new FormData()
@@ -442,8 +533,16 @@ const uploadProcessedFile = async (file: File): Promise<void> => {
   }
 }
 
+/** ========== el-upload 回调 ========== */
+
 /**
- * 上传前校验和处理
+ * 上传前校验与预处理（el-upload before-upload）
+ *
+ * 校验大小与 MIME 类型；启用压缩时先压缩；启用裁剪时打开裁剪弹窗
+ * 并返回 false 中断 el-upload 默认上传（改由裁剪确认后独立上传）。
+ *
+ * @param rawFile 待上传的原始文件
+ * @returns false=中断上传；File=替换为处理后的文件继续上传
  */
 const beforeUpload: UploadProps['beforeUpload'] = async (rawFile: UploadRawFile): Promise<boolean | File> => {
   if (rawFile.size > MAX_UPLOAD_SIZE) {
@@ -478,7 +577,11 @@ const beforeUpload: UploadProps['beforeUpload'] = async (rawFile: UploadRawFile)
 }
 
 /**
- * 上传进度
+ * 上传进度回调（el-upload 路径）
+ *
+ * 裁剪模式下进度由独立的 uploadProcessedFile 驱动，此处跳过避免重复弹窗。
+ *
+ * @param event 进度事件（percent 为 0~100）
  */
 const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent): void => {
   if (!props.enableCropper) {
@@ -490,7 +593,13 @@ const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent): 
 }
 
 /**
- * 上传成功
+ * 上传成功回调（el-upload 路径）
+ *
+ * 按 Result{code,msg,data} 解包：code=0 时更新列表预览 URL 并 emit success；
+ * 失败时提示并从列表中移除对应文件。裁剪模式下由独立上传通道处理，此处跳过。
+ *
+ * @param response 后端原始响应（未解包的 Result 结构）
+ * @param uploadFile 触发本次上传的文件项
  */
 const handleSuccess: UploadProps['onSuccess'] = (response: any, uploadFile: UploadUserFile): void => {
   if (!props.enableCropper) {
@@ -526,7 +635,9 @@ const handleSuccess: UploadProps['onSuccess'] = (response: any, uploadFile: Uplo
 }
 
 /**
- * 上传失败
+ * 上传失败回调（el-upload 路径）：更新进度弹窗为异常态并提示重试
+ *
+ * @param error 上传错误对象
  */
 const handleError: UploadProps['onError'] = (error: Error): void => {
   console.error('上传失败：', error)
@@ -541,14 +652,23 @@ const handleError: UploadProps['onError'] = (error: Error): void => {
 }
 
 /**
- * 删除文件
+ * 移除文件回调：向父组件同步移除事件
+ *
+ * @param file 被移除的文件项
  */
 const handleRemove: UploadProps['onRemove'] = (file: UploadUserFile): void => {
   emit('remove', file)
 }
 
+/** ========== 粘贴上传 ========== */
+
 /**
- * 粘贴上传
+ * 粘贴上传处理（组件获得焦点时响应 paste 事件）
+ *
+ * 从剪贴板提取图片文件，复用 beforeUpload 校验/压缩流程；
+ * 未启用裁剪时直接走独立上传通道。
+ *
+ * @param e 粘贴事件
  */
 const handlePaste = async (e: ClipboardEvent): Promise<void> => {
   if (!props.enablePaste) return
@@ -576,30 +696,39 @@ const handlePaste = async (e: ClipboardEvent): Promise<void> => {
   }
 }
 
+/** ========== 对外方法与生命周期 ========== */
+
 /**
- * 清空文件列表
+ * 清空已上传文件列表（供父组件通过 ref 调用）
  */
 const clearFiles = (): void => {
   fileList.value = []
 }
 
 /**
- * 获取已上传文件列表
+ * 获取当前文件列表（供父组件通过 ref 调用）
+ * @returns 当前文件列表（含已上传文件）
  */
 const getFileList = (): UploadUserFile[] => {
   return fileList.value
 }
 
+/**
+ * document 级 paste 事件适配器（保留引用以便卸载时移除监听）
+ * @param evt 原生粘贴事件
+ */
 const pasteHandler = (evt: Event): void => {
   void handlePaste(evt as ClipboardEvent)
 }
 
+// 挂载后注册 document 级粘贴监听（未启用粘贴上传时不注册）
 onMounted(() => {
   if (props.enablePaste) {
     document.addEventListener('paste', pasteHandler)
   }
 })
 
+// 卸载时移除粘贴监听并销毁 cropperjs 实例，避免内存泄漏
 onUnmounted(() => {
   if (props.enablePaste) {
     document.removeEventListener('paste', pasteHandler)

@@ -1,0 +1,61 @@
+/**
+ * Axios 请求封装单元测试
+ * ------------------------------------------------------------------
+ * 覆盖 src/utils/request.ts 的 401 自动刷新与重放策略：
+ * - 持续 401 时只刷新一次令牌并重放一次
+ * - 重放后的非 401 错误保留原状态码
+ * - 认证端点自身不触发自动刷新
+ * - 并发 401 共享同一次刷新
+ */
+import { expect, it, vi } from 'vitest'
+import axios, { AxiosError } from 'axios'
+import { refreshToken } from '@/api/auth'
+import { request } from '@/utils/request'
+vi.mock('@/api/auth', () => ({ refreshToken: vi.fn() }))
+vi.mock('@/utils/auth', () => ({ getToken: () => 'test-access', getRefreshToken: () => 'test-refresh', setToken: vi.fn(), setRefreshToken: vi.fn(), clearSession: vi.fn() }))
+it('持续 401 时最多刷新一次并重放一次', async () => {
+  vi.mocked(refreshToken).mockResolvedValue({ accessToken: 'test-new-access' })
+  const adapter = vi.fn(async (config) => {
+    throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, undefined, { status: 401, statusText: 'Unauthorized', headers: {}, data: {}, config })
+  })
+  await expect(request({ url: '/test', adapter })).rejects.toMatchObject({ code: 401 })
+  expect(adapter).toHaveBeenCalledTimes(2)
+  expect(refreshToken).toHaveBeenCalledTimes(1)
+})
+it('重放的其他错误保留原状态', async () => {
+  vi.mocked(refreshToken).mockClear()
+  let count = 0
+  const adapter: typeof axios.defaults.adapter = async (config) => {
+    const status = ++count === 1 ? 401 : 503
+    throw new AxiosError('Failure', 'ERR_BAD_REQUEST', config, undefined, { status, statusText: 'Failure', headers: {}, data: {}, config })
+  }
+  await expect(request({ url: '/test', adapter })).rejects.toMatchObject({ code: 503 })
+  expect(refreshToken).toHaveBeenCalledTimes(1)
+})
+
+it.each(['/api/v1/auth/login', '/api/v1/auth/refresh', '/oauth2/token'])('认证端点 %s 不触发自动刷新', async (url) => {
+  vi.mocked(refreshToken).mockClear()
+  const adapter = vi.fn(async (config) => {
+    throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, undefined, { status: 401, statusText: 'Unauthorized', headers: {}, data: {}, config })
+  })
+  await expect(request({ url, adapter })).rejects.toMatchObject({ code: 401 })
+  expect(adapter).toHaveBeenCalledTimes(1)
+  expect(refreshToken).not.toHaveBeenCalled()
+})
+it('并发 401 共享一次刷新', async () => {
+  vi.mocked(refreshToken).mockClear()
+  let resolveRefresh!: (value: { accessToken: string }) => void
+  vi.mocked(refreshToken).mockImplementation(() => new Promise(resolve => { resolveRefresh = resolve }))
+  const adapter = vi.fn(async (config) => {
+    if (!config.authRetried) {
+      throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, undefined, { status: 401, statusText: 'Unauthorized', headers: {}, data: {}, config })
+    }
+    return { status: 200, statusText: 'OK', headers: {}, data: { code: 0, data: 'ok' }, config }
+  })
+  const pending = [request({ url: '/first', adapter }), request({ url: '/second', adapter })]
+  await vi.waitFor(() => expect(adapter).toHaveBeenCalledTimes(2))
+  expect(refreshToken).toHaveBeenCalledTimes(1)
+  resolveRefresh({ accessToken: 'new-access' })
+  await expect(Promise.all(pending)).resolves.toEqual(['ok', 'ok'])
+  expect(adapter).toHaveBeenCalledTimes(4)
+})

@@ -26,6 +26,14 @@ export const staticRoutes: RouteRecordRaw[] = [
     meta: { title: 'OAuth2 授权回调', public: true, hidden: true },
   },
   {
+    // 办公平台（飞书/钉钉/企微）授权回调页：平台重定向回来时用户尚未登录，
+    // 必须 public 放行；页面自行用 code/state 调 /api/v1/office/callback 换取会话。
+    path: '/office/callback',
+    name: 'OfficeCallback',
+    component: () => import('@/views/office/callback.vue'),
+    meta: { title: '办公平台授权回调', public: true, hidden: true },
+  },
+  {
     path: '/',
     name: 'Root',
     component: AdminLayout,
@@ -66,6 +74,12 @@ export const staticRoutes: RouteRecordRaw[] = [
         name: 'FileUploadEnhancedDemo',
         component: () => import('@/views/demo/FileUploadEnhancedDemo.vue'),
         meta: { title: '文件上传增强版', icon: 'Upload', hidden: true },
+      },
+      {
+        path: 'monitor/trace',
+        name: 'TraceQuery',
+        component: () => import('@/views/monitor/trace/TraceQuery.vue'),
+        meta: { title: '链路追踪查询', icon: 'Search', hidden: true },
       },
     ],
   },

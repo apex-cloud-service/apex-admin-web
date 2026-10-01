@@ -1,3 +1,11 @@
+<!--
+  办公平台控制台页面
+  ------------------------------------------------------------------
+  功能：办公平台数据统计、消息推送统计、审批流程统计
+  
+  权限：
+    - office:console:view - 查看办公平台控制台
+-->
 <template>
   <div class="office-console-container">
     <el-card class="header-card">
@@ -69,21 +77,32 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 办公平台控制台逻辑
+ * - 三平台状态总览（配置状态/绑定数/待审批数）+ 快捷入口
+ * - 绑定统计通过逐平台拉取绑定列表汇总（后端暂无统计接口）
+ */
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Connection, ChatDotRound, Checked, Calendar, FolderOpened } from '@element-plus/icons-vue'
+import { Connection, ChatDotRound, Checked, Calendar } from '@element-plus/icons-vue'
 import { listApps, listBindings, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-new'
 
+/** ========== 状态定义 ========== */
+
 const router = useRouter()
+/** 管理的三大平台（固定顺序渲染卡片） */
 const platforms: OfficePlatform[] = ['FEISHU', 'DINGTALK', 'WECOM']
+/** 各平台应用配置列表 */
 const apps = ref<any[]>([])
+/** 各平台绑定统计（总数 + 待审批数） */
 const bindingStats = ref<Record<OfficePlatform, { total: number; pending: number }>>({
   FEISHU: { total: 0, pending: 0 },
   DINGTALK: { total: 0, pending: 0 },
   WECOM: { total: 0, pending: 0 },
 })
 
+/** 即将上线的功能预告卡片数据 */
 const upcomingFeatures = [
   {
     name: '组织同步',
@@ -107,6 +126,13 @@ const upcomingFeatures = [
   },
 ]
 
+/** ========== 展示辅助 ========== */
+
+/**
+ * 平台对应的展示图标（emoji）
+ * @param platform 平台类型
+ * @returns 图标字符（未知平台返回默认图标）
+ */
 const getPlatformIcon = (platform: OfficePlatform) => {
   const iconMap: Record<OfficePlatform, string> = {
     FEISHU: '🚀',
@@ -116,26 +142,55 @@ const getPlatformIcon = (platform: OfficePlatform) => {
   return iconMap[platform] || '📋'
 }
 
+/**
+ * 判断平台是否已配置应用
+ * @param platform 平台类型
+ * @returns true=已配置
+ */
 const hasConfig = (platform: OfficePlatform) => {
   return apps.value.some((app) => app.platform === platform)
 }
 
+/**
+ * 获取平台绑定用户总数
+ * @param platform 平台类型
+ * @returns 绑定总数（无统计时返回 0）
+ */
 const getBindingCount = (platform: OfficePlatform) => {
   return bindingStats.value[platform]?.total || 0
 }
 
+/**
+ * 获取平台待审批绑定数
+ * @param platform 平台类型
+ * @returns 待审批数（无统计时返回 0）
+ */
 const getPendingCount = (platform: OfficePlatform) => {
   return bindingStats.value[platform]?.pending || 0
 }
 
-const goToConfig = (platform: OfficePlatform) => {
+/** ========== 导航与数据加载 ========== */
+
+/**
+ * 跳转平台配置管理页
+ * @param _platform 目标平台（当前配置页为统一入口，未区分平台）
+ */
+const goToConfig = (_platform: OfficePlatform) => {
   router.push('/office/config')
 }
 
-const goToBindings = (platform: OfficePlatform) => {
+/**
+ * 跳转绑定审批页
+ * @param _platform 目标平台（当前绑定页为统一入口，未区分平台）
+ */
+const goToBindings = (_platform: OfficePlatform) => {
   router.push('/office/bindings')
 }
 
+/**
+ * 加载控制台数据：应用配置一次拉取；绑定统计逐平台查询后汇总
+ * （单个平台查询失败不阻塞其他平台）
+ */
 const loadData = async () => {
   try {
     // 加载应用配置
@@ -158,6 +213,7 @@ const loadData = async () => {
   }
 }
 
+// 挂载时加载控制台数据
 onMounted(() => {
   loadData()
 })

@@ -86,16 +86,28 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 业务日志查询页逻辑
+ * - 整合登录/操作/API 三类日志的统一查询（统一分页口径 PageResponse）
+ * - 默认查询最近 7 天，支持类型/用户名/模块/时间范围筛选
+ */
 import { onMounted, reactive, ref } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import Pagination from '@/components/Pagination.vue'
 import { queryBusinessLogs, type BusinessLog } from '@/api/log'
 import { showError } from '@/utils/request'
 
+/** ========== 查询状态 ========== */
+
+/** 查询请求进行中 */
 const loading = ref(false)
+/** 日志列表（当前页） */
 const logList = ref<BusinessLog[]>([])
+/** 数据总条数 */
 const total = ref(0)
+/** 时间范围（yyyy-MM-dd HH:mm:ss 字符串） */
 const timeRange = ref<string[]>([])
+/** 查询条件（类型/用户名/模块/分页） */
 const query = reactive({
   logType: '',
   username: '',
@@ -104,6 +116,7 @@ const query = reactive({
   size: 20,
 })
 
+// 挂载时默认查询最近 7 天日志
 onMounted(() => {
   // 默认查询最近7天
   const now = new Date()
@@ -112,6 +125,11 @@ onMounted(() => {
   search()
 })
 
+/** ========== 查询操作 ========== */
+
+/**
+ * 拉取日志列表：合并查询条件与时间范围，回填列表与总数
+ */
 async function fetchList(): Promise<void> {
   loading.value = true
   try {
@@ -129,11 +147,17 @@ async function fetchList(): Promise<void> {
   }
 }
 
+/**
+ * 执行查询：重置回第一页后拉取
+ */
 function search(): void {
   query.page = 1
   fetchList()
 }
 
+/**
+ * 重置查询条件并回到默认的最近 7 天范围
+ */
 function reset(): void {
   query.logType = ''
   query.username = ''
@@ -146,12 +170,24 @@ function reset(): void {
   search()
 }
 
+/**
+ * 分页变更（Pagination 组件回调）
+ * @param page 新页码
+ * @param size 新每页条数
+ */
 function onPageChange(page: number, size: number): void {
   query.page = page
   query.size = size
   fetchList()
 }
 
+/** ========== 展示辅助 ========== */
+
+/**
+ * 日志类型显示名称
+ * @param type 日志类型标识（login/operation/api）
+ * @returns 中文名称（未知类型原样返回）
+ */
 function getTypeName(type: string): string {
   const names: Record<string, string> = {
     login: '登录',
@@ -161,6 +197,11 @@ function getTypeName(type: string): string {
   return names[type] || type
 }
 
+/**
+ * 日志类型对应的标签颜色
+ * @param type 日志类型标识
+ * @returns el-tag 类型
+ */
 function getTypeTag(type: string): 'success' | 'warning' | 'info' | '' {
   const tags: Record<string, 'success' | 'warning' | 'info' | ''> = {
     login: 'success',
@@ -170,11 +211,21 @@ function getTypeTag(type: string): 'success' | 'warning' | 'info' | '' {
   return tags[type] || ''
 }
 
+/**
+ * 格式化日期为 yyyy-MM-dd HH:mm:ss（时间范围控件的 value-format）
+ * @param date 日期对象
+ * @returns 格式化后的字符串
+ */
 function formatDateTime(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
+/**
+ * 格式化后端 LocalDateTime 字符串（去 T、截断到秒）
+ * @param timestamp ISO 时间字符串
+ * @returns 可读时间文案（空值返回 '-'）
+ */
 function formatTimestamp(timestamp: string): string {
   if (!timestamp) return '-'
   // 后端返回的是 LocalDateTime 字符串，可能需要格式化

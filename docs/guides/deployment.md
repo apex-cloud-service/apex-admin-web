@@ -13,13 +13,13 @@
 - [4. 构建与产物](#4-构建与产物)
 - [5. 环境变量](#5-环境变量)
 - [6. 部署方式一：Nginx 独立部署（推荐生产）](#6-部署方式一nginx-独立部署推荐生产)
-- [6A. 部署方式三：Docker 容器部署（推荐）](#6a-部署方式三docker-容器部署推荐)
-- [7. 部署方式二：与后端网关同域部署](#7-部署方式二与后端网关同域部署)
-- [8. 开发环境联调](#8-开发环境联调)
-- [9. 部署验证清单](#9-部署验证清单)
-- [10. 升级与回滚](#10-升级与回滚)
-- [11. 常见问题 FAQ](#11-常见问题-faq)
-- [12. 命令速查表](#12-命令速查表)
+- [7. 部署方式二：Docker 容器部署（推荐）](#7-部署方式二docker-容器部署推荐)
+- [8. 部署方式三：与后端网关同域部署](#8-部署方式三与后端网关同域部署)
+- [9. 开发环境联调](#9-开发环境联调)
+- [10. 部署验证清单](#10-部署验证清单)
+- [11. 升级与回滚](#11-升级与回滚)
+- [12. 常见问题 FAQ](#12-常见问题-faq)
+- [13. 命令速查表](#13-命令速查表)
 
 ---
 
@@ -97,8 +97,12 @@ dist/
     └── index-*.css
 ```
 
-> 构建命令为 `vue-tsc --noEmit && vite build`，类型错误会导致构建失败；`vite build` 通过
-> `chunkSizeWarningLimit: 1500` 抑制大 chunk 告警，`target: es2018` 兼容老浏览器。
+> 构建命令为 `vue-tsc --noEmit && vite build`，类型错误会导致构建失败。`vite build` 的关键参数
+> （见 `vite.config.ts`）：
+> - `chunkSizeWarningLimit: 1000`（KB）抑制大 chunk 告警；构建目标跟随 esbuild 默认（`tsconfig.target` 为 `ES2020`）。
+> - `minify: 'terser'` 且 `drop_console` / `drop_debugger`：生产产物移除 `console` 与调试语句。
+> - `manualChunks` 按 vue/pinia、element-plus、element-icons、echarts、vueuse、axios、其他 vendor 拆分 chunk。
+> - `rollup-plugin-visualizer` 构建后输出 `dist/stats.html`，可手动打开分析产物体积。
 
 ---
 
@@ -197,12 +201,12 @@ server {
 
 ---
 
-## 6A. 部署方式三：Docker 容器部署（推荐）
+## 7. 部署方式二：Docker 容器部署（推荐）
 
 适用：需要统一容器化交付、与后端（`apex-scaffold`）编排在同一 Docker 环境时。
 本工程提供 `Dockerfile`（多阶段构建）与 `docker-compose.yml` 编排。
 
-### 6A.1 目录结构
+### 7.1 目录结构
 
 ```
 apex-admin-web/
@@ -214,7 +218,7 @@ apex-admin-web/
     └── docker-entrypoint.sh  # 容器入口：envsubst 渲染后启动 Nginx
 ```
 
-### 6A.2 镜像设计
+### 7.2 镜像设计
 
 - **构建阶段** `node:18-alpine`：`npm install` → `npm run build`（含 vue-tsc 类型校验），
   产物 `dist/`；`VITE_API_BASE_URL` 通过 `--build-arg` 注入（默认空 = 同域相对路径）。
@@ -224,7 +228,7 @@ apex-admin-web/
   `${API_PROXY_PASS}` 渲染为实际后端地址（环境变量 `API_PROXY_PASS`，默认
   `http://apex-scaffold:8080`，即与后端 compose 同网络直连）。
 
-### 6A.3 构建镜像
+### 7.3 构建镜像
 
 工程提供一键构建脚本 `scripts/build/build-image.sh`（风格与后端 `scripts/build/build.sh` 一致）：
 
@@ -246,7 +250,7 @@ docker build [--build-arg VITE_API_BASE_URL=<url>] -t apex-admin-web:latest .
 脚本特性：参数解析（`--tag/--api-base-url/--no-cache`）、自动读取 `.env.production`
 的 `VITE_API_BASE_URL`、构建完成后打印镜像与运行示例。
 
-### 6A.4 独立运行
+### 7.4 独立运行
 
 ```bash
 # 运行（独立部署时把反代指向宿主后端：macOS/Windows 用 172.17.0.1，Linux 用宿主 IP）
@@ -257,7 +261,7 @@ curl -s http://localhost/ | head -5        # 页面
 curl -s http://localhost/api/v1/health     # 反代后端健康检查
 ```
 
-### 6A.5 Compose 编排（推荐）
+### 7.5 Compose 编排（推荐）
 
 本工程的 `docker-compose.yml` 已声明 **外部网络** `apex-network`
 （`name: apex-scaffold_apex-network`，即后端 compose 项目创建的网络），
@@ -273,7 +277,7 @@ docker compose up -d --build
 docker compose ps    # 等待 healthy
 ```
 
-### 6A.6 接入后端 compose 网络的完整启动命令（端到端）
+### 7.6 接入后端 compose 网络的完整启动命令（端到端）
 
 > 以下命令均已在本工程实际验证通过：前端容器成功挂入 `apex-scaffold_apex-network`，
 > 网络内 DNS 可解析后端 compose 服务名 `apex-scaffold`，Nginx 反代正常转发。
@@ -409,59 +413,7 @@ docker exec apex-admin-web getent hosts apex-scaffold             # 应解析出
 > （后端 `container_name` 未固定，由 compose 自动命名）。若用 `docker-compose -p <项目>` 改了项目名，
 > 请把两处 `apex-scaffold_apex-network` 替换为 `<项目>_apex-network`。
 
-#### 方式二：docker run 直接挂网络
-
-后端 compose 已运行、且前端镜像已构建好时，免 compose：
-
-```bash
-# 构建（若尚未构建）
-cd /path/to/apex-admin-web
-docker build -t apex-admin-web:latest .
-
-# 运行：--network 指定后端 compose 网络名，反代指向后端服务名
-docker run -d --name apex-admin-web \
-  --network apex-scaffold_apex-network \
-  -e API_PROXY_PASS=http://apex-scaffold:8080 \
-  -p 80:80 \
-  apex-admin-web:latest
-
-# 验证
-docker inspect apex-admin-web --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
-#   输出应包含 apex-scaffold_apex-network
-docker exec apex-admin-web getent hosts apex-scaffold   # 应解析出后端容器 IP
-curl -s http://localhost/api/v1/health
-```
-
-#### 方式三：合并进后端 compose
-
-将前端服务片段直接并入后端 `docker-compose.yml` 的 `services`（与后端同网络，无需 external）：
-
-```yaml
-services:
-  apex-admin-web:
-    image: apex-admin-web:latest
-    container_name: apex-admin-web
-    environment:
-      API_PROXY_PASS: http://apex-scaffold:8080
-      TZ: Asia/Shanghai
-    ports:
-      - "80:80"
-    networks:
-      - apex-network
-    restart: unless-stopped
-```
-
-```bash
-cd /path/to/apex-scaffold
-docker compose up -d --build   # 一次性拉起后端 + 前端
-```
-
-> **网络名与 DNS 说明**：后端 compose 项目名 `apex-scaffold`、网络名 `apex-network` 时，
-> 实际 Docker 网络为 `apex-scaffold_apex-network`。容器加入后按 **compose 服务名**
-> `apex-scaffold` 进行 DNS 解析（不依赖容器名，容器名由 compose 自动生成）。
-> 若后端使用 `docker-compose -p <项目名>` 指定了项目名，请将网络名替换为 `<项目名>_apex-network`。
-
-### 6A.7 Docker 部署验证
+### 7.7 Docker 部署验证
 
 ```bash
 # 容器与网络
@@ -478,7 +430,7 @@ curl -s http://localhost/admin-api/v1/api-call-logs?pageNum=1      # 带登录�
 
 ---
 
-## 7. 部署方式二：与后端网关同域部署
+## 8. 部署方式三：与后端网关同域部署
 
 适用：前端与后端共用同一域名/入口，前端走相对路径，`VITE_API_BASE_URL` 留空（默认行为）。
 
@@ -490,7 +442,7 @@ curl -s http://localhost/admin-api/v1/api-call-logs?pageNum=1      # 带登录�
 
 ---
 
-## 8. 开发环境联调
+## 9. 开发环境联调
 
 ```bash
 # 1. 启动后端（Java 服务，端口 8080）
@@ -502,13 +454,13 @@ npm run dev
 ```
 
 - 默认访问 `http://localhost:5173`。
-- Vite dev server 已将 `/api`、`/admin-api` 代理到 `http://127.0.0.1:8080`（可通过
-  `.env.development` 的 `VITE_API_PROXY_TARGET` 调整代理目标）。
+- Vite dev server 已将 `/api`、`/admin-api` 及 OAuth2 端点（`/oauth2/authorize`、`/oauth2/token`）
+  代理到 `http://127.0.0.1:8080`（可通过 `.env.development` 的 `VITE_API_PROXY_TARGET` 调整代理目标）。
 - 登录流程：`GET /api/v1/auth/captcha`（拉取验证码）→ 提交账号密码 + 验证码 → 获取 `accessToken`。
 
 ---
 
-## 9. 部署验证清单（迁移回归）
+## 10. 部署验证清单（迁移回归）
 
 部署完成后按下列顺序冒烟，确认迁移不影响任何功能：
 
@@ -527,7 +479,7 @@ npm run dev
 
 ---
 
-## 10. 升级与回滚
+## 11. 升级与回滚
 
 ### 升级
 
@@ -562,7 +514,7 @@ cp -r /var/www/apex-admin.bak.<TIMESTAMP> /var/www/apex-admin
 
 ---
 
-## 11. 常见问题 FAQ
+## 12. 常见问题 FAQ
 
 **Q1：访问后端 `/admin` 返回 404？**
 正常。迁移后后端不再重定向 `/admin`，管理后台应访问前端源站（Nginx 托管地址）。
@@ -583,7 +535,7 @@ Nginx 未配置 `try_files $uri $uri/ /index.html;`，history 模式路由刷新
 
 ---
 
-## 12. 命令速查表
+## 13. 命令速查表
 
 | 命令 | 说明 |
 |------|------|

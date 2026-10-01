@@ -1,3 +1,17 @@
+<!--
+  办公平台授权回调页（静态路由 /office/callback）
+  ------------------------------------------------------------------
+  承接飞书/钉钉/企微 OAuth2 授权完成后的重定向：
+    1. 提取回调参数（code/state/platform）
+    2. 调用 officeCallback 用授权码换取会话令牌
+    3. 保存登录态并加载用户身份，成功跳工作台
+    4. 平台账号未绑定时提示「等待管理员审批」，其余失败提示错误
+
+  后端接口：
+    - GET /api/v1/office/callback - 办公平台授权回调（见 api/office-new.ts）
+
+  Props / Emits：无（路由页面）
+-->
 <template>
   <div class="office-callback-container">
     <el-card class="callback-card">
@@ -31,30 +45,46 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 办公平台授权回调处理逻辑
+ * - 挂载后自动执行 handleCallback 完成登录换取
+ * - 页面展示三种状态：处理中 / 等待审批 / 登录失败
+ */
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Loading, CircleCloseFilled, Clock } from '@element-plus/icons-vue'
 import { officeCallback, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-new'
+import { setToken, setRefreshToken, removeRefreshToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
+/** 是否处于登录处理中 */
 const loading = ref(true)
+/** 是否登录失败 */
 const error = ref(false)
+/** 平台账号是否待管理员审批（绑定流程） */
 const needApproval = ref(false)
+/** 登录失败文案 */
 const errorMessage = ref('')
+/** 本次回调对应的平台类型（缺省飞书） */
 const platform = ref<OfficePlatform>('FEISHU')
 
+/** 当前平台的中文名称（文案展示用） */
 const platformName = computed(() => PLATFORM_NAMES[platform.value])
 
+/**
+ * 执行授权回调：换取令牌 → 保存登录态 → 加载身份 → 跳转主页
+ * 绑定待审批与一般失败分别落在 needApproval / error 状态
+ */
 const handleCallback = async () => {
   try {
     // 获取 URL 参数
     const code = route.query.code as string
-    const state = route.query.state as string
+    const state: string | undefined = route.query.state as string
     platform.value = (route.query.platform as OfficePlatform) || 'FEISHU'
 
     if (!code || !state) {
@@ -64,12 +94,18 @@ const handleCallback = async () => {
     // 调用回调接口
     const result = await officeCallback(platform.value, code, state)
 
-    // 保存登录态
-    localStorage.setItem('access_token', result.accessToken)
-    localStorage.setItem('refresh_token', result.refreshToken)
+    // 保存登录态：统一走 auth.ts 工具函数（键为 apex.admin.token 等），
+    // 禁止直接操作 localStorage——旧实现写入 access_token 键，
+    // 拦截器经 getToken() 读取不到，会导致后续请求缺失 Bearer Token
+    setToken(result.accessToken)
+    userStore.token = result.accessToken
+    removeRefreshToken()
+    if (result.refreshToken) {
+      setRefreshToken(result.refreshToken)
+    }
 
-    // 加载用户信息
-    await userStore.loadUserInfo()
+    // 加载用户身份（用户信息/角色/权限码，与 oauth2 回调页保持同一入口）
+    await userStore.loadIdentity()
 
     ElMessage.success(`${platformName.value}登录成功`)
 
@@ -90,10 +126,14 @@ const handleCallback = async () => {
   }
 }
 
+/**
+ * 返回登录页（失败/待审批场景的操作按钮回调）
+ */
 const goToLogin = () => {
   router.push('/login')
 }
 
+// 挂载即开始处理授权回调
 onMounted(() => {
   handleCallback()
 })

@@ -378,9 +378,9 @@ export function updateChartStatus(id: string, status: number): Promise<void>
 ## 📚 文档索引
 
 ### 前端文档
-- 功能说明：`/Users/work/apex-admin-web/docs/features/document-chart-query.md`
-- Mock 使用指南：`/Users/work/apex-admin-web/docs/mock/README.md`
-- 后端集成状态：`/Users/work/apex-admin-web/docs/features/backend-integration-status.md`
+- 功能说明：`docs/features/document-chart-query.md`
+- Mock 使用指南：`docs/mock/README.md`
+- 后端集成状态：`docs/features/backend-integration-status.md`
 
 ### 后端文档
 - 实施进度报告：`/Users/work/apex-scaffold/docs/DOCUMENT_CHART_IMPLEMENTATION_PROGRESS.md`

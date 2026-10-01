@@ -18,6 +18,7 @@ import type {
   OnlineUser,
   PageQuery,
   PageResponse,
+  TraceQueryResult,
 } from '@/types'
 
 /** 登录日志查询参数（后端 username 模糊 + status 精确） */
@@ -96,6 +97,13 @@ export function getMonitorGovernance(): Promise<MonitorGovernance> {
  */
 export function getMonitorBusiness(): Promise<MonitorBusiness> {
   return get<MonitorBusiness>('/admin-api/v1/monitor/business')
+}
+
+/**
+ * 根据 Trace ID 查询链路追踪
+ */
+export function getTraceById(traceId: string): Promise<TraceQueryResult> {
+  return get<TraceQueryResult>(`/admin-api/v1/monitor/trace/${traceId}`)
 }
 
 /** API 调用日志查询参数（serviceName/status 精确，traceId/path 模糊） */

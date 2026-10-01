@@ -8,12 +8,24 @@
 
 - [项目主文档](../README.md) - 项目介绍、安装和快速开始
 - [开发规范](../AGENTS.md) - AI Agent 开发规范与工程约束
+- [贡献指南](../CONTRIBUTING.md) - 分支/提交/质量门/文档同步义务
+- [更新日志](../CHANGELOG.md) - 版本变更记录
+
+### 架构文档
+
+- [总体架构](architecture/overview.md) - 技术栈、分层架构、请求时序、部署架构、质量保障
+- [认证与路由架构](architecture/auth-and-routing.md) - 登录、令牌无感刷新、OAuth2/PKCE、动态路由全流程图
+
+### API 文档
+
+- [API 接口目录](api/README.md) - 全量接口清单（按业务域，与 src/api/ 逐一对齐）、分页口径、错误处理约定
 
 ### 开发指南
 
 - [部署指南](guides/deployment.md) - 生产环境部署配置
 - [前后端集成](guides/frontend-backend-integration.md) - 前后端联调和接口对接
 - [数据库配置验证](guides/database-config-verification.md) - 数据库配置功能说明
+- [Mock 数据服务](guides/mock-data-service.md) - 前端开发 Mock 数据使用指南
 
 ### 功能文档
 
@@ -27,6 +39,13 @@
 - [文档图表后端状态](implementation/document-chart-backend-status.md) - 文档图表功能后端集成状态
 - [文件上传实现](implementation/file-upload-implementation.md) - 基础文件上传实现细节
 - [增强文件上传实现](implementation/file-upload-enhanced-implementation.md) - 增强版文件上传实现细节
+- [监控大盘增强](implementation/monitor-dashboard-enhancement.md) - 监控大盘前端优化完整实现方案
+- [数据库配置验证](guides/database-config-verification.md) - 数据库配置功能验证清单
+
+### 参考文档
+
+- [测试指南](reference/testing.md) - Vitest 配置、现有用例、编写规范与覆盖率
+- [工具库与组合式函数参考](reference/toolkit.md) - utils/composables/stores 全量导出与选型建议
 
 ### 分析文档
 
@@ -57,12 +76,14 @@ apex-admin-web/
 │   ├── analysis/               # 分析文档
 │   ├── archived/               # 归档文档
 │   │   └── project-reports/    # 项目报告
-│   ├── architecture/           # 架构文档(待完善)
-│   ├── api/                    # API 文档(待完善)
-│   └── reference/              # 参考文档(待完善)
+│   ├── architecture/           # 架构文档（总体架构、认证与路由）
+│   ├── api/                    # API 接口目录（与 src/api/ 对齐）
+│   └── reference/              # 参考文档（测试指南、工具库参考）
 ├── scripts/                     # 脚本目录
 │   ├── build/                  # 构建脚本
-│   └── database/               # 数据库脚本
+│   ├── database/               # 数据库脚本
+│   ├── performance/            # 性能测试脚本
+│   └── security-scan.sh        # 安全扫描脚本
 └── src/                        # 源代码
 ```
 
@@ -78,6 +99,9 @@ apex-admin-web/
 - 需要文件上传功能 → [基础文件上传](features/file-upload-basic.md) 或 [增强文件上传](features/file-upload-enhanced.md)
 - 需要数据库配置 → [数据库配置](features/database-config.md)
 - 需要文档管理 → [文档图表管理](features/document-chart-management.md)
+- 查接口定义 → [API 接口目录](api/README.md)
+- 理解登录/路由机制 → [认证与路由架构](architecture/auth-and-routing.md)
+- 写测试 → [测试指南](reference/testing.md)
 
 ### 问题排查
 - 认证问题 → [认证集成分析](analysis/auth-integration.md)
@@ -92,11 +116,11 @@ apex-admin-web/
 - **features/** - 功能特性说明,从用户角度描述功能和使用方法
 - **implementation/** - 技术实现细节,面向开发者的代码实现说明
 - **analysis/** - 技术分析文档,包含架构分析、技术选型等
+- **architecture/** - 系统架构设计文档（含 Mermaid 架构图/流程图/时序图）
+- **api/** - API 接口目录（与 src/api/ 实现逐一对齐）
+- **reference/** - 参考文档（测试指南、工具库与组合式函数参考）
 - **archived/** - 已完成或过时的历史文档归档
   - **project-reports/** - 项目报告、更新记录等临时性文档
-- **architecture/** - 系统架构设计文档(待完善)
-- **api/** - API 接口文档(待完善)
-- **reference/** - 参考资料和规范文档(待完善)
 
 ### 文档命名规范
 
@@ -130,5 +154,5 @@ apex-admin-web/
 
 ---
 
-**最后更新**: 2026-09-15  
+**最后更新**: 2026-09-27  
 **维护者**: Apex Admin Web Team

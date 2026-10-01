@@ -8,7 +8,7 @@
  *   4. 业务错误：code !== 0 时抛出带 traceId 的错误信息
  *   5. 请求超时：默认 30s（与后端全局响应超时对齐）
  */
-import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
+import axios, { type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import { CODE_UNAUTHORIZED, RESULT_SUCCESS } from '@/settings'
 import { getRefreshToken, getToken, setRefreshToken, setToken, clearSession } from '@/utils/auth'
@@ -76,25 +76,30 @@ service.interceptors.response.use(
     // 非标准结构（如文件流）原样返回
     return response.data as never
   },
-  (error) => {
+  async (error) => {
     // HTTP 层错误处理
     const status = error.response?.status
-    if (status === CODE_UNAUTHORIZED && !error.config?.url?.includes('/auth/refresh') && getRefreshToken()) {
+    const config = error.config as (InternalAxiosRequestConfig & { authRetried?: boolean }) | undefined
+    const path = config?.url?.split('?')[0]
+    const authEndpoint = path === '/api/v1/auth/refresh' || path === '/api/v1/auth/login' || path === '/oauth2/token'
+    if (status === CODE_UNAUTHORIZED && config && !config.authRetried && !authEndpoint && getRefreshToken()) {
+      config.authRetried = true
       if (!refreshPromise) {
         refreshPromise = refreshToken(getRefreshToken()).then((result) => {
+          if (!result.accessToken) throw new Error('刷新响应缺少访问令牌')
           setToken(result.accessToken)
           if (result.refreshToken) setRefreshToken(result.refreshToken)
           return result.accessToken
         }).finally(() => { refreshPromise = null })
       }
-      return refreshPromise.then((newToken) => {
-        const config = error.config
+      try {
+        const newToken = await refreshPromise
         config.headers.Authorization = `Bearer ${newToken}`
-        return service.request(config)
-      }).catch(() => {
+      } catch {
         handleUnauthorized()
-        return Promise.reject(new ApiError('登录状态已失效，请重新登录', status))
-      })
+        throw new ApiError('登录状态已失效，请重新登录', status)
+      }
+      return service.request(config)
     }
     if (status === CODE_UNAUTHORIZED) {
       handleUnauthorized()
