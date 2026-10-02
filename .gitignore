@@ -58,6 +58,8 @@ test-results/
 # ===== 工具链本地状态 =====
 .workbuddy/
 .trae/
+.trae-html-share-packages/
+.zcode/
 
 # ===== 备份和临时文件 =====
 *.bak

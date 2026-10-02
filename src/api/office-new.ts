@@ -16,12 +16,13 @@
  * - POST   /admin-api/v1/office/apps/{platform}  - 新建平台配置
  * - PUT    /admin-api/v1/office/apps/{platform}  - 更新平台配置（带 version 乐观锁）
  * - DELETE /admin-api/v1/office/apps/{platform}  - 删除平台配置（带 version 乐观锁）
- * - GET    /admin-api/v1/office/bindings         - 账号绑定列表（分页）
+ * - GET    /admin-api/v1/office/bindings         - 账号绑定列表（数组响应，向后兼容）
+ * - GET    /admin-api/v1/office/bindings/page     - 账号绑定分页列表（真实 total，支持 status 过滤）
  * - POST   /admin-api/v1/office/bindings/{id}/review - 绑定审批（通过/驳回）
- * - POST   /admin-api/v1/office/bindings/{id}/unbind - 解除绑定（带 version 乐观锁）
+ * - DELETE /admin-api/v1/office/bindings/{id}/unbind - 解除绑定（带 version 乐观锁）
  */
 import { del, get, post, put } from '@/utils/request'
-import type { LoginResult } from '@/types'
+import type { LoginResult, PageResponse } from '@/types'
 
 /** 办公平台类型：飞书 / 钉钉 / 企业微信 */
 export type OfficePlatform = 'FEISHU' | 'DINGTALK' | 'WECOM'
@@ -168,7 +169,7 @@ export function updateApp(
   version: number,
   request: OfficeAppRequest,
 ): Promise<OfficeAppResponse> {
-  return put<OfficeAppResponse>(`/admin-api/v1/office/apps/${platform}?version=${version}`, request)
+  return put<OfficeAppResponse>(`/admin-api/v1/office/apps/${platform}`, { ...request, version })
 }
 
 /**
@@ -200,6 +201,29 @@ export function listBindings(
 }
 
 /**
+ * 分页查询账号绑定列表（真实总数，支持按状态过滤）
+ *
+ * @param platform 平台类型
+ * @param status 绑定状态过滤（PENDING/APPROVED/REJECTED/REVOKED），不传则查询全部状态
+ * @param page 页码（从 1 开始）
+ * @param size 每页条数
+ * @returns 分页结果（list / total / pageNum / pageSize）
+ */
+export function listBindingsPage(
+  platform: OfficePlatform,
+  status: string | undefined,
+  page: number,
+  size: number,
+): Promise<PageResponse<OfficeBindingResponse>> {
+  return get<PageResponse<OfficeBindingResponse>>('/admin-api/v1/office/bindings/page', {
+    platform,
+    status,
+    page,
+    size,
+  })
+}
+
+/**
  * 审批绑定申请（通过后平台账号与系统用户正式绑定）
  * @param id 绑定记录 ID
  * @param request 审批动作（approved=true 通过 / false 驳回）+ 版本号
@@ -216,5 +240,5 @@ export function reviewBinding(id: number, request: OfficeBindingReviewRequest): 
  * @returns true=解绑成功
  */
 export function unbindBinding(id: number, version: number): Promise<boolean> {
-  return post<boolean>(`/admin-api/v1/office/bindings/${id}/unbind?version=${version}`)
+  return del<boolean>(`/admin-api/v1/office/bindings/${id}/unbind?version=${version}`)
 }

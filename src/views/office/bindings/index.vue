@@ -100,16 +100,25 @@
       </el-table>
 
       <!-- 分页 -->
-      <el-pagination
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.size"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="pagination.total"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleQuery"
-        @current-change="handleQuery"
-        class="pagination"
-      />
+      <div class="pagination">
+        <span>共 {{ total }} 条</span>
+        <span>每页</span>
+        <el-select
+          v-model="pagination.size"
+          aria-label="每页条数"
+          style="width: 90px"
+          @change="handleSizeChange"
+        >
+          <el-option v-for="size in pageSizes" :key="size" :label="size" :value="size" />
+        </el-select>
+        <el-button :disabled="pagination.page <= 1 || loading" @click="handlePageChange(pagination.page - 1)">
+          上一页
+        </el-button>
+        <span>第 {{ pagination.page }} 页</span>
+        <el-button :disabled="!hasNextPage || loading" @click="handlePageChange(pagination.page + 1)">
+          下一页
+        </el-button>
+      </div>
     </el-card>
   </div>
 </template>
@@ -120,11 +129,11 @@
  * - 按平台+状态查询绑定申请，支持批准/拒绝（PENDING）与解绑（APPROVED）
  * - 审批与解绑均携带 version 乐观锁，冲突时后端拒绝
  */
-import { ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import {
-  listBindings,
+  listBindingsPage,
   reviewBinding,
   unbindBinding,
   PLATFORM_NAMES,
@@ -140,6 +149,10 @@ const platforms: OfficePlatform[] = ['FEISHU', 'DINGTALK', 'WECOM']
 const loading = ref(false)
 /** 绑定记录列表 */
 const bindings = ref<OfficeBindingResponse[]>([])
+/** 符合查询条件的总记录数（来自后端真实分页） */
+const total = ref(0)
+const pageSizes = [10, 20, 50, 100]
+const hasNextPage = computed(() => pagination.page * pagination.size < total.value)
 
 /** 查询条件（平台 + 状态） */
 const queryForm = reactive({
@@ -147,11 +160,10 @@ const queryForm = reactive({
   status: '',
 })
 
-/** 分页状态（页码/条数/总数） */
+/** 分页状态（页码/条数） */
 const pagination = reactive({
   page: 1,
   size: 20,
-  total: 0,
 })
 
 /** ========== 展示辅助 ========== */
@@ -203,7 +215,7 @@ const getStatusText = (status: string) => {
 /** ========== 查询操作 ========== */
 
 /**
- * 加载绑定列表（必须先选择平台；后端暂未返回 total，以当前页条数模拟）
+ * 加载绑定列表（必须先选择平台；按 status 过滤，返回真实分页 total）
  */
 const loadBindings = async () => {
   if (!queryForm.platform) {
@@ -213,14 +225,14 @@ const loadBindings = async () => {
 
   loading.value = true
   try {
-    const data = await listBindings(
+    const data = await listBindingsPage(
       queryForm.platform as OfficePlatform,
+      queryForm.status || undefined,
       pagination.page,
       pagination.size,
     )
-    bindings.value = data
-    // 注意：后端暂未返回 total，这里模拟分页
-    pagination.total = data.length
+    bindings.value = data.list
+    total.value = data.total
   } catch (error: any) {
     ElMessage.error(error.message || '加载失败')
   } finally {
@@ -236,6 +248,16 @@ const handleQuery = () => {
   loadBindings()
 }
 
+const handlePageChange = (page: number) => {
+  pagination.page = page
+  loadBindings()
+}
+
+const handleSizeChange = () => {
+  pagination.page = 1
+  loadBindings()
+}
+
 /**
  * 重置查询条件并清空列表
  */
@@ -243,7 +265,8 @@ const handleReset = () => {
   queryForm.platform = ''
   queryForm.status = ''
   bindings.value = []
-  pagination.total = 0
+  total.value = 0
+  pagination.page = 1
 }
 
 /** ========== 审批与解绑操作 ========== */
@@ -268,6 +291,7 @@ const handleApprove = async (row: OfficeBindingResponse) => {
     })
 
     ElMessage.success('批准成功')
+    pagination.page = 1
     await loadBindings()
   } catch (error: any) {
     if (error !== 'cancel') {
@@ -296,6 +320,7 @@ const handleReject = async (row: OfficeBindingResponse) => {
     })
 
     ElMessage.success('拒绝成功')
+    pagination.page = 1
     await loadBindings()
   } catch (error: any) {
     if (error !== 'cancel') {
@@ -320,6 +345,7 @@ const handleUnbind = async (row: OfficeBindingResponse) => {
 
     await unbindBinding(row.id, row.version)
     ElMessage.success('解绑成功')
+    pagination.page = 1
     await loadBindings()
   } catch (error: any) {
     if (error !== 'cancel') {
@@ -328,10 +354,6 @@ const handleUnbind = async (row: OfficeBindingResponse) => {
   }
 }
 
-// 默认不加载列表，等用户先选择平台再查询
-onMounted(() => {
-  // 默认不加载，等用户选择平台
-})
 </script>
 
 <style scoped lang="scss">
@@ -360,7 +382,9 @@ onMounted(() => {
   .pagination {
     margin-top: 16px;
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    gap: 8px;
   }
 }
 </style>

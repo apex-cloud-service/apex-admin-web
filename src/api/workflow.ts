@@ -88,7 +88,7 @@ export function listWorkflowInstances(params: InstanceQueryParams) {
  * @returns 流程实例详细信息，包含审批记录、当前节点等
  */
 export function getWorkflowInstanceDetail(id: number) {
-  return get<WorkflowInstanceDetail>(`/admin-api/v1/workflows/instances/${id}/detail`)
+  return get<WorkflowInstanceDetail>(`/admin-api/v1/workflows/instances/${id}`)
 }
 
 // ===== 统计分析 =====
