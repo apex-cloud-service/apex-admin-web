@@ -99,7 +99,7 @@ export interface TraceQueryResult {
   traceId: string
   spans: TraceSpan[]
   duration: number
-  serviceCoun: number
+  serviceCount: number
   spanCount: number
 }
 ```
@@ -781,17 +781,14 @@ function formatTimestamp(timestamp: number): string {
 添加链路追踪查询接口：
 
 ```typescript
-import request from '@/utils/request'
+import { get } from '@/utils/request'
 import type { TraceQueryResult } from '@/types'
 
 /**
  * 根据 Trace ID 查询链路追踪
  */
 export function getTraceById(traceId: string): Promise<TraceQueryResult> {
-  return request({
-    url: `/admin-api/v1/monitor/trace/${traceId}`,
-    method: 'get'
-  })
+  return get<TraceQueryResult>(`/admin-api/v1/monitor/trace/${traceId}`)
 }
 ```
 

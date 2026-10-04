@@ -179,10 +179,10 @@ npm run dev
 
 ```typescript
 // 文档数据量（默认50条）
-const documentDatabase: Document[] = Array.from({ length: 100 }, () => generateDocument())
+const documentDatabase: Document[] = Array.from({ length: 50 }, () => generateDocument())
 
 // 图表数据量（默认30条）
-const chartDatabase: Chart[] = Array.from({ length: 50 }, () => generateChart())
+const chartDatabase: Chart[] = Array.from({ length: 30 }, () => generateChart())
 ```
 
 ### 2. 调整响应延迟
@@ -195,7 +195,9 @@ Mock.setup({
 
 ### 3. 禁用 Mock 服务
 
-如果需要测试真实后端接口，在 `main.ts` 中注释掉 Mock 引入：
+Mock 仅开发环境加载：`src/mock/index.ts` 顶部 `const MOCK_ENABLED = import.meta.env.DEV` 且 `main.ts` 中按 `if (import.meta.env.DEV)` 动态 `import('./mock')`，生产构建（`import.meta.env.DEV === false`）天然不启用，无需手动关闭。
+
+如需在开发环境临时连真实后端，在 `main.ts` 中注释掉 Mock 引入：
 
 ```typescript
 // Mock 数据服务（仅开发环境生效）
@@ -204,11 +206,8 @@ Mock.setup({
 // }
 ```
 
-或直接修改 `src/mock/index.ts`：
-
-```typescript
-const MOCK_ENABLED = false  // 改为 false
-```
+> 说明：不要把 `MOCK_ENABLED` 改为 `false`。它由 `import.meta.env.DEV` 派生（见 `src/mock/index.ts`），
+> 强改为 `false` 会同时关闭其下方的拦截注册，行为与注释该引入一致但写法与源码不符。
 
 ## 🐛 常见问题
 

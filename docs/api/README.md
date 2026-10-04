@@ -210,18 +210,22 @@
 
 ### 2.16 办公平台（两套 API 并存，按页面引用）
 
-**[src/api/office-new.ts](../../src/api/office-new.ts)**（新版应用/绑定管理 + 登录，被 `office/callback`、`office/config`、`office/bindings`、`office/console`、`PlatformSelector` 引用）：
+**[src/api/office-new.ts](../../src/api/office-new.ts)**（品牌应用/绑定管理 + 登录，被 `office/callback`、`office/config`、`office/bindings`、`office/console`、`PlatformSelector` 引用）：
 
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
-| GET | `/api/v1/office/status` | `getPlatformStatus()` | 平台启用状态（登录页） |
-| POST | `/api/v1/office/login/{platform}` | `startOfficeLogin(platform)` | 获取平台授权 URL |
-| POST | `/api/v1/office/callback/{platform}` | `officeCallback(...)` | 授权回调换会话 |
-| GET/POST | `/admin-api/v1/office/apps` | `listApps` / `createApp` | 应用配置 |
-| GET/PUT/DELETE | `/admin-api/v1/office/apps/{platform}` | `getApp` / `updateApp` / `deleteApp` | 按平台维度，删除带 `version` 乐观锁 |
-| GET | `/admin-api/v1/office/bindings` | `listBindings` | 绑定申请分页 |
-| POST | `/admin-api/v1/office/bindings/{id}/review` | `reviewBinding(id, req)` | 审批绑定（APPROVED/REJECTED） |
-| DELETE | `/admin-api/v1/office/bindings/{id}` | `unbindBinding(id, version)` | 解绑（带 version 乐观锁） |
+| GET | `/api/v1/office/status` | `getPlatformStatus()` | 已启用平台列表（返回平台标识数组） |
+| GET | `/api/v1/office/login?platform=` | `startOfficeLogin(platform)` | 获取平台 OAuth2 授权跳转地址（query 传 platform） |
+| GET | `/api/v1/office/callback?platform=&code=&state=` | `officeCallback(platform, code, state)` | 授权回调换会话（query 传参） |
+| GET | `/admin-api/v1/office/apps` | `listApps()` | 应用配置列表 |
+| GET | `/admin-api/v1/office/apps/{platform}` | `getApp(platform)` | 查询单平台配置 |
+| POST | `/admin-api/v1/office/apps/{platform}` | `createApp(platform, req)` | 新建平台配置 |
+| PUT | `/admin-api/v1/office/apps/{platform}` | `updateApp(platform, version, req)` | 更新配置（version 乐观锁随 body 回传） |
+| DELETE | `/admin-api/v1/office/apps/{platform}?version=` | `deleteApp(platform, version)` | 删除配置（version 乐观锁） |
+| GET | `/admin-api/v1/office/bindings` | `listBindings(platform, page, size)` | 账号绑定列表（数组响应，向后兼容） |
+| GET | `/admin-api/v1/office/bindings/page` | `listBindingsPage(platform, status, page, size)` | 账号绑定分页（真实 total，支持 status 过滤） |
+| POST | `/admin-api/v1/office/bindings/{id}/review` | `reviewBinding(id, req)` | 审批绑定（approved=true 通过 / false 驳回） |
+| DELETE | `/admin-api/v1/office/bindings/{id}/unbind?version=` | `unbindBinding(id, version)` | 解绑（version 乐观锁） |
 
 **[src/api/office.ts](../../src/api/office.ts)**（综合接口，被 `office/message`、`office/approval`、`office/calendar`、`office/document`、`office/organization` 引用）：
 
@@ -241,7 +245,7 @@
 
 ### 2.17 自动生成接口
 
-`npm run generate:api`（openapi-generator-cli 7.2.0，typescript-axios）从根目录 `openapi.json` 生成代码到 `src/api/generated/`。生成物为辅助参考，业务代码仍以手写 [src/api/](../../src/api/) 模块为准。
+`npm run generate:api`（openapi-generator-cli 7.2.0，typescript-axios，配置见 [openapitools.json](../../openapitools.json)）依据 `glob: "openapi.json"` 从根目录 `openapi.json` 生成代码到 `src/api/generated/`。该 OpenAPI 规范文件由后端接口导出提供，当前仓库未内置（`.gitignore` 也未忽略），执行前须先将其放到根目录；`src/api/generated/` 亦为生成目录，当前仓库不存在。生成物为辅助参考，业务代码仍以手写 [src/api/](../../src/api/) 模块为准。
 
 ## 3. 错误处理约定
 

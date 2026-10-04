@@ -215,8 +215,9 @@ docs/
 
 **实现方式：**
 - 支持 accept 配置视频类型
-- 支持 mp4, webm, ogg 格式
-- 自动生成视频预览
+- 支持 mp4, webm, ogg 格式（由传入的 `accept` 决定，组件默认 accept 为图片）
+- 组件仅对 `image/*` 执行压缩与裁剪（`compressImage` / Cropper），视频不加处理原样上传
+- **组件内不内建视频预览**：图片预览走 `el-image` 的 `preview-src-list`，视频预览需父组件基于 `success` 回调的 url 自行渲染 `<video>`
 
 **注意事项：**
 - 视频不支持压缩

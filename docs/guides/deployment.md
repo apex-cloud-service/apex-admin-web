@@ -1,6 +1,6 @@
 # Apex Admin Web 部署使用指南（迁移后·前后端分离）
 
-> 版本：1.1.4 ｜ 适用：dev / it / prod 全环境
+> 版本：1.2.0 ｜ 适用：dev / it / prod 全环境
 > 本文档面向 **前端独立工程**（`apex-admin-web`，Vue 3 + Vite）的构建与部署，记录前端与后端 [Apex Scaffold](https://github.com/your-org/apex-scaffold)（Spring Boot 3 WebFlux）分离后的部署形态。
 
 ---
@@ -16,7 +16,7 @@
 - [7. 部署方式二：Docker 容器部署（推荐）](#7-部署方式二docker-容器部署推荐)
 - [8. 部署方式三：与后端网关同域部署](#8-部署方式三与后端网关同域部署)
 - [9. 开发环境联调](#9-开发环境联调)
-- [10. 部署验证清单](#10-部署验证清单)
+- [10. 部署验证清单（迁移回归）](#10-部署验证清单迁移回归)
 - [11. 升级与回滚](#11-升级与回滚)
 - [12. 常见问题 FAQ](#12-常见问题-faq)
 - [13. 命令速查表](#13-命令速查表)
@@ -112,8 +112,8 @@ dist/
 
 | 变量 | 生效环境 | 说明 |
 |------|---------|------|
-| `VITE_API_BASE_URL` | 生产（`.env.production`） | 后端网关地址。**同域部署留空**，走相对路径 `/api`、`/admin-api`；跨域/独立网关时填写完整前缀（如 `https://api.example.com`） |
-| `VITE_API_PROXY_TARGET` | 开发（`.env.development`） | Vite dev server 代理目标，默认 `http://127.0.0.1:8080` |
+| `VITE_API_BASE_URL` | 生产（`.env.production`） | 后端网关地址。**同域部署留空**，走相对路径 `/api`、`/admin-api`、`/oauth2`；跨域/独立网关时填写完整前缀（如 `https://api.example.com`） |
+| `VITE_API_PROXY_TARGET` | 开发（`.env.development`） | Vite dev server 代理目标（`/api`、`/admin-api`、`/oauth2`），默认 `http://127.0.0.1:8080` |
 
 ```bash
 # 例：跨域部署时指定后端网关
@@ -156,7 +156,13 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # 后端业务与管理接口反向代理
+    # 后端业务、管理接口与 OAuth2 端点反向代理
+    location ~ ^/oauth2/(authorize|token)$ {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
     location /api/ {
         proxy_pass         http://127.0.0.1:8080;
         proxy_set_header   Host $host;
@@ -179,8 +185,8 @@ nginx -t && systemctl reload nginx
 > **为什么需要 `try_files ... /index.html`**：前端使用 Vue Router「history 模式」，直接刷新
 > `/monitor/api-call-log` 等多级路径时需回退到 `index.html` 再让前端路由接管，否则返回 404。
 >
-> **为什么只需代理 `/api/` 与 `/admin-api/`**：前后端分离后前端所有动态数据请求均带这两组前缀，
-> 静态资源与页面由 Nginx 直接返回。
+> **为什么需要代理 `/oauth2/`、`/api/` 与 `/admin-api/`**：前后端分离后前端所有动态数据请求均带这几组前缀
+> （`/oauth2/authorize`、`/oauth2/token` 为授权码登录端点），静态资源与页面由 Nginx 直接返回。
 
 ### 6.3 启用 HTTPS（生产建议）
 
@@ -239,7 +245,7 @@ cd /path/to/apex-admin-web
 ./scripts/build/build-image.sh
 
 # 指定版本标签 / 后端网关 / 禁用缓存
-./scripts/build/build-image.sh --tag v1.1.4
+./scripts/build/build-image.sh --tag v1.2.0
 ./scripts/build/build-image.sh --api-base-url https://api.example.com
 ./scripts/build/build-image.sh --no-cache
 

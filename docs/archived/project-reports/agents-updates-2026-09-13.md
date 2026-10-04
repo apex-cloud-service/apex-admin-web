@@ -239,10 +239,10 @@ npx vue-tsc --noEmit
 
 ## 🔗 相关文档
 
-- **[AGENTS.md](AGENTS.md)**：项目开发规范与工程约束（主文档）
-- **[AGENTS_CHECK_REPORT.md](AGENTS_CHECK_REPORT.md)**：完整的检查报告
-- **[AGENTS_MD_SUPPLEMENTS.md](AGENTS_MD_SUPPLEMENTS.md)**：补充建议详细内容
-- **[AGENTS_UPDATE_SUMMARY.md](AGENTS_UPDATE_SUMMARY.md)**：完整更新总结
+- **[AGENTS.md](../../../AGENTS.md)**：项目开发规范与工程约束（主文档）
+- **[AGENTS_CHECK_REPORT.md](agents-check-report-2026-09-13.md)**：完整的检查报告
+- **[AGENTS_MD_SUPPLEMENTS.md](agents-supplements-2026-09-13.md)**：补充建议详细内容
+- **[AGENTS_UPDATE_SUMMARY.md](agents-update-summary-2026-09-13.md)**：完整更新总结
 
 ---
 
@@ -257,7 +257,7 @@ npx vue-tsc --noEmit
 
 **文档生成时间**：2026-09-13  
 **文档用途**：快速查阅更新内容，定位相关章节  
-**推荐阅读**：结合 [AGENTS.md](AGENTS.md) 主文档使用
+**推荐阅读**：结合 [AGENTS.md](../../../AGENTS.md) 主文档使用
 
 ---
 

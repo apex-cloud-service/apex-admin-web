@@ -4,28 +4,26 @@
 
 ## 📂 归档文档列表
 
-### 实施报告（已完成项目）
+### 实施报告与功能总结
 
 | 文档 | 说明 | 归档时间 |
 |------|------|---------|
-| [implementation-complete.md](implementation-complete.md) | 文档和图表功能实施完成报告 | 2026-09-12 |
-| [document-chart-backend-summary.md](document-chart-backend-summary.md) | 后端实施总结（步骤 4-6） | 2026-09-12 |
+| [document-chart-backend-summary.md](document-chart-backend-summary.md) | 文档图表后端实施总结 | 2026-09-12 |
 | [document-chart-feature-summary.md](document-chart-feature-summary.md) | 文档和图表功能总结 | 2026-09-12 |
-| [backend-implementation-steps-4-to-6.md](backend-implementation-steps-4-to-6.md) | 后端实施步骤详细说明 | 2026-09-12 |
-| [implementation-code-step4-to-6.md](implementation-code-step4-to-6.md) | 后端实施代码记录 | 2026-09-12 |
 
-### 文档整理报告
+### 前后端优化与后端交付
 
 | 文档 | 说明 | 归档时间 |
 |------|------|---------|
-| [documentation-reorganization-v1.md](documentation-reorganization-v1.md) | 文档整合重组报告（第一版） | 2026-09-12 |
-| [documentation-reorganization-v2.md](documentation-reorganization-v2.md) | 文档整合重组报告（最终版） | 2026-09-12 |
+| [frontend-backend-optimization-plan-2026-10-01.md](frontend-backend-optimization-plan-2026-10-01.md) | 前后端功能匹配评审与优化实施方案 | 2026-10-04 |
+| [backend-pending-features-2026-10-01.md](backend-pending-features-2026-10-01.md) | 后端待实现功能清单与接口契约 | 2026-10-04 |
+| [backend-code-generator-implementation-2026-10-01.md](backend-code-generator-implementation-2026-10-01.md) | 代码生成器模块后端完整实现代码 | 2026-10-04 |
 
-### 快速开始指南
+### 项目报告
 
 | 文档 | 说明 | 归档时间 |
 |------|------|---------|
-| [quick-start-guide.md](quick-start-guide.md) | 文档和图表管理功能快速开始指南（后端相关） | 2026-09-12 |
+| [project-reports/](project-reports/) | 项目报告与更新记录（AGENTS 更新、办公平台交付等） | 2026-09-13 ~ 2026-09-14 |
 
 ## 📝 归档原因
 
@@ -57,5 +55,5 @@
 
 ---
 
-**归档时间**：2026-09-12  
+**归档时间**：2026-10-04  
 **维护状态**：不再维护

@@ -7,7 +7,7 @@ set -e
 # 基于 Dockerfile 多阶段构建（node:18-alpine 构建 + nginx:1.27-alpine 运行）
 # 用法:
 #   ./scripts/build/build-image.sh                     # 构建 apex-admin-web:latest
-#   ./scripts/build/build-image.sh --tag v1.1.4        # 指定镜像标签
+#   ./scripts/build/build-image.sh --tag v1.2.0        # 指定镜像标签
 #   ./scripts/build/build-image.sh --api-base-url https://api.example.com   # 覆盖后端网关
 #   ./scripts/build/build-image.sh --no-cache          # 禁用 Docker 构建缓存
 # 说明:

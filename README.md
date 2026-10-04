@@ -32,7 +32,7 @@ npm install
 # 2. 配置环境变量（首次运行必须）
 cp .env.example .env.development
 
-# 3. 启动开发服务器（默认 http://localhost:5173，代理 /api、/admin-api 到后端 8080）
+# 3. 启动开发服务器（默认 http://localhost:5173，代理 /oauth2、/api、/admin-api 到后端 8080）
 npm run dev
 
 # 4. 生产构建（输出 dist/）
@@ -144,8 +144,8 @@ apex-admin-web/
 > 本工程已与后端 Apex Scaffold 完成**前后端分离**：后端不再托管 `static/admin/` 静态前端，
 > 也不再提供 `/admin` 短入口重定向。完整构建与部署说明见 **[`docs/guides/deployment.md`](docs/guides/deployment.md)**。
 
-- **独立部署（推荐生产）**：`npm run build` 后将 `dist/` 交给 Nginx/静态服务器，反向代理 `/api`、`/admin-api` 到后端（详见 [`docs/guides/deployment.md`](docs/guides/deployment.md) §6）。
-- **与后端网关同域**：前端走相对路径（`VITE_API_BASE_URL` 留空），由 Nginx 按 `/api/`、`/admin-api/` 前缀分流到后端（详见 [`docs/guides/deployment.md`](docs/guides/deployment.md) §7）。
+- **独立部署（推荐生产）**：`npm run build` 后将 `dist/` 交给 Nginx/静态服务器，反向代理 `/oauth2`、`/api`、`/admin-api` 到后端（详见 [`docs/guides/deployment.md`](docs/guides/deployment.md) §6）。
+- **与后端网关同域**：前端走相对路径（`VITE_API_BASE_URL` 留空），由 Nginx 按 `/oauth2/`、`/api/`、`/admin-api/` 前缀分流到后端（详见 [`docs/guides/deployment.md`](docs/guides/deployment.md) §7）。
 
 ## 标准前端注释规范
 

@@ -182,7 +182,7 @@ flowchart LR
 | 手段 | 命令/位置 | 说明 |
 |------|-----------|------|
 | 类型检查 | `vue-tsc --noEmit`（build 前置） | tsconfig `strict` + `noUnusedLocals` + `noUnusedParameters` |
-| 单元测试 | `npm run test`（Vitest + happy-dom） | 用例见 `src/utils/__tests__/`，详见 [测试指南](../reference/testing.md) |
+| 单元测试 | `npm run test`（Vitest + happy-dom） | 用例分布于 `src/utils/__tests__/`（工具/契约）与 `src/api/`（业务 API 契约），详见 [测试指南](../reference/testing.md) |
 | 产物分析 | `npm run analyze` | rollup-plugin-visualizer |
 | 性能审计 | `scripts/performance/lighthouse-test.sh` | Lighthouse desktop preset，报告输出 `./reports/lighthouse` |
 | 依赖安全 | `scripts/security-scan.sh`、`npm run audit` | npm audit + npm-check-updates + snyk（可选） |

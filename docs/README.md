@@ -40,7 +40,6 @@
 - [文件上传实现](implementation/file-upload-implementation.md) - 基础文件上传实现细节
 - [增强文件上传实现](implementation/file-upload-enhanced-implementation.md) - 增强版文件上传实现细节
 - [监控大盘增强](implementation/monitor-dashboard-enhancement.md) - 监控大盘前端优化完整实现方案
-- [数据库配置验证](guides/database-config-verification.md) - 数据库配置功能验证清单
 
 ### 参考文档
 
@@ -60,6 +59,9 @@
   - [AGENTS 检查报告](archived/project-reports/agents-check-report-2026-09-13.md)
   - [AGENTS 补充建议](archived/project-reports/agents-supplements-2026-09-13.md)
   - [办公平台前端交付](archived/project-reports/office-frontend-delivery-2026-09-14.md)
+- [前后端优化实施方案](archived/frontend-backend-optimization-plan-2026-10-01.md) - 前后端功能匹配评审与分级优化方案
+- [后端待实现功能清单](archived/backend-pending-features-2026-10-01.md) - 后端待实现功能清单与接口契约
+- [后端代码生成器实现](archived/backend-code-generator-implementation-2026-10-01.md) - 代码生成器模块后端完整实现代码
 - [历史文档](archived/) - 已归档的历史文档
 
 ## 📁 项目结构
@@ -75,7 +77,8 @@ apex-admin-web/
 │   ├── implementation/         # 实现文档
 │   ├── analysis/               # 分析文档
 │   ├── archived/               # 归档文档
-│   │   └── project-reports/    # 项目报告
+│   │   ├── project-reports/    # 项目报告
+│   │   └── *.md                # 历史预归档文档（含日期后缀）
 │   ├── architecture/           # 架构文档（总体架构、认证与路由）
 │   ├── api/                    # API 接口目录（与 src/api/ 对齐）
 │   └── reference/              # 参考文档（测试指南、工具库参考）
@@ -154,5 +157,5 @@ apex-admin-web/
 
 ---
 
-**最后更新**: 2026-09-27  
+**最后更新**: 2026-10-04  
 **维护者**: Apex Admin Web Team

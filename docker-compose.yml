@@ -6,7 +6,7 @@
 #   docker compose ps     # 等待 healthy
 # 访问:
 #   前端页面 http://localhost:80
-#   详细文档: DEPLOYMENT.md
+#   详细文档: docs/guides/deployment.md
 # ============================================================
 
 services:
@@ -14,7 +14,7 @@ services:
     build:
       context: .
       args:
-        # 生产后端网关地址；同域（由本 Nginx 反代 /api、/admin-api）部署留空
+        # 生产后端网关地址；同域（由本 Nginx 反代 /oauth2、/api、/admin-api）部署留空
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
     image: apex-admin-web:${TAG:-latest}
     container_name: apex-admin-web

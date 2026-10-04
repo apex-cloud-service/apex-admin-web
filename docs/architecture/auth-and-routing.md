@@ -121,7 +121,7 @@ sequenceDiagram
     LP->>IdP: 跳转授权页
     IdP-->>CB: 回调 ?code=xxx&state=xxx
     CB->>OA: consumeAuthorization(state)<br/>校验 state 并取出 clientId/redirectUri/codeVerifier
-    CB->>B: POST /api/v1/oauth2/callback<br/>（表单编码，携带 code + code_verifier）
+    CB->>B: POST /oauth2/token<br/>（表单编码，携带 code + code_verifier，不含 client_secret）
     B-->>CB: LoginResult{accessToken, refreshToken}
     CB->>CB: 保存会话并跳转回跳页或 /dashboard
 ```
@@ -145,13 +145,13 @@ sequenceDiagram
     participant P as 平台(飞书/钉钉/企微)
 
     L->>B: GET /api/v1/office/status（查询已启用平台）
-    B-->>L: OfficePlatform[]（登录页渲染对应按钮）
+    B-->>L: OfficePlatform[]（登录页按此渲染入口）
     U->>L: 点击平台按钮
-    L->>B: POST /api/v1/office/login/{platform}
-    B-->>L: 平台授权 URL
+    L->>B: GET /api/v1/office/login?platform=（获取授权跳转地址）
+    B-->>L: 平台 OAuth2 授权 URL
     L->>P: 跳转平台授权页
-    P-->>L: 回调 /office/callback?code=...
-    L->>B: POST /api/v1/office/callback/{platform}
+    P-->>L: 回调 /office/callback?code=...&state=...
+    L->>B: GET /api/v1/office/callback?platform=&code=&state=
     B-->>L: 换取会话令牌（新用户则生成绑定申请）
     L->>L: 保存会话并进入工作台
 ```

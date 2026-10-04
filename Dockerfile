@@ -5,7 +5,7 @@
 #   VITE_API_BASE_URL  生产后端网关地址；同域部署（Nginx 反代 /api、/admin-api）留空
 # 运行: docker run -p 80:80 -e API_PROXY_PASS=http://127.0.0.1:8080 apex-admin-web:latest
 #   API_PROXY_PASS     前端 Nginx 反代后端的 upstream 地址（默认 http://apex-scaffold:8080）
-# 详细说明见 DEPLOYMENT.md §13
+# 详细说明见 docs/guides/deployment.md §13
 # ============================================================
 
 # ------------------------------------------------------------
