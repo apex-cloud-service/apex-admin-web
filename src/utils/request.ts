@@ -4,7 +4,7 @@
  * 统一处理：
  *   1. 请求拦截：注入 Bearer Token
  *   2. 响应拦截：解包 Result{code,msg,data,traceId}
- *   3. 401 处理：清除会话并跳转登录页（保留回跳地址）
+ *   3. 401 处理：自动刷新令牌（并发单飞）并单次重放；失败才清除会话并跳转登录页（保留回跳地址）
  *   4. 业务错误：code !== 0 时抛出带 traceId 的错误信息
  *   5. 请求超时：默认 30s（与后端全局响应超时对齐）
  */
@@ -28,9 +28,10 @@ export class ApiError extends Error {
   }
 }
 
-/** axios 实例：baseURL 支持生产环境注入网关地址 */
+/** 共享的令牌刷新 Promise：并发 401 只创建一次刷新请求（单飞），完成后置空 */
 let refreshPromise: Promise<string> | null = null
 
+/** axios 实例：baseURL 支持生产环境注入网关地址 */
 const service = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
   timeout: 30000,

@@ -23,6 +23,7 @@ function checkPermission(el: HTMLElement, binding: DirectiveBinding<string>): vo
   }
 }
 
+/** v-permission 指令定义：mounted/updated 时校验权限码，无权限移除节点 */
 export const permission: Directive<HTMLElement, string> = {
   mounted: checkPermission,
   updated: checkPermission,

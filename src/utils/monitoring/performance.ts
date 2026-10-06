@@ -1,14 +1,13 @@
 /**
  * 性能监控工具
  * ------------------------------------------------------------------
- * 封装前端性能指标采集，支持页面加载性能、资源加载性能监控。
+ * 封装前端性能指标采集，支持页面加载性能监控。
  * 
  * 监控指标：
  *   - FCP (First Contentful Paint) - 首次内容绘制时间
  *   - LCP (Largest Contentful Paint) - 最大内容绘制时间
  *   - FID (First Input Delay) - 首次输入延迟
- *   - CLS (Cumulative Layout Shift) - 累计布局偏移
- *   - TTFB (Time To First Byte) - 首字节时间
+ *   - TTFB (Time To First Byte) - 首字节时间（随页面 load 上报）
  */
 
 /** 带 processingStart 字段的性能条目（FID 计算需要，标准类型未覆盖） */
@@ -19,8 +18,8 @@ interface PerformanceEntryWithProcessing extends PerformanceEntry {
 /**
  * 前端性能监控器
  * ------------------------------------------------------------------
- * 基于 PerformanceObserver 采集 Web Vitals 关键指标并输出到控制台，
- * 在 main.ts 中调用 PerformanceMonitor.init() 一次性启动。
+ * 基于 PerformanceObserver 采集 Web Vitals 关键指标并输出到控制台。
+ * 当前未接入：仓库内无调用点，需在应用入口调用 init() 后才会生效。
  * 后续可将 console.log 替换为上报到监控后端（配合 TraceId 链路）。
  */
 export class PerformanceMonitor {

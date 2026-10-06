@@ -13,6 +13,7 @@ import { SIDEBAR_KEY, THEME_KEY } from '@/settings'
 /** 主题类型：light=浅色 dark=深色 */
 export type ThemeMode = 'light' | 'dark'
 
+/** 应用 UI 状态 Store：侧边栏折叠与主题偏好（持久化） */
 export const useAppStore = defineStore('app', () => {
   /** 侧边栏是否折叠 */
   const sidebarCollapsed = ref<boolean>(readRaw(SIDEBAR_KEY) === '1')

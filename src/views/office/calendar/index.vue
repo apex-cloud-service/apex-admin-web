@@ -1,13 +1,10 @@
 <!--
   办公平台日历管理页面
   ------------------------------------------------------------------
-  功能：日历事件管理、会议预约、会议室预订
-  
-  权限：
-    - office:calendar:view - 查看日历事件
-    - office:calendar:create - 创建日历事件
-    - office:calendar:edit - 编辑日历事件
-    - office:calendar:delete - 删除日历事件
+  功能：
+  - 日历视图（按月展示当日事件，点击日期查询）
+  - 事件列表（日期筛选、分页）
+  - 事件创建 / 查看 / 编辑 / 删除
 -->
 <template>
   <div class="office-calendar-container">
@@ -365,6 +362,7 @@ const handleQuery = async () => {
   }
 }
 
+/** 拉取当月全部事件到本地缓存（供月历视图展示） */
 const loadAllEvents = async () => {
   try {
     const startOfMonth = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth(), 1)
@@ -382,6 +380,7 @@ const loadAllEvents = async () => {
   }
 }
 
+/** 过滤出指定日期的事件 */
 const getEventsForDay = (day: string) => {
   return allEvents.value.filter(event => {
     const eventDate = new Date(event.startTime).toISOString().split('T')[0]
@@ -389,18 +388,21 @@ const getEventsForDay = (day: string) => {
   })
 }
 
+/** 点击月历某天：设置当天起止时间并查询事件列表 */
 const handleDayClick = (day: string) => {
   queryParams.startTime = `${day} 00:00:00`
   queryParams.endTime = `${day} 23:59:59`
   handleQuery()
 }
 
+/** 重置表单并打开新增事件弹窗 */
 const handleCreate = () => {
   isEdit.value = false
   Object.assign(formData, defaultFormData())
   dialogVisible.value = true
 }
 
+/** 加载事件详情回填表单并打开编辑弹窗 */
 const handleEdit = async (row: CalendarEvent) => {
   isEdit.value = true
   try {
@@ -423,6 +425,7 @@ const handleEdit = async (row: CalendarEvent) => {
   }
 }
 
+/** 加载事件详情并打开查看弹窗 */
 const handleView = async (row: CalendarEvent) => {
   try {
     const event = await getCalendarEvent(row.id)
@@ -489,10 +492,12 @@ const handleSubmit = async () => {
   })
 }
 
+/** 弹窗关闭时重置表单校验状态 */
 const handleDialogClose = () => {
   formRef.value?.resetFields()
 }
 
+/** 平台 → 标签类型映射 */
 const getPlatformTagType = (platform: OfficePlatform) => {
   const typeMap: Record<OfficePlatform, any> = {
     FEISHU: 'primary',
@@ -502,6 +507,7 @@ const getPlatformTagType = (platform: OfficePlatform) => {
   return typeMap[platform] || ''
 }
 
+/** 事件状态 → 标签类型映射 */
 const getStatusTagType = (status: string) => {
   const typeMap: Record<string, any> = {
     SCHEDULED: '',
@@ -511,6 +517,7 @@ const getStatusTagType = (status: string) => {
   return typeMap[status] || ''
 }
 
+/** 事件状态 → 中文文案映射 */
 const getStatusText = (status: string) => {
   const textMap: Record<string, string> = {
     SCHEDULED: '计划中',
@@ -520,6 +527,7 @@ const getStatusText = (status: string) => {
   return textMap[status] || status
 }
 
+/** 事件状态 → 月历徽标颜色映射 */
 const getEventBadgeType = (status: string) => {
   const typeMap: Record<string, any> = {
     SCHEDULED: 'primary',
@@ -529,6 +537,7 @@ const getEventBadgeType = (status: string) => {
   return typeMap[status] || 'primary'
 }
 
+/** 提醒时间（分钟）→ 展示文案（不提醒/事件开始时/N分钟前 等） */
 const getReminderText = (minutes?: number) => {
   if (minutes === undefined || minutes === null) return '不提醒'
   if (minutes === 0) return '事件开始时'
@@ -537,6 +546,7 @@ const getReminderText = (minutes?: number) => {
   return `${minutes / 1440}天前`
 }
 
+/** ISO 时间 → "YYYY-MM-DD HH:mm:ss" 展示，空值返回 "-" */
 const formatDateTime = (dateTime?: string) => {
   if (!dateTime) return '-'
   return dateTime.replace('T', ' ').substring(0, 19)

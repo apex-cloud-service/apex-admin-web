@@ -8,7 +8,7 @@
     4. 成功跳工作台，失败清理会话回登录页
 
   后端接口：
-    - POST /api/v1/oauth2/callback - 授权码换取令牌（见 api/oauth2.ts）
+    - POST /oauth2/token - 授权码换取令牌（见 api/oauth2.ts）
 
   Props / Emits：无（路由页面）
 -->

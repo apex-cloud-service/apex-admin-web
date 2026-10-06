@@ -1,3 +1,9 @@
+/**
+ * 办公平台 API（office-new.ts）单元测试
+ * ------------------------------------------------------------------
+ * 覆盖：应用配置更新的乐观锁 version 透传、解绑请求的 version 查询参数、
+ * 绑定分页列表的 platform/status/分页参数传递（status 缺省时省略）
+ */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const request = vi.hoisted(() => ({

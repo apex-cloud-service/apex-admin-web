@@ -5,7 +5,7 @@
   
   权限：
     - office:approval:view - 查看审批列表
-    - office:approval:create - 发起审批
+    - office:approval:initiate - 发起审批
     - office:approval:approve - 审批操作
     - office:approval:cancel - 撤销审批
 -->

@@ -1,3 +1,8 @@
+/**
+ * 工作流 API（workflow.ts）单元测试
+ * ------------------------------------------------------------------
+ * 覆盖：实例详情接口走注册路由 /admin-api/v1/workflows/instances/{id}
+ */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const request = vi.hoisted(() => ({

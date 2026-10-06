@@ -7,6 +7,7 @@ import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 
+/** 权限状态 Store：派生当前用户权限码，支撑按钮级权限判断 */
 export const usePermissionStore = defineStore('permission', () => {
   const userStore = useUserStore()
 

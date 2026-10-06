@@ -248,11 +248,13 @@ const handleQuery = () => {
   loadBindings()
 }
 
+/** 翻页：更新页码并重新加载绑定列表 */
 const handlePageChange = (page: number) => {
   pagination.page = page
   loadBindings()
 }
 
+/** 变更每页条数：重置到第 1 页并重新加载 */
 const handleSizeChange = () => {
   pagination.page = 1
   loadBindings()

@@ -616,6 +616,7 @@ flowchart TD
 - [部署指南](docs/guides/deployment.md)
 - [测试说明](docs/reference/testing.md)
 - [工具说明](docs/reference/toolkit.md)
+- [注释规范](docs/reference/comment-style.md)
 
 图示集中在本文件，其他资料用于扩展阅读。引用资料可能保留历史描述，例如 OAuth2 Token 地址和上传能力状态；遇到冲突需回到源码核对。注册表、端点和 DTO 的完整清单以 `router/dynamic.ts`、`api/*.ts`、`types/*.ts` 为准，不在本文件复制第二份易失同步的代码列表。
 

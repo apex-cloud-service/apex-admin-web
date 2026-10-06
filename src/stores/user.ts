@@ -18,6 +18,7 @@ export interface LoginParams {
   captchaCode: string
 }
 
+/** 用户会话 Store：管理 Token、身份信息与登录/登出动作 */
 export const useUserStore = defineStore('user', () => {
   /** 访问令牌（初始化时从本地缓存恢复） */
   const token = ref<string>(getToken())

@@ -70,7 +70,7 @@ export function maskIdCard(idCard: string): string {
 /**
  * 银行卡号脱敏
  * @param bankCard 银行卡号
- * @returns 脱敏后的银行卡号，如 6222 **** **** 1234
+ * @returns 脱敏后的银行卡号，如 6222 ******** 1234
  */
 export function maskBankCard(bankCard: string): string {
   if (!bankCard) return ''
@@ -91,7 +91,7 @@ export function maskBankCard(bankCard: string): string {
 /**
  * 姓名脱敏
  * @param name 姓名
- * @returns 脱敏后的姓名，如 张*、欧阳**
+ * @returns 脱敏后的姓名，如 张*、王**
  */
 export function maskName(name: string): string {
   if (!name) return ''

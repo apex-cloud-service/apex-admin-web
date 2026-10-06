@@ -695,6 +695,7 @@ async function saveJwtConfig() {
   }
 }
 
+/** 加载 OAuth2 客户端列表 */
 async function loadOAuth2Clients() {
   oauth2Loading.value = true
   try {
@@ -706,6 +707,7 @@ async function loadOAuth2Clients() {
   }
 }
 
+/** 重置表单为默认公共客户端配置（PKCE + 授权码/刷新令牌）并打开新增弹窗 */
 function handleAddOAuth2Client() {
   Object.assign(oauth2Form, {
     id: undefined,
@@ -726,6 +728,7 @@ function handleAddOAuth2Client() {
   oauth2DialogVisible.value = true
 }
 
+/** 回填所选客户端并打开编辑弹窗（密钥不回显，查询未返回的设置需显式补填） */
 function handleEditOAuth2Client(row: OAuth2ClientConfig) {
   Object.assign(oauth2Form, {
     ...row,
@@ -741,6 +744,7 @@ function handleEditOAuth2Client(row: OAuth2ClientConfig) {
   oauth2DialogVisible.value = true
 }
 
+/** 校验并提交 OAuth2 客户端（按有无 id 区分创建/更新），成功后刷新列表 */
 async function submitOAuth2Client() {
   if (!oauth2FormRef.value) return
   await oauth2FormRef.value.validate()
@@ -760,6 +764,7 @@ async function submitOAuth2Client() {
 }
 
 
+/** 确认后删除 OAuth2 客户端并刷新列表 */
 async function handleDeleteOAuth2Client(row: OAuth2ClientConfig) {
   if (!row.id) return
   await ElMessageBox.confirm('确认删除该OAuth2客户端?', '提示', { type: 'warning' })
@@ -772,6 +777,7 @@ async function handleDeleteOAuth2Client(row: OAuth2ClientConfig) {
   }
 }
 
+/** 按筛选条件分页加载权限码列表 */
 async function loadPermissions() {
   permissionLoading.value = true
   try {
@@ -785,11 +791,13 @@ async function loadPermissions() {
   }
 }
 
+/** 清空类型筛选并重新加载权限列表 */
 function resetPermissionQuery() {
   permissionQuery.type = undefined
   loadPermissions()
 }
 
+/** 触发后端权限扫描，提示新增/废弃权限数量（后端不执行增删）并刷新列表 */
 async function handleSyncPermissions() {
   try {
     const result = await syncPermissions()
@@ -800,6 +808,7 @@ async function handleSyncPermissions() {
   }
 }
 
+/** 重置表单（默认按钮类型 type=2）并打开权限新增弹窗 */
 function handleAddPermission() {
   Object.assign(permissionForm, {
     id: undefined,
@@ -813,11 +822,13 @@ function handleAddPermission() {
   permissionDialogVisible.value = true
 }
 
+/** 回填所选权限并打开编辑弹窗 */
 function handleEditPermission(row: Permission) {
   Object.assign(permissionForm, row)
   permissionDialogVisible.value = true
 }
 
+/** 校验并提交权限表单（按有无 id 区分创建/更新），成功后刷新列表 */
 async function submitPermission() {
   if (!permissionFormRef.value) return
   await permissionFormRef.value.validate()
@@ -836,6 +847,7 @@ async function submitPermission() {
   }
 }
 
+/** 确认后删除权限并刷新列表 */
 async function handleDeletePermission(row: Permission) {
   if (!row.id) return
   await ElMessageBox.confirm('确认删除该权限?', '提示', { type: 'warning' })
@@ -849,6 +861,7 @@ async function handleDeletePermission(row: Permission) {
 }
 
 
+/** 按筛选条件分页加载在线用户列表 */
 async function loadOnlineUsers() {
   onlineLoading.value = true
   try {
@@ -862,10 +875,12 @@ async function loadOnlineUsers() {
   }
 }
 
+/** 记录表格勾选的在线用户会话 ID */
 function handleSelectionChange(val: OnlineUser[]) {
   selectedSessions.value = val.map((v) => v.id)
 }
 
+/** 确认后强制单个用户下线并刷新列表 */
 async function handleForceLogout(row: OnlineUser) {
   await ElMessageBox.confirm('确认强制该用户下线?', '提示', { type: 'warning' })
   try {
@@ -877,6 +892,7 @@ async function handleForceLogout(row: OnlineUser) {
   }
 }
 
+/** 确认后批量强制勾选用户下线并刷新列表 */
 async function handleBatchLogout() {
   await ElMessageBox.confirm(`确认强制选中的${selectedSessions.value.length}个用户下线?`, '提示', { type: 'warning' })
   try {
@@ -888,6 +904,7 @@ async function handleBatchLogout() {
   }
 }
 
+/** 加载会话配置 */
 async function loadSessionConfig() {
   sessionLoading.value = true
   try {
@@ -900,6 +917,7 @@ async function loadSessionConfig() {
   }
 }
 
+/** 校验并保存会话配置 */
 async function saveSessionConfig() {
   if (!sessionFormRef.value) return
   await sessionFormRef.value.validate()
@@ -911,6 +929,7 @@ async function saveSessionConfig() {
   }
 }
 
+/** 加载安全策略配置 */
 async function loadSecurityPolicy() {
   securityLoading.value = true
   try {
@@ -923,6 +942,7 @@ async function loadSecurityPolicy() {
   }
 }
 
+/** 校验并保存安全策略配置 */
 async function saveSecurityPolicy() {
   if (!securityFormRef.value) return
   await securityFormRef.value.validate()
@@ -934,6 +954,7 @@ async function saveSecurityPolicy() {
   }
 }
 
+/** 按筛选条件分页加载登录尝试记录 */
 async function loadLoginAttempts() {
   attemptLoading.value = true
   try {
@@ -947,6 +968,7 @@ async function loadLoginAttempts() {
   }
 }
 
+/** 清空账号/状态筛选并重新加载登录记录 */
 function resetAttemptQuery() {
   attemptQuery.username = undefined
   attemptQuery.status = undefined

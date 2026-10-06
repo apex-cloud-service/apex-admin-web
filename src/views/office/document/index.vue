@@ -678,6 +678,7 @@ const getDocTypeText = (type: DocumentType) => {
   return textMap[type] || type
 }
 
+/** 字节数 → 可读大小（B/KB/MB/GB，保留 2 位小数），空值返回 "-" */
 const formatFileSize = (bytes?: number) => {
   if (!bytes) return '-'
   const units = ['B', 'KB', 'MB', 'GB']
@@ -690,6 +691,7 @@ const formatFileSize = (bytes?: number) => {
   return `${size.toFixed(2)} ${units[unitIndex]}`
 }
 
+/** ISO 时间 → "YYYY-MM-DD HH:mm:ss" 展示，空值返回 "-" */
 const formatDateTime = (dateTime?: string) => {
   if (!dateTime) return '-'
   return dateTime.replace('T', ' ').substring(0, 19)

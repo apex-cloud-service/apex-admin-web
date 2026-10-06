@@ -9,6 +9,7 @@ import { ref, watch, type Ref } from 'vue'
 import { readJSON, writeJSON, removeItem } from '@/utils/storage'
 import { TABLE_CONFIG_KEY_PREFIX } from '@/settings'
 
+/** 可持久化的表格列配置 */
 export interface TableColumn {
   prop: string
   label: string
@@ -17,6 +18,7 @@ export interface TableColumn {
   sortable?: boolean
 }
 
+/** 表格持久化数据（列配置、分页大小、筛选与排序） */
 export interface TableConfig {
   columns: TableColumn[]
   pageSize: number
@@ -25,6 +27,7 @@ export interface TableConfig {
   sortOrder?: 'ascending' | 'descending'
 }
 
+/** 表格配置持久化初始化选项 */
 export interface UseTableConfigOptions {
   /** 默认每页大小 */
   defaultPageSize?: number

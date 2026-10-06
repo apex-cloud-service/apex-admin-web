@@ -93,6 +93,12 @@ export async function getMyPermissions(): Promise<string[]> {
 }
 
 
+/**
+ * 刷新访问令牌。
+ * 仅供 utils/request.ts 的 401 单飞刷新流程调用，页面不应直接使用。
+ * @param refreshToken 当前持有的刷新令牌
+ * @returns 新的会话令牌（refreshToken 仅在后端返回时存在）
+ */
 export function refreshToken(refreshToken: string): Promise<LoginResult> {
   return post<LoginResult>('/api/v1/auth/refresh', { refreshToken, deviceId: 'apex-admin-web', platform: 'web' })
 }

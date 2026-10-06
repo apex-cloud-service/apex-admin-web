@@ -11,6 +11,7 @@ import { ElMessageBox } from 'element-plus'
 import { readJSON, writeJSON, readRaw, writeRaw, removeItem, hasItem } from '@/utils/storage'
 import { DRAFT_KEY_PREFIX, DRAFT_TIMESTAMP_KEY_SUFFIX } from '@/settings'
 
+/** 表单草稿自动保存配置 */
 export interface UseFormDraftOptions {
   /** 自动保存延迟（毫秒） */
   debounce?: number

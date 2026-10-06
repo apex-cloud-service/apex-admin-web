@@ -811,20 +811,24 @@ function progressColor(percent: number): string {
   return '#f56c6c'
 }
 
+/** 错误率 → 样式分级（>1% danger，>0.1% warn，其余 success） */
 function getErrorRateClass(errorRate: number): string {
   if (errorRate > 0.01) return 'danger'
   if (errorRate > 0.001) return 'warn'
   return 'success'
 }
 
+/** 数字按中文本地化格式化（千分位） */
 function formatNumber(num: number): string {
   return num.toLocaleString('zh-CN')
 }
 
+/** 时间戳 → 中文本地化时分秒 */
 function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleTimeString('zh-CN')
 }
 
+/** 跳转链路追踪查询页 */
 function openTraceQuery() {
   router.push('/monitor/trace')
 }

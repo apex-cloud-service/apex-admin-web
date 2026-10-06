@@ -125,8 +125,9 @@ export const validateIP = (_rule: FormItemRule, value: string, callback: Validat
 
 /**
  * 端口号校验
- * 
- * @description 校验端口号范围（1-65535）
+ *
+ * @description 校验端口号范围（1-65535）；注意：0（假值）与小数不会被本规则拦截，
+ * 如需拦截非整数请使用 validate-rules.ts 的 port 规则。
  */
 export const validatePort = (_rule: FormItemRule, value: number, callback: ValidateCallback): void => {
   if (value && (value < 1 || value > 65535)) {

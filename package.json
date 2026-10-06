@@ -11,6 +11,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "check:comments": "node scripts/check-comments.mjs",
     "analyze": "vite build && open dist/stats.html",
     "generate:api": "openapi-generator-cli generate",
     "audit": "npm audit --json | npm-audit-html --output ./reports/audit.html",

@@ -120,6 +120,12 @@ export async function exchangeToken(request: OAuth2TokenRequest): Promise<LoginR
   return { accessToken: result.access_token, refreshToken: result.refresh_token, tokenType: result.token_type, expiresIn: result.expires_in }
 }
 
+/**
+ * 校验并消费一次性授权上下文（state 防 CSRF）。
+ * 上下文在读取后立即从 sessionStorage 删除：无论校验是否通过均只能消费一次（防重放/伪造回调）。
+ * @param state 回调携带的 state 参数
+ * @returns 校验通过时返回 clientId / redirectUri / codeVerifier，否则返回 null
+ */
 export function consumeAuthorization(state: string): Pick<OAuth2TokenRequest, 'clientId' | 'redirectUri' | 'codeVerifier'> | null {
   const raw = sessionStorage.getItem('oauth2_context')
   sessionStorage.removeItem('oauth2_context')

@@ -117,7 +117,7 @@ const globalCache = new RequestCache()
  * 缓存请求配置
  */
 export interface CacheOptions {
-  /** 缓存键（不提供则根据 URL 和参数自动生成） */
+  /** 缓存键（不提供则每次调用生成随机键，等效于不命中缓存；需命中请显式传键） */
   key?: string
   /** 缓存时间（毫秒），默认 5 分钟 */
   ttl?: number

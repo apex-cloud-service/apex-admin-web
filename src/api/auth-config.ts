@@ -7,11 +7,11 @@
  * 后端接口：
  * - GET/PUT /admin-api/v1/auth/config/jwt - JWT Token 配置
  * - GET/POST/PUT/DELETE /admin-api/v1/auth/config/oauth2/clients - OAuth2 客户端管理
- * - GET/POST/PUT/DELETE /admin-api/v1/auth/permissions - 权限码管理
- * - GET/DELETE /admin-api/v1/auth/sessions - 会话管理
+ * - POST/DELETE /api/v1/auth/permissions（更新走 /update 子路径）- 权限码管理
+ * - GET /admin-api/v1/auth/config/sessions（踢出会话：POST /admin-api/v1/users/{sessionId}/sessions/revoke）- 会话管理
  * - GET/PUT /admin-api/v1/auth/config/session - 会话配置
  * - GET/PUT /admin-api/v1/auth/config/security - 安全策略配置
- * - GET /admin-api/v1/auth/login-attempts - 登录尝试记录
+ * - GET /admin-api/v1/auth/config/login-logs - 登录尝试记录
  */
 import { del, get, post, put } from '@/utils/request'
 import type { PageQuery, PageResponse } from '@/types'

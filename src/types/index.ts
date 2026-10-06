@@ -605,6 +605,7 @@ export interface GatewayPathTraffic {
   errorRate: number
 }
 
+/** 接口路径流量统计（调用量、耗时与错误率） */
 export interface PathTraffic {
   path: string
   method?: string

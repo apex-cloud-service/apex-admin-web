@@ -5,6 +5,7 @@
 import { computed } from 'vue'
 import { useWindowSize } from '@vueuse/core'
 
+/** 各断点的最小宽度阈值（单位 px） */
 export interface Breakpoints {
   xs: number  // 超小屏（手机）
   sm: number  // 小屏（手机横屏）
