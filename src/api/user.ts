@@ -5,7 +5,7 @@
  * 后台用户字段已与后端 AdminUserCreateRequest 对齐：
  * 必填 phone/nickname/gender/birthday，无 username/password 字段。
  */
-import { del, get, post, put } from '@/utils/request'
+import { del, get, post, put, request } from '@/utils/request'
 import type { AdminUser, AdminUserDetail, PageQuery, PageResponse, StaffRole, UserIdentity } from '@/types'
 
 /** 用户列表查询参数（后端 page/size/keyword/status） */
@@ -115,4 +115,19 @@ export function assignUserRoles(id: string, roleIds: string[]): Promise<void> {
  */
 export function deleteUser(id: string): Promise<void> {
   return del<void>(`/admin-api/v1/users/${id}`)
+}
+
+/**
+ * 导出用户列表 Excel（后端固定返回最近创建的前 100 条，Excel 二进制流）。
+ * @returns Blob 文件内容与建议文件名
+ */
+export async function exportUsers(): Promise<{ blob: Blob; filename: string }> {
+  const response = await request<Blob>({
+    method: 'GET',
+    url: '/admin-api/v1/export/users',
+    responseType: 'blob',
+  })
+  const blob =
+    response instanceof Blob ? response : new Blob([response as unknown as BlobPart])
+  return { blob, filename: '用户列表.xlsx' }
 }

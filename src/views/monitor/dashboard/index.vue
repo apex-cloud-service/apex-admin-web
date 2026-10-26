@@ -4,7 +4,7 @@
   全量性能监控看板，数据来自 /admin-api/v1/monitor/* 聚合接口：
   - 概览：应用状态/运行时长/堆内存/CPU/线程/活跃会话
   - 系统：JVM 内存、CPU、磁盘、网络、线程、GC、阻塞 IO 池
-  - 中间件：MySQL、Redis、消息中间件、Zipkin
+  - 中间件：MySQL、Redis、消息中间件、SkyWalking
   - 治理：Sentinel 熔断/限流规则与计数、网关流量
   - 业务：核心业务指标
   默认每 10 秒自动刷新。
@@ -165,12 +165,12 @@
         </el-card>
       </el-col>
 
-      <!-- Zipkin -->
+      <!-- SkyWalking -->
       <el-col :xs="24" :lg="6">
         <el-card shadow="never" class="panel">
           <template #header>
             <div class="middleware-header">
-              <span>Zipkin</span>
+              <span>SkyWalking</span>
               <el-tag v-if="!tracingAvailable" type="info" size="small">未接入</el-tag>
               <el-tag v-else type="success" size="small">运行中</el-tag>
             </div>
@@ -182,33 +182,12 @@
                 <span class="stat-value">{{ ((middleware?.tracing?.samplingRate ?? 0) * 100).toFixed(1) }}%</span>
               </div>
               <div class="stat-item">
-                <span class="stat-label">上报成功</span>
-                <span class="stat-value success">{{ formatNumber(middleware?.tracing?.reportedSpans ?? 0) }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">上报失败</span>
-                <span class="stat-value" :class="{ danger: (middleware?.tracing?.failedSpans ?? 0) > 0 }">
-                  {{ formatNumber(middleware?.tracing?.failedSpans ?? 0) }}
-                </span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">平均延迟</span>
-                <span class="stat-value">{{ (middleware?.tracing?.avgReportLatency ?? 0).toFixed(2) }} ms</span>
-              </div>
-              <div v-if="middleware?.tracing?.lastReportTime" class="stat-item">
-                <span class="stat-label">最近上报</span>
-                <span class="stat-value">{{ formatTime(middleware.tracing.lastReportTime) }}</span>
+                <span class="stat-label">OAP 地址</span>
+                <span class="stat-value">{{ middleware?.tracing?.endpoint || '未配置' }}</span>
               </div>
             </div>
             <div v-else class="middleware-placeholder">
               <el-empty description="链路追踪未接入" :image-size="80" />
-            </div>
-            
-            <div v-if="tracingAvailable" class="trace-query-section">
-              <el-divider />
-              <el-button type="primary" size="small" @click="openTraceQuery" :icon="Search">
-                TraceId 查询
-              </el-button>
             </div>
           </div>
         </el-card>
@@ -337,11 +316,11 @@
  * - 用 ECharts 渲染各板块图表；CPU/网络保留最近 30 个采样点绘制趋势
  * - 所有指标接口失败时置灰展示，不阻塞页面
  */
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import * as echarts from 'echarts'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { Refresh } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
+import { useAppStore } from '@/stores/app'
 import {
   getMonitorBusiness,
   getMonitorGovernance,
@@ -438,8 +417,6 @@ const activeNetworks = computed(() => {
 
 /* ==================== 图表 ==================== */
 
-const router = useRouter()
-
 const memChartRef = ref<HTMLElement>()
 const cpuChartRef = ref<HTMLElement>()
 const threadChartRef = ref<HTMLElement>()
@@ -450,10 +427,19 @@ const poolChartRef = ref<HTMLElement>()
 const sentinelChartRef = ref<HTMLElement>()
 const bizChartRef = ref<HTMLElement>()
 const charts: echarts.ECharts[] = []
+/** 容器 → 实例缓存（复用实例，避免每轮刷新销毁重建） */
+const chartInstances = new Map<HTMLElement, echarts.ECharts>()
 
-/** 初始化并记录实例（便于统一 resize/dispose） */
+/** 获取或创建实例（同一容器复用同一实例，setOption 增量更新） */
 function initChart(el: HTMLElement): echarts.ECharts {
+  const existing = chartInstances.get(el)
+  if (existing && !existing.isDisposed()) return existing
+  if (existing) {
+    const index = charts.indexOf(existing)
+    if (index >= 0) charts.splice(index, 1)
+  }
   const chart = echarts.init(el)
+  chartInstances.set(el, chart)
   charts.push(chart)
   return chart
 }
@@ -762,10 +748,8 @@ async function loadAll(): Promise<void> {
   }
 }
 
-/** 渲染全部图表 */
+/** 渲染全部图表（实例复用，仅 setOption 增量更新） */
 function renderAll(): void {
-  charts.forEach((c) => c.dispose())
-  charts.length = 0
   renderMemChart()
   renderCpuChart()
   renderThreadChart()
@@ -775,6 +759,13 @@ function renderAll(): void {
   renderPoolChart()
   renderSentinelChart()
   renderBizChart()
+}
+
+/** 窗口尺寸变化时统一自适应 */
+function handleChartsResize(): void {
+  charts.forEach((c) => {
+    if (!c.isDisposed()) c.resize()
+  })
 }
 
 /* ==================== 工具函数 ==================== */
@@ -818,34 +809,32 @@ function getErrorRateClass(errorRate: number): string {
   return 'success'
 }
 
-/** 数字按中文本地化格式化（千分位） */
-function formatNumber(num: number): string {
-  return num.toLocaleString('zh-CN')
-}
-
-/** 时间戳 → 中文本地化时分秒 */
-function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString('zh-CN')
-}
-
-/** 跳转链路追踪查询页 */
-function openTraceQuery() {
-  router.push('/monitor/trace')
-}
-
 /* ==================== 生命周期 ==================== */
+
+const appStore = useAppStore()
 
 onMounted(() => {
   loadAll()
   timer = setInterval(() => {
     if (autoRefresh.value) loadAll()
   }, 10000)
+  window.addEventListener('resize', handleChartsResize)
 })
+
+// 主题切换后按新配色重绘全部图表
+watch(
+  () => appStore.theme,
+  () => renderAll(),
+)
 
 onBeforeUnmount(() => {
   if (timer) clearInterval(timer)
-  charts.forEach((c) => c.dispose())
+  window.removeEventListener('resize', handleChartsResize)
+  charts.forEach((c) => {
+    if (!c.isDisposed()) c.dispose()
+  })
   charts.length = 0
+  chartInstances.clear()
 })
 </script>
 
@@ -1181,21 +1170,8 @@ onBeforeUnmount(() => {
     .stat-value {
       font-weight: 600;
       font-size: 14px;
-
-      &.success {
-        color: var(--el-color-success);
-      }
-
-      &.danger {
-        color: var(--el-color-danger);
-      }
     }
   }
-}
-
-.trace-query-section {
-  margin-top: 12px;
-  text-align: center;
 }
 
 .middleware-placeholder {

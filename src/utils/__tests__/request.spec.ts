@@ -10,9 +10,10 @@
 import { expect, it, vi } from 'vitest'
 import axios, { AxiosError } from 'axios'
 import { refreshToken } from '@/api/auth'
+import { getTenantId } from '@/utils/auth'
 import { request } from '@/utils/request'
 vi.mock('@/api/auth', () => ({ refreshToken: vi.fn() }))
-vi.mock('@/utils/auth', () => ({ getToken: () => 'test-access', getRefreshToken: () => 'test-refresh', setToken: vi.fn(), setRefreshToken: vi.fn(), clearSession: vi.fn() }))
+vi.mock('@/utils/auth', () => ({ getToken: () => 'test-access', getRefreshToken: () => 'test-refresh', setToken: vi.fn(), setRefreshToken: vi.fn(), clearSession: vi.fn(), getTenantId: vi.fn(() => ''), setTenantId: vi.fn(), removeTenantId: vi.fn(), setIdentity: vi.fn(), getIdentity: vi.fn(() => null), removeIdentity: vi.fn(), removeToken: vi.fn(), removeRefreshToken: vi.fn() }))
 it('持续 401 时最多刷新一次并重放一次', async () => {
   vi.mocked(refreshToken).mockResolvedValue({ accessToken: 'test-new-access' })
   const adapter = vi.fn(async (config) => {
@@ -58,4 +59,26 @@ it('并发 401 共享一次刷新', async () => {
   resolveRefresh({ accessToken: 'new-access' })
   await expect(Promise.all(pending)).resolves.toEqual(['ok', 'ok'])
   expect(adapter).toHaveBeenCalledTimes(4)
+})
+
+it('会话记录租户时附带 X-Tenant-Id 请求头', async () => {
+  vi.mocked(getTenantId).mockReturnValue('acme')
+  let captured: Record<string, unknown> | undefined
+  const adapter = vi.fn(async (config) => {
+    captured = { ...(config.headers as Record<string, unknown>) }
+    return { status: 200, statusText: 'OK', headers: {}, data: { code: 0, data: 'ok' }, config }
+  })
+  await request({ url: '/test', adapter })
+  expect(captured?.['X-Tenant-Id']).toBe('acme')
+})
+
+it('未记录租户时不附带 X-Tenant-Id 请求头', async () => {
+  vi.mocked(getTenantId).mockReturnValue('')
+  let captured: Record<string, unknown> | undefined
+  const adapter = vi.fn(async (config) => {
+    captured = { ...(config.headers as Record<string, unknown>) }
+    return { status: 200, statusText: 'OK', headers: {}, data: { code: 0, data: 'ok' }, config }
+  })
+  await request({ url: '/test', adapter })
+  expect(captured?.['X-Tenant-Id']).toBeUndefined()
 })

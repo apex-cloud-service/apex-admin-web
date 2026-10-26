@@ -23,12 +23,13 @@
 | `/api/office/**` | 办公平台业务操作（消息/审批/日历/文档） | 同 `/api` |
 | `/oauth2/token`、`/oauth2/authorize`、`/oauth2/userinfo` | OAuth2 标准端点 | Vite `^/oauth2/(authorize\|token)`、Nginx 同规则 |
 
-### 1.3 分页口径（两套并存）
+### 1.3 分页口径（三套并存）
 
 | 口径 | 请求 | 响应 | 使用范围 |
 |------|------|------|---------|
-| **统一口径** | `PageQuery{page, size}` | `PageResponse{list, total, pageNum, pageSize, pages, hasNext}` | 除工作流外的全部模块 |
-| **工作流口径** | `{pageNum, pageSize}` | `{records, total}` | 仅 [src/api/workflow.ts](../../src/api/workflow.ts) |
+| **统一口径** | `PageQuery{page, size}` | `PageResponse{list, total, pageNum, pageSize, pages, hasNext}` | 除工作流外的分页模块 |
+| **工作流口径** | `{pageNum, pageSize}` | `{records, total}`（待办 `/api/v1/workflows/tasks/pending` 返回通用 PageResponse） | 仅 [src/api/workflow.ts](../../src/api/workflow.ts) |
+| **数组响应（无分页包装）** | 各接口自行携带分页参数 | 纯数组（total 以数组长度近似） | 站内信 inbox/sent（pageNum/pageSize）、组织同步任务（page/size）、办公绑定列表（page/size）、消息模板列表（无分页参数） |
 
 ### 1.4 认证
 
@@ -43,11 +44,19 @@
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
 | GET | `/api/v1/auth/captcha` | `getCaptcha()` | 图形验证码（captchaId + base64） |
-| POST | `/api/v1/auth/login` | `login(payload)` | 账号密码登录（附带 deviceId/platform） |
+| POST | `/api/v1/auth/login` | `login(payload)` | 账号密码登录（附带 deviceId/platform；可选 tenantId 租户匹配声明，`VITE_AUTH_TENANT_ENABLED` 控制登录页输入） |
 | POST | `/api/v1/auth/logout` | `logout()` | 登出 |
 | POST | `/api/v1/auth/refresh` | `refreshToken(rt)` | 刷新令牌（request.ts 401 时自动调用） |
 | GET | `/api/v1/auth/roles/my` | `getMyRoles()` | 当前用户角色码 |
 | GET | `/api/v1/auth/permissions/my` | `getMyPermissions()` | 当前用户权限码 |
+| GET | `/api/v1/auth/roles` | `listSystemRoles()` | 系统角色列表（RoleDTO） |
+| POST | `/api/v1/auth/roles` | `createSystemRole(payload)` | 创建角色（RoleRequest） |
+| POST | `/api/v1/auth/roles/update` | `updateSystemRole(payload)` | 更新角色 |
+| DELETE | `/api/v1/auth/roles/{id}` | `deleteSystemRole(id)` | 删除角色（409=存在关联数据） |
+| GET | `/api/v1/auth/permissions` | `listSystemPermissions()` | 系统权限列表（PermissionDTO） |
+| POST | `/api/v1/auth/permissions` | `createSystemPermission(payload)` | 创建权限（code 格式 模块:操作） |
+| POST | `/api/v1/auth/permissions/update` | `updateSystemPermission(payload)` | 更新权限 |
+| DELETE | `/api/v1/auth/permissions/{id}` | `deleteSystemPermission(id)` | 删除权限 |
 
 ### 2.2 当前用户与后台用户 [src/api/user.ts](../../src/api/user.ts)
 
@@ -62,6 +71,7 @@
 | POST | `/admin-api/v1/users/{id}/sessions/revoke` | `revokeUserSessions(id)` | 强退用户会话 |
 | PUT | `/admin-api/v1/users/{id}/roles` | `assignUserRoles(id, roleIds)` | 分配角色（整体替换） |
 | GET | `/admin-api/v1/staff-roles` | `listStaffRoles()` | 可分配角色列表 |
+| GET | `/admin-api/v1/export/users` | `exportUsers()` | 导出用户 Excel（Blob，固定前 100 条） |
 | DELETE | `/admin-api/v1/users/{id}` | `deleteUser(id)` | 删除用户（预留，后端当前未暴露） |
 
 ### 2.3 系统管理 [src/api/system.ts](../../src/api/system.ts)
@@ -83,6 +93,11 @@
 | POST | `/admin-api/v1/database/test` | `testDatabaseConnection(config)` | 连接测试 |
 | POST | `/admin-api/v1/database/generate-config` | `generateDeploymentConfig(config)` | 生成部署配置（密码不落库，一次性采集） |
 | GET | `/admin-api/v1/database/current` | `getCurrentDatabaseInfo()` | 当前数据库信息 |
+| GET | `/admin-api/v1/database/datasources` | `listDataSources(pageNum, pageSize)` | 数据源分页列表（url/username 已脱敏） |
+| POST | `/admin-api/v1/database/datasources` | `createDataSource(payload)` | 创建数据源（DataSourceRequest，密码必填） |
+| PUT | `/admin-api/v1/database/datasources/{id}` | `updateDataSource(id, payload)` | 更新数据源（密码必填，后端 @NotBlank） |
+| DELETE | `/admin-api/v1/database/datasources/{id}` | `deleteDataSource(id)` | 删除数据源 |
+| GET | `/admin-api/v1/database/datasources/{id}/metrics` | `getDataSourceMetrics(id)` | 连接池指标 |
 
 ### 2.5 文件管理 [src/api/file.ts](../../src/api/file.ts)
 
@@ -108,7 +123,6 @@
 | GET | `/admin-api/v1/monitor/middleware` | `getMonitorMiddleware()` | 中间件指标 |
 | GET | `/admin-api/v1/monitor/governance` | `getMonitorGovernance()` | 治理指标 |
 | GET | `/admin-api/v1/monitor/business` | `getMonitorBusiness()` | 业务指标 |
-| GET | `/admin-api/v1/monitor/trace/{traceId}` | `getTraceById(traceId)` | 链路追踪查询 |
 | GET | `/admin-api/v1/api-call-logs` | `listApiCallLogs(q)` | API 调用日志分页 |
 
 ### 2.7 日志查询 [src/api/log.ts](../../src/api/log.ts)
@@ -122,13 +136,11 @@
 
 ### 2.8 工作流 [src/api/workflow.ts](../../src/api/workflow.ts)（⚠️ 工作流分页口径）
 
-**流程定义**（`/admin-api/v1/workflows/definitions`）：`getWorkflowDefinition`、`createWorkflowDefinition`、`updateWorkflowDefinition`、`listWorkflowDefinitions`。
-
-**流程实例**：`listWorkflowInstances`（GET `/instances`）、`getWorkflowInstanceDetail`（GET `/instances/{id}`）。
+**流程实例**：`listWorkflowInstances`（GET `/admin-api/v1/workflows/instances`）、`getWorkflowInstanceDetail`（GET `/instances/{id}`）。后端未提供流程定义管理接口，前端已移除相关函数。
 
 **统计**：`getWorkflowStatistics`（GET `/statistics`）、`getWorkflowTrend(days)`（GET `/statistics/trend`）。
 
-**任务**：`getMyPendingTasks`（GET `/tasks/my`）、`approveTask`（POST `/tasks/approve`）、`rejectTask`（POST `/tasks/reject`）、`getTaskDetail`（GET `/tasks/{id}`）。
+**待办任务**（前缀 `/api/v1/workflows/tasks`）：`getMyPendingTasks`（GET `/pending`，pageNum/pageSize→PageResponse）、`completeTask(taskId, comment)`（POST `/{taskId}/complete`，请求体仅 `comment`，后端固定为通过语义）。办理界面位于 `workflow/monitor` 页「待办任务」Tab。
 
 **高级操作**（注意前缀是 `/api/workflow`，不是 `/admin-api/v1`）：
 
@@ -172,10 +184,10 @@
 
 | 子域 | 路径 | 函数 |
 |------|------|------|
-| JWT 配置 | GET/PUT `/admin-api/v1/auth/config/jwt` | `getJwtConfig` / `updateJwtConfig` |
+| JWT 配置 | GET/PUT `/admin-api/v1/auth/config/jwt`；POST `/admin-api/v1/auth/config/jwt/test` 配置测试 | `getJwtConfig` / `updateJwtConfig` / `testJwtConfig` |
 | OAuth2 客户端 | GET `/admin-api/v1/auth/config/oauth2/clients`、POST/PUT/DELETE `/admin-api/v1/oauth2/clients[/{id}]`（写接口无 `auth/config` 前缀） | `listOAuth2Clients` 等；写前经 `validateOAuth2Settings` 前端校验 |
 | 权限码 | GET `/admin-api/v1/auth/config/permissions`（全量拉取后**前端分页/筛选**）；写接口走 `/api/v1/auth/permissions`：POST 创建、POST `/update` 更新、DELETE `/{id}` 删除；POST `/admin-api/v1/auth/config/permissions/sync` 同步 | `listPermissions` / `createPermission` / `updatePermission` / `deletePermission` / `syncPermissions`（返回新增/移除清单） |
-| 在线会话 | GET `/admin-api/v1/auth/config/sessions`；强退复用用户接口 POST `/admin-api/v1/users/{sessionId}/sessions/revoke`（批量在前端循环调用，无批量端点） | `listOnlineUsers` / `forceLogout` / `batchForceLogout` |
+| 在线会话 | GET `/admin-api/v1/auth/config/sessions`；强退复用用户接口 POST `/admin-api/v1/users/{sessionId}/sessions/revoke`（批量在前端循环调用，无批量端点；`/auth/config/sessions/kickout` 为后端占位实现，勿调用） | `listOnlineUsers` / `forceLogout` / `batchForceLogout` |
 | 会话配置 | GET/PUT `/admin-api/v1/auth/config/session` | `getSessionConfig` / `updateSessionConfig` |
 | 安全策略 | GET/PUT `/admin-api/v1/auth/config/security` | `getSecurityPolicy` / `updateSecurityPolicy` |
 | 登录尝试 | GET `/admin-api/v1/auth/config/login-logs` | `listLoginAttempts` |
@@ -199,18 +211,19 @@
 
 ### 2.15 代码生成器 [src/api/generator.ts](../../src/api/generator.ts)（前缀 `/admin-api/v1/generator`）
 
+> 路径已与后端 `GeneratorAdminRouter` 逐一对齐（2026-10-26 核对）。代码预览、模板管理、历史回滚后端无对应端点，前端已移除相关封装与页面入口；此前文档记载的 `/generate`、`/preview`、`/templates`、`/history`、`/history/{id}/rollback`、`/datasources/test` 均为不存在的端点。
+
 | 子域 | 路径 | 函数 |
 |------|------|------|
-| 数据源 | GET/POST `/datasources`、PUT/DELETE `/datasources/{id}`、POST `/datasources/test` | `listDataSources` 等 |
+| 数据源 | GET/POST `/datasources`、PUT/DELETE `/datasources/{id}`、POST `/datasources/{id}/test`（按已保存数据源 ID 测试） | `listDataSources` 等 / `testDataSourceConnection(id)` |
 | 表扫描 | GET `/datasources/{id}/tables`、GET `/datasources/{id}/tables/{name}/columns` | `listTables` / `getTableColumns` |
 | 生成配置 | GET/POST `/configs`、PUT/DELETE `/configs/{id}` | `listGeneratorConfigs` 等（统一分页口径） |
-| 代码生成 | POST `/generate`、POST `/preview` | `generateCode` / `previewCode` |
-| 模板 | GET/POST `/templates`、PUT/DELETE `/templates/{id}` | `listTemplates` 等 |
-| 历史 | GET `/history`、POST `/history/{id}/rollback` | `listGenerateHistory` / `rollbackGenerate` |
+| 代码生成 | POST `/configs/{id}/generate`（无请求体，返回 `GeneratedFile[]`） | `generateCode(configId)` |
+| 历史 | GET `/configs/{id}/history`（按配置分页，返回 `GenHistoryDTO` 分页） | `listGenerateHistory(configId, query)` |
 
-### 2.16 办公平台（两套 API 并存，按页面引用）
+### 2.16 办公平台与站内信（按页面引用的 API 模块并存）
 
-**[src/api/office-new.ts](../../src/api/office-new.ts)**（品牌应用/绑定管理 + 登录，被 `office/callback`、`office/config`、`office/bindings`、`office/console`、`PlatformSelector` 引用）：
+**[src/api/office-new.ts](../../src/api/office-new.ts)**（品牌应用/绑定管理 + 登录 + 组织同步，被 `office/callback`、`office/config`、`office/bindings`、`office/console`、`office/organization`、`PlatformSelector`、`office/message` 引用）：
 
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
@@ -226,22 +239,44 @@
 | GET | `/admin-api/v1/office/bindings/page` | `listBindingsPage(platform, status, page, size)` | 账号绑定分页（真实 total，支持 status 过滤） |
 | POST | `/admin-api/v1/office/bindings/{id}/review` | `reviewBinding(id, req)` | 审批绑定（approved=true 通过 / false 驳回） |
 | DELETE | `/admin-api/v1/office/bindings/{id}/unbind?version=` | `unbindBinding(id, version)` | 解绑（version 乐观锁） |
+| GET | `/admin-api/v1/org/departments` | `listOrgDepartments(params)` | 同步部门分页（pageNum/pageSize） |
+| GET | `/admin-api/v1/org/employees` | `listOrgEmployees(params)` | 同步员工分页（支持 deptId 过滤） |
+| GET | `/admin-api/v1/org/sync-history` | `listOrgSyncHistory(params)` | 同步历史分页 |
+| POST | `/api/v1/office/organization/sync` | `triggerOrgSync(payload)` | 触发组织同步（platform/syncType/fullSync） |
+| GET | `/api/v1/office/organization/sync/tasks` | `listOrgSyncTasks(params)` | 同步任务列表（⚠️ page/size 口径，返回数组） |
+| GET | `/api/v1/office/organization/mappings` | `listOrgMappings(platform?)` | 平台组织映射列表（apex 侧 ID 为字符串） |
 
-**[src/api/office.ts](../../src/api/office.ts)**（综合接口，被 `office/message`、`office/approval`、`office/calendar`、`office/document`、`office/organization` 引用）：
+**[src/api/message.ts](../../src/api/message.ts)**（站内信与消息模板，被 `office/message` 页与 `layouts/AdminLayout.vue` 引用）：
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| POST | `/api/v1/messages` | `sendMessage(payload)` | 发送站内信（subject/content/recipientIds 必填） |
+| GET | `/api/v1/messages/inbox` | `listInboxMessages(pageNum, pageSize)` | 收件箱（⚠️ 返回纯数组非分页对象） |
+| GET | `/api/v1/messages/sent` | `listSentMessages(pageNum, pageSize)` | 已发送（⚠️ 返回纯数组） |
+| GET | `/api/v1/messages/{id}` | `getMessageDetail(id)` | 消息详情 |
+| PUT | `/api/v1/messages/{id}/read` | `markMessageRead(id)` | 标记已读 |
+| PUT | `/api/v1/messages/read-all` | `markAllMessagesRead()` | 全部已读 |
+| GET | `/api/v1/messages/unread/count` | `getUnreadCount()` | 未读数（顶栏 30s 轮询） |
+| GET | `/admin-api/v1/message-templates` | `listMessageTemplates()` | 启用模板列表（数组，无分页） |
+| POST | `/admin-api/v1/message-templates` | `createMessageTemplate(payload)` | 创建模板 |
+| PUT | `/admin-api/v1/message-templates/{templateId}` | `updateMessageTemplate(id, payload)` | 更新模板 |
+| DELETE | `/admin-api/v1/message-templates/{templateId}` | `deleteMessageTemplate(id)` | 删除模板 |
+
+**[src/api/office.ts](../../src/api/office.ts)**（综合接口，被 `office/approval`、`office/calendar`、`office/document` 引用；`office/message` 与 `office/organization` 已改用 `message.ts` / `office-new.ts`）：
 
 | 子域 | 前缀 | 代表函数 |
 |------|------|---------|
-| 状态/登录/回调 | `/api/v1/office` | `getPlatformStatus` / `startOfficeLogin` / `officeCallback` |
-| 平台配置/连通性 | `/admin-api/v1/office/config/{platform}`、`/test` | `getPlatformConfig` / `savePlatformConfig` / `testConnectivity` |
-| 绑定/组织同步 | `/admin-api/v1/office/bindings`、`/sync/{platform}/**` | `getBindings` / `approveBinding` / `rejectBinding` / `unbindBinding` / `getSyncStatus` / `triggerSync` |
-| 消息（管理） | POST `/admin-api/v1/office/messages/send` | `sendMessage` |
-| 审批/日历/文件（管理查询） | `/admin-api/v1/office/approvals`、`/calendar/events`、`/files` | `getApprovals` / `getAdminCalendarEvents` / `getFiles` |
+| 平台配置/连通性 | `/admin-api/v1/office/config/{platform}`、`/test` | `getPlatformConfig` / `savePlatformConfig` / `testConnectivity`（⚠️ 后端无对应实现） |
+| 绑定（旧版函数） | `/admin-api/v1/office/bindings/**` | `getBindings` / `approveBinding` / `rejectBinding` / `unbindBinding`（页面实际使用 `office-new.ts` 版本） |
+| 组织同步（旧版函数） | `/admin-api/v1/office/sync/{platform}/**` | `getSyncStatus` / `triggerSync`（⚠️ 后端无对应实现，已由 `office-new.ts` 组织同步函数替代） |
+| 消息（管理） | POST `/admin-api/v1/office/messages/send` | `sendMessage`（⚠️ 后端无对应实现，站内信已由 `message.ts` 替代） |
+| 审批/日历/文件（管理查询） | `/admin-api/v1/office/approvals`、`/calendar/events`、`/files` | `getApprovals` / `getAdminCalendarEvents` / `getFiles`（⚠️ 后端无对应实现） |
 | 消息（业务） | `/api/office/messages/**`（text/image/file/card/sent/{id}） | `sendTextMessage` 等 |
 | 审批（业务） | `/api/office/approvals/**`（发起/详情/同意/撤销/pending/initiated） | `initiateApproval` 等 |
 | 日历（业务） | `/api/office/calendar/events/**`（CRUD/查询/my） | `createCalendarEvent` 等 |
 | 文档（业务） | `/api/office/documents/**`（CRUD/copy/move/share/my） | `createDocument` 等 |
 
-> 两套 API 并存是过渡状态：`office-new.ts` 覆盖应用配置与绑定管理新版接口（带乐观锁 version），`office.ts` 覆盖消息/审批/日历/文档业务操作。新增办公页面时优先查看页面实际 import 的模块，不要凭前缀猜测。
+> 多模块并存是过渡状态：`office-new.ts` 覆盖应用配置、绑定管理与组织同步，`message.ts` 覆盖站内信与模板，`office.ts` 覆盖审批/日历/文档业务操作（其中 `/api/office/**` 前缀当前无网关路由，需后端补路由后方可访问）。新增办公页面时优先查看页面实际 import 的模块，不要凭前缀猜测。
 
 ### 2.17 自动生成接口
 

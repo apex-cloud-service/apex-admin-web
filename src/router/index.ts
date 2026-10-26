@@ -75,12 +75,6 @@ export const staticRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/demo/FileUploadEnhancedDemo.vue'),
         meta: { title: '文件上传增强版', icon: 'Upload', hidden: true },
       },
-      {
-        path: 'monitor/trace',
-        name: 'TraceQuery',
-        component: () => import('@/views/monitor/trace/TraceQuery.vue'),
-        meta: { title: '链路追踪查询', icon: 'Search', hidden: true },
-      },
     ],
   },
   {

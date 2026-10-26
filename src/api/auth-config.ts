@@ -165,6 +165,31 @@ export async function updateJwtConfig(payload: Omit<JwtConfig, 'id' | 'createTim
   return put<void>('/admin-api/v1/auth/config/jwt', payload)
 }
 
+/** JWT 配置测试响应（后端 JwtTestResponse） */
+export interface JwtTestResult {
+  /** 按当前配置生成的测试 Token */
+  token: string
+  /** 解码后的 Token 载荷 */
+  decoded?: Record<string, unknown>
+  /** Token 校验是否通过 */
+  isValid?: boolean
+  issuedAt?: string
+  expiresAt?: string
+  issuer?: string
+}
+
+/**
+ * 测试 JWT 配置：按当前配置生成并验证一个测试 Token，用于确认配置正确性
+ * @param options.expiresIn 测试 Token 有效期（秒，可选）
+ * @param options.payload 自定义载荷（可选）
+ */
+export function testJwtConfig(options?: { expiresIn?: number; payload?: Record<string, unknown> }): Promise<JwtTestResult> {
+  return post<JwtTestResult>('/admin-api/v1/auth/config/jwt/test', {
+    expiresIn: options?.expiresIn,
+    payload: options?.payload,
+  })
+}
+
 /**
  * 查询 OAuth2 客户端列表
  * @returns OAuth2 客户端列表

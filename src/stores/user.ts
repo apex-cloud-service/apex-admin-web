@@ -5,7 +5,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getToken, setToken, setRefreshToken, clearSession, setIdentity, getIdentity } from '@/utils/auth'
+import { getToken, setToken, setRefreshToken, clearSession, setIdentity, getIdentity, setTenantId, getTenantId, removeTenantId } from '@/utils/auth'
 import { login as loginApi, logout as logoutApi, getMyPermissions, getMyRoles } from '@/api/auth'
 import { getCurrentUserInfo } from '@/api/user'
 import type { LoginResult, UserIdentity } from '@/types'
@@ -16,6 +16,8 @@ export interface LoginParams {
   password: string
   captchaId: string
   captchaCode: string
+  /** 租户 ID 声明（可选，仅认证中心登录链路使用） */
+  tenantId?: string
 }
 
 /** 用户会话 Store：管理 Token、身份信息与登录/登出动作 */
@@ -44,10 +46,14 @@ export const useUserStore = defineStore('user', () => {
       captchaCode: params.captchaCode,
       deviceId: 'apex-admin-web',
       platform: 'web',
+      tenantId: params.tenantId,
     })
     token.value = result.accessToken
     setToken(result.accessToken)
     if (result.refreshToken) setRefreshToken(result.refreshToken)
+    // 刷新租户记录：先清除上次会话残留，避免新令牌租户与旧请求头不一致（403）
+    removeTenantId()
+    if (result.tenantId) setTenantId(result.tenantId)
     // 登录成功后拉取身份与权限
     await loadIdentity()
     return result
@@ -71,6 +77,8 @@ export const useUserStore = defineStore('user', () => {
       nickname: info.nickname || info.nickName || '',
       roles,
       permissions: perms,
+      // 租户 ID 来自登录响应（后端 /user/info 不返回该字段）
+      tenantId: getTenantId() || undefined,
     }
     setIdentity(identity.value)
     permissions.value = perms

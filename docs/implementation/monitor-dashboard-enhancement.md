@@ -9,9 +9,12 @@
 4. 链路追踪展示优化（上报统计/延迟）
 5. **新增功能**：根据 traceId 查询链路追踪结果
 
-> **落地状态说明**：本文为实现方案文档。其中链路追踪查询功能（TraceQuery）已实际落地：
-> 静态路由 `/monitor/trace` 注册于 `src/router/index.ts`，页面为 `src/views/monitor/trace/TraceQuery.vue`，
-> API 为 `src/api/monitor.ts` 的 `getTraceById()`（`GET /admin-api/v1/monitor/trace/{traceId}`）。
+> **落地状态说明**：本文为实现方案文档，正文保留撰写时的历史方案描述。截至 2026-10-25 的现状：
+> 后端链路追踪组件已由 Zipkin/Brave 切换为 SkyWalking Java Agent，监控大盘链路追踪卡片已按新
+> `TracingStats` 契约（available/type/endpoint/samplingRate/spansPending/spansDropped）改为展示
+> 采样率与 OAP 地址；第 5 节的链路追踪查询功能（TraceQuery）因后端接口自始未实现、追踪组件切换后
+> 查询契约（业务 traceId 与 SkyWalking tid）未定，已于 2026-10-25 移除页面、路由、API 与类型，
+> 待后端基于 SkyWalking OAP 提供查询接口后按新契约重建。
 
 ---
 

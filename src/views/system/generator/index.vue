@@ -1,8 +1,9 @@
 <!--
   代码生成页面
   ------------------------------------------------------------------
-  功能：数据库表选择、代码生成配置、模板选择、代码预览和下载
-  
+  功能：数据源管理、表结构扫描、代码生成配置、代码生成与生成历史查询
+  （代码预览、模板管理、历史回滚后端未提供端点，页面不提供对应入口）
+
   权限：
     - system:generator:view - 查看代码生成
     - system:generator:generate - 生成代码
@@ -17,14 +18,6 @@
             <el-button type="primary" @click="handleAddDataSource" v-permission="'system:generator:create'">
               <el-icon><Plus /></el-icon>
               新增数据源
-            </el-button>
-            <el-button type="success" @click="handleShowTemplates" v-permission="'system:generator:template'">
-              <el-icon><Document /></el-icon>
-              模板管理
-            </el-button>
-            <el-button @click="handleShowHistory" v-permission="'system:generator:history'">
-              <el-icon><Clock /></el-icon>
-              生成历史
             </el-button>
           </div>
         </div>
@@ -83,13 +76,13 @@
             <el-table-column prop="moduleName" label="模块名" width="100" />
             <el-table-column prop="functionName" label="功能名称" width="120" />
             <el-table-column prop="author" label="作者" width="100" />
-            <el-table-column label="操作" width="350" fixed="right">
+            <el-table-column label="操作" width="250" fixed="right">
               <template #default="{ row }">
-                <el-button link type="primary" @click="handlePreview(row)" v-permission="'system:generator:preview'">
-                  预览
-                </el-button>
                 <el-button link type="success" @click="handleGenerate(row)" v-permission="'system:generator:generate'">
                   生成
+                </el-button>
+                <el-button link type="primary" @click="handleShowHistory(row)" v-permission="'system:generator:history'">
+                  历史
                 </el-button>
                 <el-button link type="primary" @click="handleEditConfig(row)" v-permission="'system:generator:config:edit'">
                   编辑
@@ -161,13 +154,29 @@
         <el-table-column prop="tableComment" label="表注释" min-width="200" />
         <el-table-column prop="engine" label="引擎" width="100" />
         <el-table-column prop="charset" label="字符集" width="100" />
-        <el-table-column label="操作" width="150">
+        <el-table-column label="操作" width="220">
           <template #default="{ row }">
+            <el-button link type="primary" @click="handleViewColumns(row)">查看字段</el-button>
             <el-button link type="primary" @click="handleConfigFromTable(row)">
               生成配置
             </el-button>
           </template>
         </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <el-dialog v-model="columnsDialogVisible" :title="`字段明细 · ${columnsTableName}`" width="860px">
+      <el-table :data="columns" border stripe v-loading="columnsLoading" max-height="500px">
+        <el-table-column prop="columnName" label="字段名" min-width="160" />
+        <el-table-column prop="dataType" label="数据类型" width="130" />
+        <el-table-column prop="columnComment" label="注释" min-width="200" show-overflow-tooltip />
+        <el-table-column label="主键" width="70">
+          <template #default="{ row }">
+            <el-tag v-if="row.columnKey === 'PRI'" type="success" size="small">PK</el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="extra" label="额外信息" width="130" />
       </el-table>
     </el-dialog>
 
@@ -211,17 +220,9 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="previewDialogVisible" title="代码预览" width="80%" top="5vh">
-      <el-tabs v-model="previewActiveTab" type="card">
-        <el-tab-pane v-for="(code, filename) in previewCode" :key="filename" :label="filename" :name="filename">
-          <pre class="code-preview">{{ code }}</pre>
-        </el-tab-pane>
-      </el-tabs>
-    </el-dialog>
-
-    <el-dialog v-model="historyDialogVisible" title="生成历史" width="1000px">
+    <el-dialog v-model="historyDialogVisible" :title="`生成历史 · ${historyConfigLabel}`" width="1000px">
       <el-table :data="history" border stripe v-loading="historyLoading">
-        <el-table-column prop="tableName" label="表名" width="150" />
+        <el-table-column prop="id" label="历史 ID" width="90" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 'success' ? 'success' : 'danger'">
@@ -229,25 +230,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="generatedFiles" label="生成文件" min-width="300">
-          <template #default="{ row }">
-            <el-tag v-for="file in row.generatedFiles" :key="file" size="small" style="margin: 2px">
-              {{ file }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createBy" label="创建人" width="100" />
+        <el-table-column prop="generatedFiles" label="生成文件" min-width="300" show-overflow-tooltip />
+        <el-table-column prop="outputPath" label="输出目录" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="errorMessage" label="错误信息" min-width="160" show-overflow-tooltip />
         <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column label="操作" width="150">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleViewHistory(row)" v-if="row.status === 'success'">
-              查看
-            </el-button>
-            <el-button link type="warning" @click="handleRollback(row)" v-if="row.status === 'success'" v-permission="'system:generator:rollback'">
-              回滚
-            </el-button>
-          </template>
-        </el-table-column>
       </el-table>
       <el-pagination
         v-model:current-page="historyQuery.page"
@@ -259,75 +245,6 @@
         @current-change="loadHistory"
       />
     </el-dialog>
-
-    <el-dialog v-model="templatesDialogVisible" title="模板管理" width="1200px">
-      <div style="margin-bottom: 16px">
-        <el-button type="primary" @click="handleAddTemplate" v-permission="'system:generator:template:create'">
-          <el-icon><Plus /></el-icon>
-          新增模板
-        </el-button>
-      </div>
-      <el-table :data="templates" border stripe v-loading="templatesLoading">
-        <el-table-column prop="name" label="模板名称" width="150" />
-        <el-table-column prop="type" label="模板类型" width="120">
-          <template #default="{ row }">
-            <el-tag>{{ templateTypeMap[row.type] }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="description" label="描述" min-width="200" />
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'">
-              {{ row.status === 1 ? '启用' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="150">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleEditTemplate(row)" v-permission="'system:generator:template:edit'">
-              编辑
-            </el-button>
-            <el-button link type="danger" @click="handleDeleteTemplate(row)" v-permission="'system:generator:template:delete'">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
-
-    <el-dialog v-model="templateDialogVisible" :title="templateForm.id ? '编辑模板' : '新增模板'" width="900px">
-      <el-form :model="templateForm" :rules="templateRules" ref="templateFormRef" label-width="100px">
-        <el-form-item label="模板名称" prop="name">
-          <el-input v-model="templateForm.name" placeholder="请输入模板名称" />
-        </el-form-item>
-        <el-form-item label="模板类型" prop="type">
-          <el-select v-model="templateForm.type" placeholder="请选择模板类型">
-            <el-option label="实体类" value="entity" />
-            <el-option label="Mapper" value="mapper" />
-            <el-option label="Service" value="service" />
-            <el-option label="Controller" value="controller" />
-            <el-option label="Vue组件" value="vue" />
-            <el-option label="API接口" value="api" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="模板内容" prop="content">
-          <el-input v-model="templateForm.content" type="textarea" :rows="15" placeholder="请输入模板内容" />
-        </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <el-input v-model="templateForm.description" type="textarea" :rows="3" placeholder="请输入描述" />
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="templateForm.status">
-            <el-radio :label="1">启用</el-radio>
-            <el-radio :label="0">停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="templateDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitTemplate">确定</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -338,24 +255,23 @@
  * 1. 数据源管理 - 配置数据库连接,支持MySQL/PostgreSQL/Oracle/SQL Server
  * 2. 表结构扫描 - 自动扫描数据库表结构和字段信息
  * 3. 代码生成配置 - 配置生成参数(模块名、包名、作者等)
- * 4. 代码预览与生成 - 预览生成的代码并一键生成
- * 5. 模板管理 - 自定义代码生成模板
- * 6. 生成历史 - 查看历史记录并支持回滚
- * 
+ * 4. 代码生成 - 按配置一键生成代码文件
+ * 5. 生成历史 - 按配置查看生成历史（代码预览/模板管理/回滚后端未提供端点）
+ *
  * 权限要求:
  * - system:generator:view - 查看权限(必需)
  * - system:generator:create - 创建数据源
  * - system:generator:edit - 编辑配置
  * - system:generator:delete - 删除操作
  * - system:generator:generate - 生成代码
- * 
+ *
  * @author system
  * @date 2024
  */
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Document, Clock } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
 import {
   listDataSources,
   createDataSource,
@@ -368,17 +284,12 @@ import {
   updateGeneratorConfig,
   deleteGeneratorConfig,
   generateCode,
-  previewCode as previewCodeApi,
-  listTemplates,
-  createTemplate,
-  updateTemplate,
-  deleteTemplate,
+  getTableColumns,
   listGenerateHistory,
-  rollbackGenerate,
   type DataSource,
   type TableInfo,
+  type ColumnInfo,
   type GeneratorConfig,
-  type GeneratorTemplate,
   type GenerateHistory,
 } from '@/api/generator'
 import type { PageQuery } from '@/types'
@@ -459,44 +370,15 @@ const configRules: FormRules = {
   functionName: [{ required: true, message: '请输入功能名称', trigger: 'blur' }],
 }
 
-const previewDialogVisible = ref(false)
-const previewCode = ref<Record<string, string>>({})
-const previewActiveTab = ref('')
-
 const historyDialogVisible = ref(false)
 const historyLoading = ref(false)
 const history = ref<GenerateHistory[]>([])
 const historyQuery = reactive<PageQuery>({ page: 1, size: 10 })
 const historyTotal = ref(0)
-
-const templatesDialogVisible = ref(false)
-const templatesLoading = ref(false)
-const templates = ref<GeneratorTemplate[]>([])
-
-const templateDialogVisible = ref(false)
-const templateFormRef = ref<FormInstance>()
-const templateForm = reactive<Partial<GeneratorTemplate>>({
-  name: '',
-  type: 'entity',
-  content: '',
-  description: '',
-  status: 1,
-})
-
-const templateTypeMap: Record<string, string> = {
-  entity: '实体类',
-  mapper: 'Mapper',
-  service: 'Service',
-  controller: 'Controller',
-  vue: 'Vue组件',
-  api: 'API接口',
-}
-
-const templateRules: FormRules = {
-  name: [{ required: true, message: '请输入模板名称', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择模板类型', trigger: 'change' }],
-  content: [{ required: true, message: '请输入模板内容', trigger: 'blur' }],
-}
+/** 当前查看历史记录的生成配置 */
+const historyConfig = ref<GeneratorConfig | null>(null)
+/** 历史弹窗标题用的配置标识 */
+const historyConfigLabel = ref('')
 
 /**
  * 加载数据源列表
@@ -560,15 +442,16 @@ async function submitDataSource() {
 }
 
 /**
- * 测试数据源连接
+ * 测试数据源连接（按已保存的数据源 ID，由后端校验连通性）
  */
 async function handleTestConnection(row: DataSource) {
+  if (!row.id) return
   try {
-    const result = await testDataSourceConnection(row)
-    if (result.success) {
+    const ok = await testDataSourceConnection(row.id)
+    if (ok) {
       ElMessage.success('连接成功')
     } else {
-      ElMessage.error(`连接失败: ${result.message}`)
+      ElMessage.error('连接失败')
     }
   } catch (error) {
     ElMessage.error('测试连接失败')
@@ -590,6 +473,33 @@ async function handleViewTables(row: DataSource) {
     ElMessage.error('加载表列表失败')
   } finally {
     tablesLoading.value = false
+  }
+}
+
+/** 字段明细对话框可见性 */
+const columnsDialogVisible = ref(false)
+/** 字段明细加载中 */
+const columnsLoading = ref(false)
+/** 当前查看字段的表名 */
+const columnsTableName = ref('')
+/** 字段列表 */
+const columns = ref<ColumnInfo[]>([])
+
+/**
+ * 查看数据表字段明细（复用表列表对话框所在数据源上下文）
+ * @param row 目标表行
+ */
+async function handleViewColumns(row: TableInfo) {
+  if (!currentDatasourceId.value) return
+  columnsTableName.value = row.tableName
+  columnsLoading.value = true
+  columnsDialogVisible.value = true
+  try {
+    columns.value = await getTableColumns(currentDatasourceId.value, row.tableName)
+  } catch (error) {
+    ElMessage.error('加载字段明细失败')
+  } finally {
+    columnsLoading.value = false
   }
 }
 
@@ -658,6 +568,7 @@ function handleEditConfig(row: GeneratorConfig) {
  * @param datasourceId 新选中的数据源 ID
  */
 async function handleDatasourceChange(datasourceId: number) {
+  currentDatasourceId.value = datasourceId
   try {
     tables.value = await listTables(datasourceId)
   } catch (error) {
@@ -724,170 +635,49 @@ async function handleDeleteConfig(row: GeneratorConfig) {
 }
 
 /**
- * 预览生成代码（按配置生成各文件代码并弹窗展示）
- * @param row 目标配置行
- */
-async function handlePreview(row: GeneratorConfig) {
-  if (!row.id) return
-  try {
-    const code = await previewCodeApi(row.id, row.tableName)
-    previewCode.value = code
-    previewActiveTab.value = Object.keys(code)[0] || ''
-    previewDialogVisible.value = true
-  } catch (error) {
-    ElMessage.error('预览失败')
-  }
-}
-
-/**
- * 执行代码生成（确认后按配置生成，默认开启 Swagger/Lombok/MyBatis-Plus）
+ * 执行代码生成（确认后按配置生成全部文件）
  * @param row 目标配置行
  */
 async function handleGenerate(row: GeneratorConfig) {
   if (!row.id) return
   await ElMessageBox.confirm('确认生成代码?', '提示', { type: 'info' })
   try {
-    const result = await generateCode({
-      configId: row.id,
-      tables: [row.tableName],
-      enableSwagger: true,
-      enableLombok: true,
-      enableMybatisPlus: true,
-    })
-    ElMessage.success(`代码生成成功，共生成 ${result.files.length} 个文件`)
-    await loadHistory()
+    const files = await generateCode(row.id)
+    const okCount = files.filter((f) => f.success !== false).length
+    const failCount = files.length - okCount
+    ElMessage.success(`代码生成完成，成功 ${okCount} 个文件${failCount > 0 ? `，失败 ${failCount} 个` : ''}`)
   } catch (error) {
     ElMessage.error('生成失败')
   }
 }
 
 /**
- * 打开生成历史弹窗并加载记录
+ * 打开指定配置的生成历史弹窗
+ * @param row 目标配置行
  */
-async function handleShowHistory() {
+async function handleShowHistory(row: GeneratorConfig) {
+  if (!row.id) return
+  historyConfig.value = row
+  historyConfigLabel.value = `${row.tableName}（${row.functionName || row.className || `#${row.id}`}）`
   historyDialogVisible.value = true
+  historyQuery.page = 1
   await loadHistory()
 }
 
 /**
- * 分页加载代码生成历史
+ * 分页加载当前配置的代码生成历史
  */
 async function loadHistory() {
+  if (!historyConfig.value?.id) return
   historyLoading.value = true
   try {
-    const result = await listGenerateHistory(historyQuery)
+    const result = await listGenerateHistory(historyConfig.value.id, historyQuery)
     history.value = result.list || []
     historyTotal.value = result.total
   } catch (error) {
     ElMessage.error('加载历史记录失败')
   } finally {
     historyLoading.value = false
-  }
-}
-
-/**
- * 查看历史详情（功能待实现，暂提示）
- * @param _row 目标历史行（保留参数签名，暂未使用）
- */
-function handleViewHistory(_row: GenerateHistory) {
-  ElMessage.info('查看功能待实现')
-}
-
-/**
- * 回滚某次代码生成（二次确认后回滚并刷新历史）
- * @param row 目标历史行
- */
-async function handleRollback(row: GenerateHistory) {
-  await ElMessageBox.confirm('确认回滚该次代码生成?', '提示', { type: 'warning' })
-  try {
-    await rollbackGenerate(row.id)
-    ElMessage.success('回滚成功')
-    await loadHistory()
-  } catch (error) {
-    ElMessage.error('回滚失败')
-  }
-}
-
-/**
- * 打开模板管理弹窗并加载模板列表
- */
-async function handleShowTemplates() {
-  templatesDialogVisible.value = true
-  await loadTemplates()
-}
-
-/**
- * 加载代码生成模板列表
- */
-async function loadTemplates() {
-  templatesLoading.value = true
-  try {
-    templates.value = await listTemplates()
-  } catch (error) {
-    ElMessage.error('加载模板失败')
-  } finally {
-    templatesLoading.value = false
-  }
-}
-
-/**
- * 打开新建模板弹窗（表单恢复默认值）
- */
-function handleAddTemplate() {
-  Object.assign(templateForm, {
-    id: undefined,
-    name: '',
-    type: 'entity',
-    content: '',
-    description: '',
-    status: 1,
-  })
-  templateDialogVisible.value = true
-}
-
-/**
- * 打开编辑模板弹窗（回填所选行）
- * @param row 目标模板行
- */
-function handleEditTemplate(row: GeneratorTemplate) {
-  Object.assign(templateForm, row)
-  templateDialogVisible.value = true
-}
-
-/**
- * 提交模板：按有无 id 区分创建/更新，成功后刷新列表
- */
-async function submitTemplate() {
-  if (!templateFormRef.value) return
-  await templateFormRef.value.validate()
-  try {
-    if (templateForm.id) {
-      await updateTemplate(templateForm.id, templateForm as GeneratorTemplate)
-      ElMessage.success('更新成功')
-    } else {
-      await createTemplate(templateForm as GeneratorTemplate)
-      ElMessage.success('创建成功')
-    }
-    templateDialogVisible.value = false
-    await loadTemplates()
-  } catch (error) {
-    ElMessage.error('操作失败')
-  }
-}
-
-/**
- * 删除模板（二次确认后删除并刷新列表）
- * @param row 目标模板行
- */
-async function handleDeleteTemplate(row: GeneratorTemplate) {
-  if (!row.id) return
-  await ElMessageBox.confirm('确认删除该模板?', '提示', { type: 'warning' })
-  try {
-    await deleteTemplate(row.id)
-    ElMessage.success('删除成功')
-    await loadTemplates()
-  } catch (error) {
-    ElMessage.error('删除失败')
   }
 }
 

@@ -5,6 +5,8 @@
 ## [Unreleased]
 
 ### Added
+- 功能配置与数据维护盘点：JWT 配置测试（`POST /admin-api/v1/auth/config/jwt/test`，认证配置页"测试配置"弹窗）；覆盖说明见 `docs/guides/config-maintenance-coverage.md`
+- 统一权限认证与多租户适配：登录可选 `tenantId` 租户匹配声明（登录页租户输入由 `VITE_AUTH_TENANT_ENABLED` 控制，默认关闭）、租户 ID 会话存取（`apex.admin.tenant-id`）、请求层条件附带 `X-Tenant-Id` 头；评审结论见 `docs/guides/auth-tenant-adaptation.md`
 - 监控大盘增强：新增链路追踪查询页（`/monitor/trace` 静态路由，`TraceQuery.vue`）与 `monitor/trace/{traceId}` 接口封装（`src/api/monitor.ts`）
 - 认证配置管理模块（`src/api/auth-config.ts`、`views/system/auth`）：JWT/OAuth2 客户端/权限码/会话/安全策略/登录尝试管理
 - SSO 单点登录模块（`src/api/sso.ts`、`views/system/sso`）：SAML/CAS/LDAP/OAuth2/OIDC 提供商、会话、审计
@@ -16,6 +18,7 @@
 - 文档体系补齐：架构文档（`docs/architecture/`）、API 接口目录（`docs/api/`）、测试指南与工具库参考（`docs/reference/`）
 
 ### Fixed
+- 代码生成器模块与后端 `GeneratorAdminRouter` 对齐：`generateCode` 改为 `POST /generator/configs/{id}/generate`（原 `/generate` 为不存在的端点）、`listGenerateHistory` 改为按配置 `GET /generator/configs/{id}/history`、`testDataSourceConnection` 改为按已保存数据源 ID `POST /generator/datasources/{id}/test`；移除后端未提供的代码预览、模板管理、历史回滚封装及页面入口（原按钮会 404）
 - 文件上传组件与登录页面的类型问题（aa375a3）
 - 办公平台授权回调页 `/office/callback` 此前未注册路由导致不可达，已补注册为静态路由（public），与 `office/callback.vue` 头注释及 AGENTS.md 静态路由清单对齐
 

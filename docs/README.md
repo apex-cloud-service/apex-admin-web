@@ -24,6 +24,8 @@
 
 - [部署指南](guides/deployment.md) - 生产环境部署配置
 - [前后端集成](guides/frontend-backend-integration.md) - 前后端联调和接口对接
+- [统一权限认证与多租户适配](guides/auth-tenant-adaptation.md) - 后端统一权限认证/多租户评审结论与前端适配说明
+- [功能配置与数据维护覆盖](guides/config-maintenance-coverage.md) - 配置/维护能力清单、后端未暴露能力的暂缓项
 - [数据库配置验证](guides/database-config-verification.md) - 数据库配置功能说明
 - [Mock 数据服务](guides/mock-data-service.md) - 前端开发 Mock 数据使用指南
 

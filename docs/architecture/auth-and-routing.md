@@ -11,6 +11,7 @@ Token 与身份信息统一由 [src/utils/auth.ts](../../src/utils/auth.ts) 存�
 | `apex.admin.token` | `TOKEN_KEY` | 访问令牌 |
 | `apex.admin.refresh-token` | `REFRESH_TOKEN_KEY` | 刷新令牌 |
 | `apex.admin.identity` | `IDENTITY_KEY` | 用户身份缓存（UserIdentity） |
+| `apex.admin.tenant-id` | `TENANT_ID_KEY` | 当前租户 ID（登录响应返回 `tenantId` 时记录） |
 | `apex.admin.sidebarCollapsed` | `SIDEBAR_KEY` | 侧边栏折叠状态 |
 | `apex.admin.theme` | `THEME_KEY` | 明暗主题 |
 
@@ -29,19 +30,25 @@ sequenceDiagram
     participant B as 后端
 
     U->>L: 输入账号/密码
+    opt 多租户部署（VITE_AUTH_TENANT_ENABLED=true）
+        U->>L: 可选填写租户标识
+    end
     L->>B: GET /api/v1/auth/captcha
     B-->>L: CaptchaVO{captchaId, base64 图片}
     U->>L: 提交表单
-    L->>S: login({username, password, captchaId, captchaCode})
-    S->>B: POST /api/v1/auth/login<br/>(附带 deviceId='apex-admin-web', platform='web')
-    B-->>S: LoginResult{accessToken, refreshToken}
+    L->>S: login({username, password, captchaId, captchaCode, tenantId?})
+    S->>B: POST /api/v1/auth/login<br/>(附带 deviceId='apex-admin-web', platform='web'，<br/>tenantId 仅作租户匹配声明，缺省由后端使用 default)
+    B-->>S: LoginResult{accessToken, refreshToken, tenantId?}
     S->>S: setToken + setRefreshToken（utils/auth.ts）
+    S->>S: removeTenantId 清残留后，<br/>响应含 tenantId 时 setTenantId 记录
     S->>B: 并行拉取三个接口：<br/>GET /api/v1/user/info<br/>GET /api/v1/auth/roles/my<br/>GET /api/v1/auth/permissions/my
     Note over S: roles/permissions 拉取失败时<br/>降级为空数组，不阻塞登录
-    S->>S: setIdentity 缓存身份，initialized=true
+    S->>S: setIdentity 缓存身份（含 tenantId），initialized=true
     S-->>L: 返回 LoginResult
     L->>L: 跳转 redirect 参数页或 /dashboard
 ```
+
+登录后请求层（`utils/request.ts`）在会话存在租户 ID 时附带 `X-Tenant-Id` 请求头，仅作匹配声明：租户作用域始终由后端从令牌解析，网关会剥离并重建该头。租户适配的完整评审结论见 [统一权限认证与多租户适配](../guides/auth-tenant-adaptation.md)。
 
 ## 3. 路由守卫流程
 
@@ -209,7 +216,6 @@ flowchart TD
 | `/workflow/instances/:id` | workflow/monitor/InstanceDetail.vue | `hidden: true, activeMenu: /workflow/monitor` | 流程详情 |
 | `/demo/file-upload` | demo/FileUploadDemo.vue | `hidden: true` | 上传演示 |
 | `/demo/file-upload-enhanced` | demo/FileUploadEnhancedDemo.vue | `hidden: true` | 增强上传演示 |
-| `/monitor/trace` | monitor/trace/TraceQuery.vue | `hidden: true` | 链路追踪查询（按 traceId） |
 | `/:pathMatch(.*)*` | error/NotFound.vue | — | 404 兜底 |
 
 `/office/callback`（办公平台授权回调）为静态路由（public），页面位于 [src/views/office/callback.vue](../../src/views/office/callback.vue)。

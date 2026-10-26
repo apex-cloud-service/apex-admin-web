@@ -1,28 +1,26 @@
 /**
  * 工作流API模块
- * 
+ *
  * 提供工作流相关的HTTP接口调用，包括：
- * - 流程定义的创建、查询、更新和列表获取
  * - 流程实例的查询和详情获取
  * - 统计数据和趋势分析
- * - 待办任务的查询和处理（审批、驳回）
+ * - 待办任务的查询与办理（后端 complete 固定为通过语义，仅携带审批意见）
  * - 高级任务操作（回退、转办、委派）
  * - 流程实例的挂起和恢复
- * 
+ *
  * @module api/workflow
  */
 
-import { get, post, put } from '@/utils/request'
+import { get, post } from '@/utils/request'
+import type { PageResponse } from '@/types'
 import type {
-  WorkflowDefinition,
+  WorkflowPendingTask,
+  WorkflowStartedInstance,
   WorkflowInstance,
   WorkflowInstanceDetail,
-  WorkflowTask,
   WorkflowStatistics,
   WorkflowTrend,
   InstanceQueryParams,
-  WorkflowDefinitionPayload,
-  CompleteTaskPayload,
   RollbackTaskPayload,
   TransferTaskPayload,
   DelegateTaskPayload,
@@ -30,52 +28,11 @@ import type {
   ResumeInstancePayload
 } from '@/types/workflow'
 
-// ===== 流程定义管理 =====
-
-/**
- * 获取流程定义详情
- * @param id - 流程定义ID
- * @returns 流程定义详细信息，包含流程图、节点配置等
- */
-export function getWorkflowDefinition(id: number) {
-  return get<WorkflowDefinition>(`/admin-api/v1/workflows/definitions/${id}/detail`)
-}
-
-/**
- * 创建新的流程定义
- * @param data - 流程定义数据，包含名称、流程图、节点配置等
- * @returns 创建成功的流程定义ID
- */
-export function createWorkflowDefinition(data: WorkflowDefinitionPayload) {
-  return post('/admin-api/v1/workflows/definitions', data)
-}
-
-/**
- * 更新流程定义
- * @param id - 流程定义ID
- * @param data - 更新的流程定义数据
- * @returns 更新结果
- */
-export function updateWorkflowDefinition(id: number, data: WorkflowDefinitionPayload) {
-  return put(`/admin-api/v1/workflows/definitions/${id}`, data)
-}
-
-/**
- * 获取流程定义列表
- * @param params - 查询参数，包含分页信息
- * @param params.pageNum - 页码
- * @param params.pageSize - 每页数量
- * @returns 流程定义列表和总数
- */
-export function listWorkflowDefinitions(params?: { pageNum?: number; pageSize?: number }) {
-  return get<{ records: WorkflowDefinition[]; total: number }>('/admin-api/v1/workflows/definitions', params)
-}
-
 // ===== 流程实例管理 =====
 
 /**
  * 获取流程实例列表
- * @param params - 查询参数，包含分页、状态、发起人、流程定义等过滤条件
+ * @param params - 查询参数，包含分页、状态、发起人等过滤条件
  * @returns 流程实例列表和总数
  */
 export function listWorkflowInstances(params: InstanceQueryParams) {
@@ -85,7 +42,7 @@ export function listWorkflowInstances(params: InstanceQueryParams) {
 /**
  * 获取流程实例详情
  * @param id - 流程实例ID
- * @returns 流程实例详细信息，包含审批记录、当前节点等
+ * @returns 流程实例详细信息，包含流程定义、任务列表等
  */
 export function getWorkflowInstanceDetail(id: number) {
   return get<WorkflowInstanceDetail>(`/admin-api/v1/workflows/instances/${id}`)
@@ -117,37 +74,32 @@ export function getWorkflowTrend(days: number = 7) {
  * @param params - 查询参数
  * @param params.pageNum - 页码
  * @param params.pageSize - 每页数量
- * @returns 当前用户的待办任务列表和总数
+ * @returns 当前用户的待办任务分页结果
  */
 export function getMyPendingTasks(params: { pageNum: number; pageSize: number }) {
-  return get<{ records: WorkflowTask[]; total: number }>('/admin-api/v1/workflows/tasks/my', params)
+  return get<PageResponse<WorkflowPendingTask>>('/api/v1/workflows/tasks/pending', params)
 }
 
 /**
- * 审批通过任务
- * @param data - 审批数据，包含任务ID、审批意见等
- * @returns 审批结果
- */
-export function approveTask(data: CompleteTaskPayload) {
-  return post('/admin-api/v1/workflows/tasks/approve', data)
-}
-
-/**
- * 驳回任务
- * @param data - 驳回数据，包含任务ID、驳回原因等
- * @returns 驳回结果
- */
-export function rejectTask(data: CompleteTaskPayload) {
-  return post('/admin-api/v1/workflows/tasks/reject', data)
-}
-
-/**
- * 获取任务详情
+ * 办理任务（后端 complete 固定为通过语义）
  * @param taskId - 任务ID
- * @returns 任务详细信息，包含任务数据、表单信息等
+ * @param comment - 审批意见（最长 1000 字符）
  */
-export function getTaskDetail(taskId: number) {
-  return get<WorkflowTask>(`/admin-api/v1/workflows/tasks/${taskId}`)
+export function completeTask(taskId: number, comment?: string) {
+  return post<void>(`/api/v1/workflows/tasks/${taskId}/complete`, { comment })
+}
+
+/**
+ * 发起流程实例（发起人取当前登录用户，无需传入）
+ * @param workflowCode - 流程定义编码（后端无定义列表接口，需调用方提供）
+ * @param payload - businessKey 必填（≤200），contextJson 选填（JSON 字符串，≤10000）
+ * @returns 新建的流程实例（status 固定 RUNNING）
+ */
+export function startWorkflowInstance(
+  workflowCode: string,
+  payload: { businessKey: string; contextJson?: string }
+) {
+  return post<WorkflowStartedInstance>(`/api/v1/workflows/${workflowCode}/instances`, payload)
 }
 
 // ===== 高级任务操作 =====

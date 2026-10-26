@@ -14,6 +14,9 @@ export const REFRESH_TOKEN_KEY = 'apex.admin.refresh-token'
 /** 用户身份缓存的 localStorage 键 */
 export const IDENTITY_KEY = 'apex.admin.identity'
 
+/** 当前租户 ID 的 localStorage 键（登录响应返回 tenantId 时记录） */
+export const TENANT_ID_KEY = 'apex.admin.tenant-id'
+
 /** ========== 本地存储键（UI 偏好） ========== */
 
 /** 侧边栏折叠状态的 localStorage 键 */

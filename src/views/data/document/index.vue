@@ -77,10 +77,15 @@
       </el-table-column>
       <el-table-column prop="viewCount" label="查看次数" width="100" />
       <el-table-column prop="createTime" label="创建时间" width="160" />
-      <el-table-column label="操作" width="240" fixed="right">
+      <el-table-column label="操作" width="300" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" :icon="View" @click="handleView(row)">查看</el-button>
           <el-button link type="primary" :icon="Download" @click="handleDownload(row)" v-if="row.fileUrl">下载</el-button>
+          <el-button
+            link
+            :type="row.status === 1 ? 'warning' : 'success'"
+            @click="handleToggleStatus(row)"
+          >{{ row.status === 1 ? '归档' : '启用' }}</el-button>
           <el-button link type="warning" :icon="Edit" @click="handleEdit(row)" v-permission="'data:document:edit'">编辑</el-button>
           <el-button link type="danger" :icon="Delete" @click="handleDelete(row)" v-permission="'data:document:delete'">删除</el-button>
         </template>
@@ -166,7 +171,7 @@ import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Search, Refresh, Plus, Edit, Delete, View, Download } from '@element-plus/icons-vue'
 import Pagination from '@/components/Pagination.vue'
-import { listDocuments, createDocument, updateDocument, deleteDocument, getDocumentDetail, downloadDocument } from '@/api/document'
+import { listDocuments, createDocument, updateDocument, deleteDocument, getDocumentDetail, downloadDocument, updateDocumentStatus } from '@/api/document'
 import type { Document } from '@/types'
 import { showError } from '@/utils/request'
 
@@ -361,6 +366,25 @@ const handleDelete = (row: Document): void => {
     try {
       await deleteDocument(row.id)
       ElMessage.success('删除成功')
+      fetchList()
+    } catch (error) {
+      showError(error)
+    }
+  }).catch(() => {})
+}
+
+/**
+ * 切换文档状态：正常(1) ↔ 归档(2)，草稿(0) 一律启用为正常
+ */
+const handleToggleStatus = (row: Document): void => {
+  const next = row.status === 1 ? 2 : 1
+  const action = next === 1 ? '启用' : '归档'
+  ElMessageBox.confirm(`确定${action}文档「${row.title}」吗？`, '提示', {
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await updateDocumentStatus(row.id, next)
+      ElMessage.success(`${action}成功`)
       fetchList()
     } catch (error) {
       showError(error)

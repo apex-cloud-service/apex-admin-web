@@ -13,6 +13,10 @@
         <el-form-item prop="username">
           <el-input v-model="form.username" placeholder="请输入账号" :prefix-icon="User" clearable />
         </el-form-item>
+        <!-- 租户（多租户部署时启用，VITE_AUTH_TENANT_ENABLED=true） -->
+        <el-form-item v-if="tenantEnabled" prop="tenantId">
+          <el-input v-model="form.tenantId" placeholder="租户标识（留空使用默认租户）" :prefix-icon="OfficeBuilding" clearable />
+        </el-form-item>
         <!-- 密码 -->
         <el-form-item prop="password">
           <el-input
@@ -91,7 +95,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
-import { ChatDotRound, Key, Lock, User } from '@element-plus/icons-vue'
+import { ChatDotRound, Key, Lock, OfficeBuilding, User } from '@element-plus/icons-vue'
 import { getCaptcha } from '@/api/auth'
 import { buildAuthUrl } from '@/api/oauth2'
 import { useUserStore } from '@/stores/user'
@@ -110,11 +114,15 @@ const captchaImage = ref('')
 /** 当前验证码 ID（提交登录时回传） */
 const captchaId = ref('')
 
+/** 是否启用登录租户标识输入（多租户部署，VITE_AUTH_TENANT_ENABLED=true 时生效） */
+const tenantEnabled = import.meta.env.VITE_AUTH_TENANT_ENABLED === 'true'
+
 /** 登录表单数据 */
 const form = reactive({
   username: '',
   password: '',
   captchaCode: '',
+  tenantId: '',
 })
 
 /** 表单校验规则 */
@@ -127,6 +135,10 @@ const rules: FormRules = {
   captchaCode: [
     { required: true, message: '请输入验证码', trigger: 'blur' },
     { min: 4, max: 6, message: '验证码 4-6 位', trigger: 'blur' },
+  ],
+  // 租户标识可选，填写时仅允许与服务端一致的格式（1-64 位字母/数字/点/下划线/短横线）
+  tenantId: [
+    { pattern: /^[A-Za-z0-9._-]{1,64}$/, message: '租户标识仅允许 1-64 位字母、数字、点、下划线或短横线', trigger: 'blur' },
   ],
 }
 
@@ -163,6 +175,7 @@ async function handleLogin(): Promise<void> {
       password: form.password,
       captchaId: captchaId.value,
       captchaCode: form.captchaCode,
+      tenantId: tenantEnabled && form.tenantId ? form.tenantId : undefined,
     })
     ElMessage.success('登录成功')
     // 携带 redirect 参数则跳转原目标，否则进入工作台

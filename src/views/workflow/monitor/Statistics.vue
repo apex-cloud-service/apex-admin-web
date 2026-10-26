@@ -97,11 +97,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { TrendCharts, Loading, Bell, Timer } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
+import { useAppStore } from '@/stores/app'
 import { getWorkflowStatistics, getWorkflowTrend } from '@/api/workflow'
 import type { WorkflowStatistics, WorkflowTrend } from '@/types/workflow'
+
+const appStore = useAppStore()
 
 /** 统计数据 */
 const statistics = ref<WorkflowStatistics>({
@@ -295,19 +298,34 @@ const formatDuration = (seconds: number): string => {
   return `${hours}h ${minutes}m`
 }
 
+/** 窗口尺寸变化时自适应两个图表（命名函数，便于卸载时移除） */
+function handleResize(): void {
+  pieChart?.resize()
+  lineChart?.resize()
+}
+
 onMounted(() => {
   loadStatistics()
   loadTrend()
-  
-  window.addEventListener('resize', () => {
-    pieChart?.resize()
-    lineChart?.resize()
-  })
+
+  window.addEventListener('resize', handleResize)
 })
 
+// 主题切换后重绘图表（沿用渲染函数内的配色逻辑）
+watch(
+  () => appStore.theme,
+  () => {
+    renderPieChart()
+    renderLineChart()
+  },
+)
+
 onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
   pieChart?.dispose()
   lineChart?.dispose()
+  pieChart = null
+  lineChart = null
 })
 </script>
 

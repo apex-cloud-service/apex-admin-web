@@ -48,6 +48,8 @@ export interface LoginResult {
   refreshToken?: string
   tokenType?: string
   expiresIn?: number
+  /** 当前租户 ID（认证中心登录链路返回；单体登录暂不返回） */
+  tenantId?: string
   openId?: string
   unionId?: string
   isNewUser?: boolean
@@ -90,6 +92,8 @@ export interface UserIdentity {
   roles?: string[]
   /** 由 GET /api/v1/auth/permissions/my 合并 */
   permissions?: string[]
+  /** 当前租户 ID（登录响应返回 tenantId 时合并，仅作展示/透传，租户作用域由后端令牌决定） */
+  tenantId?: string
 }
 
 /** 后台用户列表项（AdminUserSummaryResponse，id 序列化为字符串） */
@@ -483,7 +487,7 @@ export interface BlockingIoPool {
   up: boolean
 }
 
-/** 中间件监控（middleware）：MySQL/Redis/MQ/Zipkin */
+/** 中间件监控（middleware）：MySQL/Redis/MQ/SkyWalking */
 export interface MonitorMiddleware {
   timestamp: number
   mysql: {
@@ -518,7 +522,7 @@ export interface MonitorMiddleware {
   tracing: TracingStats
 }
 
-/** 链路追踪统计 */
+/** 链路追踪统计（SkyWalking，对应后端 MonitorMiddlewareResponse.TracingStats） */
 export interface TracingStats {
   available: boolean
   type: string
@@ -526,10 +530,6 @@ export interface TracingStats {
   samplingRate: number
   spansPending: number
   spansDropped: number
-  reportedSpans: number
-  failedSpans: number
-  avgReportLatency: number
-  lastReportTime: number
 }
 
 /** 治理监控（governance）：Sentinel 熔断/限流 + 网关流量 */
@@ -686,34 +686,6 @@ export interface CurrentDatabaseInfo {
   driverVersion?: string
 }
 
-/** 链路追踪 Span */
-export interface TraceSpan {
-  traceId: string
-  spanId: string
-  parentSpanId?: string
-  serviceName: string
-  operationName: string
-  startTime: number
-  duration: number
-  tags: Record<string, string>
-  logs: TraceLog[]
-}
-
-/** 链路追踪日志 */
-export interface TraceLog {
-  timestamp: number
-  fields: Record<string, string>
-}
-
-/** 链路追踪查询结果 */
-export interface TraceQueryResult {
-  traceId: string
-  spans: TraceSpan[]
-  duration: number
-  serviceCount: number
-  spanCount: number
-}
-
 /* ==================== 文件上传类型（POST /api/v1/files/*） ==================== */
 
 /**
@@ -729,4 +701,228 @@ export interface FileUploadResult {
   url: string
   /** URL有效期（秒） */
   expiresIn: number
+}
+
+/* ==================== 站内信与消息模板（/api/v1/messages、/admin-api/v1/message-templates） ==================== */
+
+/** 站内信（后端 MessageDTO，inbox/sent 返回纯数组） */
+export interface InternalMessage {
+  /** 消息 ID */
+  id: number
+  /** 消息编码 */
+  messageCode?: string
+  /** 消息主题 */
+  subject: string
+  /** 消息内容 */
+  content: string
+  /** 消息类型（SYSTEM/NOTICE/TASK/ALERT） */
+  messageType?: string
+  /** 优先级（LOW/NORMAL/HIGH/URGENT） */
+  priority?: string
+  /** 发送人 ID */
+  senderId?: number
+  /** 发送人姓名 */
+  senderName?: string
+  /** 发送时间 */
+  sendTime?: string
+  /** 过期时间 */
+  expireTime?: string
+  /** 消息状态 */
+  status?: string
+  /** 当前用户是否已读 */
+  readStatus: boolean
+  /** 阅读时间 */
+  readTime?: string
+}
+
+/** 站内信发送请求体（后端 SendMessageRequest，接收人为系统用户 ID 列表） */
+export interface SendMessagePayload {
+  /** 消息主题（必填，最长 200） */
+  subject: string
+  /** 消息内容（必填，最长 16000） */
+  content: string
+  /** 消息类型（SYSTEM/NOTICE/TASK/ALERT，可选） */
+  messageType?: string
+  /** 优先级（LOW/NORMAL/HIGH/URGENT，可选） */
+  priority?: string
+  /** 接收人系统用户 ID 列表（必填，最多 100 个） */
+  recipientIds: number[]
+  /** 过期时间（可选） */
+  expireTime?: string
+  /** 关联模板 ID（可选） */
+  templateId?: number
+}
+
+/** 站内信消息模板（后端 MessageTemplateDTO） */
+export interface MessageTemplate {
+  /** 模板 ID（创建时留空） */
+  id?: number
+  /** 模板编码（唯一标识） */
+  templateCode: string
+  /** 模板名称 */
+  templateName: string
+  /** 模板类型 */
+  templateType?: string
+  /** 模板内容 */
+  templateContent: string
+  /** 模板变量 */
+  variables?: Record<string, unknown>
+  /** 是否启用 */
+  enabled: boolean
+}
+
+/* ==================== 办公组织同步（/admin-api/v1/org、/api/v1/office/organization） ==================== */
+
+/** 同步部门（后端 DepartmentDTO） */
+export interface OrgDepartment {
+  id: number
+  deptCode: string
+  deptName: string
+  parentId?: number
+  deptPath?: string
+  deptLevel?: number
+  sortOrder?: number
+  leaderId?: number
+  leaderName?: string
+  phone?: string
+  email?: string
+  status?: string
+  syncSource?: string
+  externalId?: string
+}
+
+/** 同步员工（后端 EmployeeDTO，userId 为关联的系统用户 ID） */
+export interface OrgEmployee {
+  id: number
+  employeeCode: string
+  employeeName: string
+  deptId?: number
+  deptName?: string
+  position?: string
+  jobTitle?: string
+  mobile?: string
+  email?: string
+  gender?: string
+  birthday?: string
+  hireDate?: string
+  status?: string
+  userId?: number
+  syncSource?: string
+  externalId?: string
+}
+
+/** 组织同步历史（后端 SyncHistoryDTO，duration 单位秒） */
+export interface OrgSyncHistory {
+  id: number
+  syncType: string
+  syncSource: string
+  syncStatus: string
+  startTime?: string
+  endTime?: string
+  duration?: number
+  deptCount?: number
+  employeeCount?: number
+  errorMessage?: string
+}
+
+/** 组织同步任务（后端 OfficeSyncTask 领域对象） */
+export interface OrgSyncTask {
+  id: number
+  platform: string
+  state: string
+  cursor?: string
+  failureMessage?: string
+  version?: number
+}
+
+/** 平台组织映射（后端 OrganizationMappingResponse，apex 侧 ID 为字符串） */
+export interface OrganizationMapping {
+  id: number
+  platform: string
+  externalOrgId?: string
+  externalUserId?: string
+  apexDeptId?: string
+  apexUserId?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** 触发组织同步请求体（后端 SyncOrganizationRequest） */
+export interface OrgSyncRequest {
+  /** 平台类型（FEISHU/DINGTALK/WECOM） */
+  platform: string
+  /** 同步对象（DEPARTMENT=部门 / MEMBER=成员） */
+  syncType: 'DEPARTMENT' | 'MEMBER'
+  /** 是否全量同步 */
+  fullSync: boolean
+}
+
+/** 触发组织同步响应（后端 SyncOrganizationResponse） */
+export interface OrgSyncResult {
+  taskId?: number
+  syncedCount?: number
+  message?: string
+  success: boolean
+}
+
+/* ==================== 数据源管理（/admin-api/v1/database/datasources） ==================== */
+
+/** 数据源（后端 DataSourceResponse，url/username 已脱敏） */
+export interface DataSourceInfo {
+  id: number
+  name: string
+  type: string
+  driver: string
+  url: string
+  username: string
+  poolSize?: number
+  activeConnections?: number
+  status?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** 数据源创建/更新请求体（后端 DataSourceRequest） */
+export interface DataSourcePayload {
+  name: string
+  type: string
+  driver: string
+  url: string
+  username: string
+  password: string
+  minIdle?: number
+  maxPoolSize?: number
+  connectionTimeout?: number
+  idleTimeout?: number
+}
+
+/** 数据源连接池指标（后端 DataSourceMetricsResponse，时间单位毫秒） */
+export interface DataSourceMetrics {
+  totalConnections?: number
+  activeConnections?: number
+  idleConnections?: number
+  waitingThreads?: number
+  averageGetTime?: number
+  averageUsageTime?: number
+  maxWaitTime?: number
+  totalConnectionsCreated?: number
+  totalConnectionsFailed?: number
+}
+
+/* ==================== 数据脱敏（/api/v1/masking，规则为启动配置只读） ==================== */
+
+/** 脱敏规则（后端 JsonFieldMasker.Rule，type 为 MaskType 枚举名） */
+export interface MaskingRule {
+  /** 脱敏类型（PHONE/ID_CARD/EMAIL/NAME/BANK_CARD/ADDRESS/IP_ADDRESS/CUSTOM） */
+  type: string
+  /** 自定义保留区间（仅 CUSTOM 类型有值，其余为 null） */
+  customRule?: string | null
+}
+
+/** 批量脱敏响应（后端 MaskingBatchData，documents 与入参结构一致、敏感字段已脱敏） */
+export interface MaskingBatchResult {
+  /** 实际使用的规则版本 */
+  version: string
+  /** 脱敏后的文档数组 */
+  documents: unknown[]
 }

@@ -24,9 +24,9 @@
 ### 1.2 功能特性
 
 - ✅ 文件上传（POST /api/v1/files/generic）
-- ✅ 文件删除（DELETE /api/v1/files）
-- ✅ 获取文件URL（GET /api/v1/files/url）
-- ✅ 检查文件存在（GET /api/v1/files/exists）
+- ✅ 文件删除（DELETE /api/v1/file/delete）
+- ✅ 获取文件URL（GET /api/v1/file/url）
+- ✅ 检查文件存在（GET /api/v1/file/exists）
 - ✅ 文件大小校验（10MB限制）
 - ✅ 文件类型校验（图片格式）
 - ✅ 自动携带认证Token
@@ -241,7 +241,7 @@ sex: 0 | 1
   "data": {
     "bucketName": "apex",
     "objectName": "AF/uuid.jpg",
-    "url": "/api/v1/files/content?fileName=AF/uuid.jpg",
+    "url": "/api/v1/file/content?fileName=AF/uuid.jpg",
     "expiresIn": 3600
   },
   "traceId": "abc123"

@@ -52,14 +52,16 @@
  * - 指标卡片：来自监控概览接口（真实数据，失败时回退占位符）
  * - 趋势图：ECharts 折线图（真实接口计数器聚合，演示窗口）
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
+import { useAppStore } from '@/stores/app'
 import { useUserStore } from '@/stores/user'
 import { getMonitorOverview } from '@/api/monitor'
 import { showError } from '@/utils/request'
 import type { MonitorOverview } from '@/types'
 
 const userStore = useUserStore()
+const appStore = useAppStore()
 
 /** 图表容器引用 */
 const chartRef = ref<HTMLElement>()
@@ -117,11 +119,13 @@ function percentOf(value: number | string): number {
 }
 
 /**
- * 渲染接口调用趋势折线图。
+ * 渲染接口调用趋势折线图（实例复用，仅首次 init）。
  */
 function renderChart(): void {
   if (!chartRef.value) return
-  chart = echarts.init(chartRef.value)
+  if (!chart) {
+    chart = echarts.init(chartRef.value)
+  }
   const isDark = document.documentElement.classList.contains('dark')
   const axisColor = isDark ? '#a3a6ad' : '#606266'
   chart.setOption({
@@ -174,6 +178,12 @@ onMounted(async () => {
   }
   renderChart()
 })
+
+// 主题切换后按新配色重绘
+watch(
+  () => appStore.theme,
+  () => renderChart(),
+)
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)

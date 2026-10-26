@@ -69,9 +69,24 @@
             <el-tag v-if="row.isDefault === 1" type="success" size="small">默认</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="140">
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+              {{ row.status === 1 ? '正常' : '停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="openDataDialog(row)">编辑</el-button>
+            <el-button
+              link
+              :type="row.status === 1 ? 'danger' : 'success'"
+              size="small"
+              @click="toggleDataStatus(row)"
+            >
+              {{ row.status === 1 ? '停用' : '启用' }}
+            </el-button>
             <el-button link type="danger" size="small" @click="removeData(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -105,7 +120,7 @@
 <script setup lang="ts">
 /**
  * 字典管理脚本
- * - 类型 CRUD + 启停；数据 CRUD + 默认标记
+ * - 类型 CRUD + 启停；数据 CRUD + 启停 + 默认标记
  * - 数据列表按当前类型编码加载（dictType 维度隔离）
  */
 import { onMounted, reactive, ref } from 'vue'
@@ -120,6 +135,7 @@ import {
   listDictData,
   listDictTypes,
   updateDictData,
+  updateDictDataStatus,
   updateDictType,
   updateDictTypeStatus,
   type DictDataPayload,
@@ -213,6 +229,18 @@ async function toggleType(row: DictType): Promise<void> {
     await updateDictTypeStatus(row.id, enable)
     ElMessage.success('状态已更新')
     fetchTypes()
+  } catch (error) {
+    showError(error)
+  }
+}
+
+/** 启停字典数据（后端 status: 0=停用 1=正常） */
+async function toggleDataStatus(row: DictData): Promise<void> {
+  const enable = row.status !== 1
+  try {
+    await updateDictDataStatus(row.id, enable)
+    ElMessage.success('状态已更新')
+    dataList.value = (await listDictData(dataDrawer.dictType)) || []
   } catch (error) {
     showError(error)
   }

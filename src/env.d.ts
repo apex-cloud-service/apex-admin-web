@@ -10,6 +10,8 @@ interface ImportMetaEnv {
   readonly VITE_API_PROXY_TARGET?: string
   /** 后端网关地址（生产环境，同域可留空） */
   readonly VITE_API_BASE_URL?: string
+  /** 是否启用登录租户标识输入（多租户部署设为 true，默认关闭） */
+  readonly VITE_AUTH_TENANT_ENABLED?: string
 }
 
 interface ImportMeta {

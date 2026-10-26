@@ -2,7 +2,7 @@
   管理后台主布局
   ------------------------------------------------------------------
   左侧：菜单侧边栏（基于路由表渲染，目录/菜单树形展示）
-  顶部：折叠开关、全局搜索、明暗主题切换、用户信息与登出
+  顶部：折叠开关、全局搜索、站内信未读提醒、明暗主题切换、用户信息与登出
   主体：<router-view> 渲染当前页面
 -->
 <template>
@@ -63,6 +63,19 @@
         <div class="header-right">
           <!-- 全局搜索 -->
           <GlobalSearch />
+          <!-- 站内信未读提醒 -->
+          <el-tooltip content="站内信" placement="bottom">
+            <el-badge
+              :value="unreadCount"
+              :hidden="unreadCount === 0"
+              :max="99"
+              class="notice-badge"
+            >
+              <el-icon class="notice-btn" @click="router.push('/office/message')">
+                <Bell />
+              </el-icon>
+            </el-badge>
+          </el-tooltip>
           <!-- 明暗主题切换 -->
           <el-tooltip :content="appStore.theme === 'dark' ? '切换浅色' : '切换深色'">
             <el-icon class="theme-btn" @click="toggleTheme">
@@ -100,13 +113,15 @@
  * - 菜单数据来源于路由表（动态路由由后端菜单驱动）
  * - 提供面包屑、全局搜索、主题切换、退出登录能力
  */
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter, type RouteRecordRaw } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
-import { Expand, Fold, Moon, Sunny } from '@element-plus/icons-vue'
+import { Bell, Expand, Fold, Moon, Sunny } from '@element-plus/icons-vue'
 import { useAppStore } from '@/stores/app'
 import { useUserStore } from '@/stores/user'
 import GlobalSearch from '@/components/GlobalSearch/index.vue'
+import { getUnreadCount } from '@/api/message'
+import { subscribeMessagePush } from '@/utils/message-socket'
 
 const route = useRoute()
 const router = useRouter()
@@ -132,6 +147,34 @@ const breadcrumbs = computed(() => {
 const avatarText = computed(() => {
   const name = userStore.identity?.nickName || userStore.identity?.username || 'A'
   return name.charAt(0).toUpperCase()
+})
+
+/** 站内信未读数：WebSocket 推送实时刷新，60 秒轮询兜底（失败静默避免打扰） */
+const unreadCount = ref(0)
+let unreadTimer: ReturnType<typeof setInterval> | undefined
+let unsubscribePush: (() => void) | undefined
+
+/** 拉取一次站内信未读数 */
+async function refreshUnread(): Promise<void> {
+  try {
+    unreadCount.value = await getUnreadCount()
+  } catch {
+    unreadCount.value = 0
+  }
+}
+
+onMounted(() => {
+  refreshUnread()
+  unreadTimer = setInterval(refreshUnread, 60000)
+  // 订阅站内信推送：收到新消息帧立即刷新角标
+  unsubscribePush = subscribeMessagePush(() => {
+    refreshUnread()
+  })
+})
+
+onBeforeUnmount(() => {
+  if (unreadTimer) clearInterval(unreadTimer)
+  unsubscribePush?.()
 })
 
 /**
@@ -248,6 +291,22 @@ function handleCommand(command: string): void {
 
 .collapse-btn:hover,
 .theme-btn:hover {
+  color: var(--el-color-primary);
+}
+
+/* 站内信铃铛 */
+.notice-badge {
+  display: flex;
+  align-items: center;
+}
+
+.notice-btn {
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--el-text-color-regular);
+}
+
+.notice-btn:hover {
   color: var(--el-color-primary);
 }
 

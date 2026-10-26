@@ -50,6 +50,9 @@
               <el-button type="primary" @click="saveJwtConfig" v-permission="'system:auth:config:jwt:edit'">
                 保存配置
               </el-button>
+              <el-button type="success" @click="jwtTestVisible = true" v-permission="'system:auth:config:jwt:edit'">
+                测试配置
+              </el-button>
             </el-form-item>
           </el-form>
         </el-card>
@@ -432,6 +435,48 @@
         <el-table-column prop="roleName" label="角色名称" />
       </el-table>
     </el-dialog>
+
+    <el-dialog v-model="jwtTestVisible" title="测试 JWT 配置" width="760px">
+      <el-alert
+        title="按当前已保存的 JWT 配置生成测试令牌并验证，用于确认配置正确性"
+        type="info"
+        :closable="false"
+        style="margin-bottom: 16px"
+      />
+      <el-form inline>
+        <el-form-item label="测试令牌有效期(秒)">
+          <el-input-number v-model="jwtTestExpiresIn" :min="60" :max="3600" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="jwtTestLoading" @click="handleJwtTest" v-permission="'system:auth:config:jwt:edit'">
+            执行测试
+          </el-button>
+        </el-form-item>
+      </el-form>
+      <template v-if="jwtTestResult">
+        <el-descriptions title="测试结果" :column="2" border size="small">
+          <el-descriptions-item label="校验通过">
+            <el-tag :type="jwtTestResult.isValid ? 'success' : 'danger'">
+              {{ jwtTestResult.isValid ? '通过' : '未通过' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="发行者">{{ jwtTestResult.issuer || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="签发时间">{{ jwtTestResult.issuedAt || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="过期时间">{{ jwtTestResult.expiresAt || '-' }}</el-descriptions-item>
+        </el-descriptions>
+        <el-form-item label="测试令牌" style="margin-top: 16px">
+          <el-input :model-value="jwtTestResult.token" type="textarea" :rows="4" readonly />
+        </el-form-item>
+        <el-form-item label="解码载荷">
+          <el-input
+            :model-value="jwtTestResult.decoded ? JSON.stringify(jwtTestResult.decoded, null, 2) : ''"
+            type="textarea"
+            :rows="4"
+            readonly
+          />
+        </el-form-item>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -465,6 +510,7 @@ import { Plus, Refresh, SwitchButton } from '@element-plus/icons-vue'
 import {
   getJwtConfig,
   updateJwtConfig,
+  testJwtConfig,
   listOAuth2Clients,
   createOAuth2Client,
   updateOAuth2Client,
@@ -483,6 +529,7 @@ import {
   getSecurityPolicy,
   updateSecurityPolicy,
   type JwtConfig,
+  type JwtTestResult,
   type OAuth2ClientConfig,
   type Permission,
   type PermissionRole,
@@ -692,6 +739,30 @@ async function saveJwtConfig() {
     ElMessage.success('保存成功')
   } catch (error) {
     ElMessage.error('保存失败')
+  }
+}
+
+/** JWT 配置测试弹窗可见性 */
+const jwtTestVisible = ref(false)
+/** JWT 配置测试进行中 */
+const jwtTestLoading = ref(false)
+/** 测试 Token 有效期（秒） */
+const jwtTestExpiresIn = ref(300)
+/** 测试结果 */
+const jwtTestResult = ref<JwtTestResult | null>(null)
+
+/**
+ * 测试 JWT 配置：按当前已保存配置生成并验证测试 Token
+ */
+async function handleJwtTest() {
+  jwtTestLoading.value = true
+  try {
+    jwtTestResult.value = await testJwtConfig({ expiresIn: jwtTestExpiresIn.value })
+    ElMessage.success('JWT 配置测试完成')
+  } catch (error) {
+    ElMessage.error('JWT 配置测试失败')
+  } finally {
+    jwtTestLoading.value = false
   }
 }
 

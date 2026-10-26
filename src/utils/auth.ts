@@ -7,9 +7,10 @@
  *   - apex.admin.token - 访问令牌（有效期较短，如 2 小时）
  *   - apex.admin.refresh-token - 刷新令牌（有效期较长，如 7 天）
  *   - apex.admin.identity - 用户身份信息（缓存用户信息和权限）
+ *   - apex.admin.tenant-id - 当前租户 ID（登录响应返回 tenantId 时记录）
  */
 
-import { TOKEN_KEY, REFRESH_TOKEN_KEY, IDENTITY_KEY } from '@/settings'
+import { TOKEN_KEY, REFRESH_TOKEN_KEY, IDENTITY_KEY, TENANT_ID_KEY } from '@/settings'
 import type { UserIdentity } from '@/types'
 
 /**
@@ -87,6 +88,31 @@ export function setIdentity(identity: UserIdentity): void {
 }
 
 /**
+ * 获取当前租户 ID
+ *
+ * @returns 租户 ID 字符串，未记录返回空字符串
+ */
+export function getTenantId(): string {
+  return localStorage.getItem(TENANT_ID_KEY) || ''
+}
+
+/**
+ * 保存当前租户 ID（登录响应返回 tenantId 时调用）
+ *
+ * @param tenantId 租户 ID
+ */
+export function setTenantId(tenantId: string): void {
+  localStorage.setItem(TENANT_ID_KEY, tenantId)
+}
+
+/**
+ * 移除当前租户 ID
+ */
+export function removeTenantId(): void {
+  localStorage.removeItem(TENANT_ID_KEY)
+}
+
+/**
  * 移除用户身份信息
  */
 export function removeIdentity(): void {
@@ -102,4 +128,5 @@ export function clearSession(): void {
   removeToken()
   removeRefreshToken()
   removeIdentity()
+  removeTenantId()
 }

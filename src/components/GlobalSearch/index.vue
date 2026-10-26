@@ -59,6 +59,12 @@
             @current-change="handleSearch"
           />
         </div>
+
+        <div class="rebuild-row">
+          <el-button size="small" :loading="rebuilding" @click="handleRebuildIndex">
+            重建搜索索引
+          </el-button>
+        </div>
       </div>
     </el-popover>
   </div>
@@ -73,7 +79,7 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
-import { search, type SearchResult } from '@/api/search'
+import { rebuildIndex, search, type SearchResult } from '@/api/search'
 import { ElMessage } from 'element-plus'
 
 /** ========== 组件状态 ========== */
@@ -93,6 +99,23 @@ const page = ref(1)
 const pageSize = ref(10)
 /** 结果总数 */
 const total = ref(0)
+/** 索引重建进行中 */
+const rebuilding = ref(false)
+
+/**
+ * 重建全文搜索索引（后端异步重建，完成后新数据可被检索）
+ */
+async function handleRebuildIndex(): Promise<void> {
+  rebuilding.value = true
+  try {
+    await rebuildIndex()
+    ElMessage.success('索引重建任务已提交')
+  } catch (error) {
+    ElMessage.error('索引重建提交失败')
+  } finally {
+    rebuilding.value = false
+  }
+}
 
 /** ========== 关键词防抖 ========== */
 
@@ -260,5 +283,12 @@ function getTagType(type: string): 'success' | 'warning' | 'info' | 'primary' | 
   border-top: 1px solid var(--el-border-color-lighter);
   display: flex;
   justify-content: center;
+}
+
+.rebuild-row {
+  padding: 8px 10px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

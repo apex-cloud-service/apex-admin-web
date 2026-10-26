@@ -249,7 +249,7 @@ export interface WorkflowTrend {
 
 /**
  * 流程实例查询参数
- * 
+ *
  * 用于查询流程实例列表的过滤和分页参数
  */
 export interface InstanceQueryParams {
@@ -264,40 +264,67 @@ export interface InstanceQueryParams {
 }
 
 /**
- * 工作流定义创建/更新参数
- * 
- * 用于创建或更新流程定义的数据结构
- */
-export interface WorkflowDefinitionPayload {
-  /** 流程编码 */
-  code: string
-  /** 流程名称 */
-  name: string
-  /** 流程描述 */
-  description?: string
-  /** 流程节点列表 */
-  nodes: WorkflowNode[]
-  /** 流程连线列表 */
-  edges: WorkflowEdge[]
+ * 待办任务
+ *
+ * 对应后端 WorkflowTaskDTO（/api/v1/workflows/tasks/pending），
+ * status 枚举与实例任务列表（WorkflowTask）不同
+ */export interface WorkflowPendingTask {
+  /** 任务 ID */
+  id: number
+  /** 所属流程实例 ID */
+  instanceId: number
+  /** 任务名称 */
+  taskName: string
+  /** 任务类型（USER_TASK/SERVICE_TASK） */
+  taskType?: string
+  /** 任务状态 */
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'REJECTED'
+  /** 办理人 ID */
+  assigneeId?: number
+  /** 办理人姓名 */
+  assigneeName?: string
+  /** 开始时间 */
+  startTime?: string
+  /** 完成时间 */
+  completedTime?: string
+  /** 审批意见 */
+  comment?: string
+  /** 所在节点 ID */
+  nodeId?: string
+  /** 创建时间 */
+  createTime?: string
 }
 
 /**
- * 任务完成参数
- * 
- * 用于审批通过或驳回任务
+ * 发起的流程实例
+ *
+ * 对应后端 ProcessInstance 领域对象（POST /api/v1/workflows/{code}/instances 响应），
+ * 新建实例 status 固定为 RUNNING
  */
-export interface CompleteTaskPayload {
-  /** 任务ID */
-  taskId: number
-  /** 审批结果：APPROVED-通过，REJECTED-拒绝 */
-  result: 'APPROVED' | 'REJECTED'
-  /** 审批意见 */
-  comment?: string
+export interface WorkflowStartedInstance {
+  /** 实例 ID */
+  id: number
+  /** 流程定义 ID */
+  workflowDefinitionId?: number
+  /** 业务主键 */
+  businessKey: string
+  /** 实例状态 */
+  status: string
+  /** 发起人 ID */
+  initiatorId?: number
+  /** 流程上下文 JSON 字符串 */
+  contextJson?: string
+  /** 开始时间 */
+  startTime?: string
+  /** 结束时间 */
+  endTime?: string
+  /** 创建时间 */
+  createTime?: string
 }
 
 /**
  * 任务回退参数
- * 
+ *
  * 用于将任务回退到指定节点
  */
 export interface RollbackTaskPayload {

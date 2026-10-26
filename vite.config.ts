@@ -41,10 +41,11 @@ export default defineConfig(({ mode }) => {
         target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
-      // 业务接口前缀
+      // 业务接口前缀（ws: true 以支持站内信 WebSocket /api/v1/messages/ws 升级）
       '/api': {
         target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
         changeOrigin: true,
+        ws: true,
       },
       // 管理后台接口前缀
       '/admin-api': {

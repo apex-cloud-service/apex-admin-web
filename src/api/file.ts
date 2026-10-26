@@ -3,12 +3,12 @@
  * ------------------------------------------------------------------
  * 文件上传、删除、URL获取等接口封装
  * 
- * 后端接口：
+ * 后端接口（apex-file-service）：
  * - POST /api/v1/files/generic - 通用文件上传（推荐）
- * - GET /api/v1/files/url - 获取文件访问URL
- * - DELETE /api/v1/files - 删除文件
- * - GET /api/v1/files/exists - 检查文件是否存在
- * - GET /api/v1/files/content - 读取文件内容
+ * - GET /api/v1/file/url - 获取文件访问URL
+ * - DELETE /api/v1/file/delete - 删除文件
+ * - GET /api/v1/file/exists - 检查文件是否存在
+ * - GET /api/v1/file/content - 读取文件内容
  */
 import { post, get, del } from '@/utils/request'
 import type { FileUploadResult } from '@/types'
@@ -49,7 +49,7 @@ export function uploadFile(file: File, sex: 0 | 1): Promise<FileUploadResult> {
  * ```
  */
 export function getFileUrl(bucketName: string, fileName: string): Promise<string> {
-  return get<string>('/api/v1/files/url', { bucketName, fileName })
+  return get<string>('/api/v1/file/url', { bucketName, fileName })
 }
 
 /**
@@ -68,7 +68,7 @@ export function getFileUrl(bucketName: string, fileName: string): Promise<string
  * ```
  */
 export function deleteFile(bucketName: string, fileName: string): Promise<boolean> {
-  return del<boolean>('/api/v1/files', { bucketName, fileName })
+  return del<boolean>('/api/v1/file/delete', { bucketName, fileName })
 }
 
 /**
@@ -85,7 +85,7 @@ export function deleteFile(bucketName: string, fileName: string): Promise<boolea
  * ```
  */
 export function checkFileExists(bucketName: string, fileName: string): Promise<boolean> {
-  return get<boolean>('/api/v1/files/exists', { bucketName, fileName })
+  return get<boolean>('/api/v1/file/exists', { bucketName, fileName })
 }
 
 /**
@@ -102,5 +102,5 @@ export function checkFileExists(bucketName: string, fileName: string): Promise<b
  * ```
  */
 export function getFileContent(fileName: string): string {
-  return `/api/v1/files/content?fileName=${encodeURIComponent(fileName)}`
+  return `/api/v1/file/content?fileName=${encodeURIComponent(fileName)}`
 }

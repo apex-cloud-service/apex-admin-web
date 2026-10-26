@@ -23,6 +23,7 @@
         <el-button :icon="Refresh" @click="reset">重置</el-button>
         <!-- 新增用户：按钮级权限示例 -->
         <el-button v-permission="'staff:manage'" type="success" :icon="Plus" @click="openCreate">新增</el-button>
+        <el-button :icon="Download" :loading="exporting" @click="handleExport">导出Excel</el-button>
       </el-form-item>
     </el-form>
 
@@ -136,12 +137,13 @@
  */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Refresh, Search } from '@element-plus/icons-vue'
+import { Download, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import Pagination from '@/components/Pagination.vue'
 import { showError } from '@/utils/request'
 import {
   assignUserRoles,
   createUser,
+  exportUsers,
   getUserDetail,
   listStaffRoles,
   listUsers,
@@ -153,6 +155,8 @@ import type { AdminUser, StaffRole } from '@/types'
 
 /** 加载状态 */
 const loading = ref(false)
+/** 导出进行中 */
+const exporting = ref(false)
 /** 保存状态 */
 const saving = ref(false)
 /** 用户列表 */
@@ -239,6 +243,25 @@ function onPageChange(page: number, size: number): void {
   query.page = page
   query.size = size
   fetchList()
+}
+
+/** 导出用户列表 Excel（后端固定返回最近创建的前 100 条） */
+async function handleExport(): Promise<void> {
+  exporting.value = true
+  try {
+    const { blob, filename } = await exportUsers()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    showError(error, '导出失败')
+  } finally {
+    exporting.value = false
+  }
 }
 
 /** 打开新增弹窗 */

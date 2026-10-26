@@ -54,6 +54,10 @@
       </el-form-item>
     </el-form>
 
+    <div v-if="logTotal !== null" class="total-bar">
+      共 {{ logTotal }} 条日志，当前展示 {{ logList.length }} 条
+    </div>
+
     <el-table v-loading="loading" :data="logList" border stripe>
       <el-table-column label="时间" prop="timestamp" width="180" />
       <el-table-column label="级别" prop="level" width="80">
@@ -97,7 +101,7 @@
  */
 import { onMounted, reactive, ref } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
-import { queryRuntimeLogs, type RuntimeLog } from '@/api/log'
+import { countRuntimeLogs, queryRuntimeLogs, type RuntimeLog } from '@/api/log'
 import { showError } from '@/utils/request'
 
 /** ========== 查询状态 ========== */
@@ -106,6 +110,8 @@ import { showError } from '@/utils/request'
 const loading = ref(false)
 /** 日志列表（无分页，一次返回） */
 const logList = ref<RuntimeLog[]>([])
+/** 符合条件的日志总数（列表按 limit 截断时用于提示全量规模） */
+const logTotal = ref<number | null>(null)
 /** 时间范围（yyyy-MM-dd HH:mm:ss 字符串） */
 const timeRange = ref<string[]>([])
 /** 查询条件（级别/Logger/关键词/条数上限） */
@@ -146,6 +152,17 @@ async function fetchList(): Promise<void> {
       endTime: timeRange.value?.[1],
     })
     logList.value = data || []
+    countRuntimeLogs({
+      startTime: timeRange.value?.[0],
+      endTime: timeRange.value?.[1],
+      level: query.level || undefined,
+    })
+      .then((count) => {
+        logTotal.value = count
+      })
+      .catch(() => {
+        logTotal.value = null
+      })
   } catch (error) {
     showError(error)
   } finally {
@@ -212,5 +229,11 @@ function formatDateTime(date: Date): string {
 <style scoped>
 .search-form {
   margin-bottom: 8px;
+}
+
+.total-bar {
+  margin-bottom: 8px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
 }
 </style>

@@ -1,7 +1,9 @@
 /**
  * 代码生成器 API
  * ------------------------------------------------------------------
- * 提供数据源管理、表结构扫描、代码生成配置、模板管理、生成历史等功能
+ * 提供数据源管理、表结构扫描、代码生成配置、代码生成与生成历史查询。
+ * 路径已与后端 GeneratorAdminRouter（GeneratorAdminRouter.java）逐一对齐；
+ * 代码预览、模板管理、生成历史回滚后端未提供对应端点，不在本模块封装。
  */
 import { del, get, post, put } from '@/utils/request'
 import type { PageQuery, PageResponse } from '@/types'
@@ -69,42 +71,30 @@ export interface GeneratorConfig {
 }
 
 /**
- * 代码生成请求参数
+ * 生成产物文件（后端 GeneratedFileDTO）
  */
-export interface GenerateCodeRequest {
-  configId: number
-  tables: string[]
-  outputPath?: string
-  enableSwagger?: boolean
-  enableLombok?: boolean
-  enableMybatisPlus?: boolean
+export interface GeneratedFile {
+  fileType: string
+  filePath: string
+  fileName: string
+  fileSize?: number
+  success?: boolean
+  errorMessage?: string
 }
 
 /**
- * 代码生成模板
- */
-export interface GeneratorTemplate {
-  id?: number
-  name: string
-  type: 'entity' | 'mapper' | 'service' | 'controller' | 'vue' | 'api'
-  content: string
-  description?: string
-  status: number
-  createTime?: string
-}
-
-/**
- * 代码生成历史记录
+ * 代码生成历史记录（后端 GenHistoryDTO，generatedFiles 为文件路径串）
  */
 export interface GenerateHistory {
   id: number
   configId: number
-  tableName: string
-  generatedFiles: string[]
-  status: 'success' | 'failed'
+  generatedFiles?: string
+  outputPath?: string
+  status?: string
   errorMessage?: string
-  createTime: string
-  createBy: string
+  operatorId?: number
+  createTime?: string
+  updateTime?: string
 }
 
 /**
@@ -136,10 +126,10 @@ export function deleteDataSource(id: number): Promise<void> {
 }
 
 /**
- * 测试数据源连接
+ * 测试已保存数据源的连接（按数据源 ID）
  */
-export function testDataSourceConnection(payload: Omit<DataSource, 'id' | 'status' | 'createTime' | 'updateTime'>): Promise<{ success: boolean; message: string }> {
-  return post<{ success: boolean; message: string }>('/admin-api/v1/generator/datasources/test', payload)
+export function testDataSourceConnection(id: number): Promise<boolean> {
+  return post<boolean>(`/admin-api/v1/generator/datasources/${id}/test`)
 }
 
 /**
@@ -185,57 +175,15 @@ export function deleteGeneratorConfig(id: number): Promise<void> {
 }
 
 /**
- * 执行代码生成
+ * 按配置执行代码生成（后端按配置生成全部文件）
  */
-export function generateCode(payload: GenerateCodeRequest): Promise<{ files: string[] }> {
-  return post<{ files: string[] }>('/admin-api/v1/generator/generate', payload)
+export function generateCode(configId: number): Promise<GeneratedFile[]> {
+  return post<GeneratedFile[]>(`/admin-api/v1/generator/configs/${configId}/generate`)
 }
 
 /**
- * 预览生成的代码
+ * 分页查询指定配置的生成历史
  */
-export function previewCode(configId: number, tableName: string): Promise<Record<string, string>> {
-  return get<Record<string, string>>(`/admin-api/v1/generator/preview/${configId}/${tableName}`)
-}
-
-/**
- * 查询模板列表
- */
-export function listTemplates(): Promise<GeneratorTemplate[]> {
-  return get<GeneratorTemplate[]>('/admin-api/v1/generator/templates')
-}
-
-/**
- * 创建代码模板
- */
-export function createTemplate(payload: Omit<GeneratorTemplate, 'id' | 'createTime'>): Promise<void> {
-  return post<void>('/admin-api/v1/generator/templates', payload)
-}
-
-/**
- * 更新代码模板
- */
-export function updateTemplate(id: number, payload: Omit<GeneratorTemplate, 'id' | 'createTime'>): Promise<void> {
-  return put<void>(`/admin-api/v1/generator/templates/${id}`, payload)
-}
-
-/**
- * 删除代码模板
- */
-export function deleteTemplate(id: number): Promise<void> {
-  return del<void>(`/admin-api/v1/generator/templates/${id}`)
-}
-
-/**
- * 分页查询生成历史记录
- */
-export function listGenerateHistory(query: PageQuery & { configId?: number }): Promise<PageResponse<GenerateHistory>> {
-  return get<PageResponse<GenerateHistory>>('/admin-api/v1/generator/history', query as unknown as Record<string, unknown>)
-}
-
-/**
- * 回滚代码生成
- */
-export function rollbackGenerate(historyId: number): Promise<void> {
-  return post<void>(`/admin-api/v1/generator/history/${historyId}/rollback`)
+export function listGenerateHistory(configId: number, query: PageQuery): Promise<PageResponse<GenerateHistory>> {
+  return get<PageResponse<GenerateHistory>>(`/admin-api/v1/generator/configs/${configId}/history`, query as unknown as Record<string, unknown>)
 }

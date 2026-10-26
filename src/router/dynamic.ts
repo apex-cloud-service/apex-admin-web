@@ -31,6 +31,7 @@ const VIEW_REGISTRY: Record<string, () => Promise<unknown>> = {
   'system/generator/index': () => import('@/views/system/generator/index.vue'),
   'system/auth/index': () => import('@/views/system/auth/index.vue'),
   'system/sso/index': () => import('@/views/system/sso/index.vue'),
+  'system/masking/index': () => import('@/views/system/masking/index.vue'),
   'monitor/loginlog/index': () => import('@/views/monitor/loginlog/index.vue'),
   'monitor/audit/index': () => import('@/views/monitor/audit/index.vue'),
   'monitor/api-call-log/index': () => import('@/views/monitor/api-call-log/index.vue'),

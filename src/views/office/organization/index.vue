@@ -1,466 +1,719 @@
 <!--
-  办公平台组织架构管理页面
+  组织架构同步页面
   ------------------------------------------------------------------
-  功能：同步办公平台组织架构、部门管理、员工管理
-  
-  权限：
-    - office:organization:view - 查看组织架构
-    - office:organization:sync - 同步组织架构
+  管理办公平台（飞书/钉钉/企业微信）同步到本系统的组织数据：
+  - 组织数据：同步部门与员工列表（员工可按部门过滤）
+  - 同步历史：每次同步的执行记录（来源/状态/耗时/数量）
+  - 同步操作：按平台触发部门或成员同步，跟踪同步任务与平台映射
 -->
 <template>
   <div class="organization-container">
-    <el-card>
+    <el-card shadow="never">
       <template #header>
         <div class="card-header">
           <span>组织架构同步</span>
-          <el-button type="primary" @click="handleSyncAll" v-permission="'office:organization:sync'">
-            <el-icon><Refresh /></el-icon>
-            全量同步
-          </el-button>
         </div>
       </template>
 
-      <el-row :gutter="20">
-        <el-col :span="8" v-for="platform in platforms" :key="platform">
-          <el-card shadow="hover" class="platform-card">
-            <template #header>
-              <div class="platform-header">
-                <span class="platform-title">{{ getPlatformName(platform) }}</span>
-                <el-tag :type="syncStatus[platform]?.lastSuccess ? 'success' : 'warning'">
-                  {{ syncStatus[platform]?.syncing ? '同步中' : '已就绪' }}
-                </el-tag>
-              </div>
-            </template>
-
-            <div class="sync-info" v-loading="loading">
-              <el-descriptions :column="1" border>
-                <el-descriptions-item label="部门数量">
-                  <el-tag type="primary">{{ syncStatus[platform]?.deptCount || 0 }}</el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item label="成员数量">
-                  <el-tag type="success">{{ syncStatus[platform]?.memberCount || 0 }}</el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item label="同步进度">
-                  <el-progress
-                    :percentage="syncStatus[platform]?.progress || 0"
-                    :status="syncStatus[platform]?.syncing ? 'success' : undefined"
-                  />
-                </el-descriptions-item>
-                <el-descriptions-item label="最近同步">
-                  {{ syncStatus[platform]?.lastFinishTime || '-' }}
-                </el-descriptions-item>
-                <el-descriptions-item label="同步结果" v-if="syncStatus[platform]?.lastFinishTime">
-                  <el-tag :type="syncStatus[platform]?.lastSuccess ? 'success' : 'danger'">
-                    {{ syncStatus[platform]?.lastSuccess ? '成功' : '失败' }}
-                  </el-tag>
-                  <span v-if="!syncStatus[platform]?.lastSuccess" style="margin-left: 8px; color: #f56c6c">
-                    {{ syncStatus[platform]?.lastError }}
-                  </span>
-                </el-descriptions-item>
-                <el-descriptions-item label="变更统计" v-if="syncStatus[platform]?.lastFinishTime && syncStatus[platform]?.lastSuccess">
-                  <el-space>
-                    <el-tag size="small" type="success">新增 {{ syncStatus[platform]?.addedCount || 0 }}</el-tag>
-                    <el-tag size="small" type="warning">更新 {{ syncStatus[platform]?.updatedCount || 0 }}</el-tag>
-                    <el-tag size="small" type="info">删除 {{ syncStatus[platform]?.removedCount || 0 }}</el-tag>
-                  </el-space>
-                </el-descriptions-item>
-              </el-descriptions>
-
-              <div class="sync-actions">
-                <el-button
-                  type="primary"
-                  @click="handleSync(platform, false)"
-                  :loading="syncStatus[platform]?.syncing"
-                  :disabled="syncStatus[platform]?.syncing"
-                  v-permission="'office:organization:sync'"
-                >
-                  <el-icon><Refresh /></el-icon>
-                  增量同步
-                </el-button>
-                <el-button
-                  type="warning"
-                  @click="handleSync(platform, true)"
-                  :loading="syncStatus[platform]?.syncing"
-                  :disabled="syncStatus[platform]?.syncing"
-                  v-permission="'office:organization:sync:full'"
-                >
-                  <el-icon><RefreshRight /></el-icon>
-                  强制全量
-                </el-button>
-                <el-button
-                  @click="handleViewDetails(platform)"
-                  v-permission="'office:organization:view'"
-                >
-                  <el-icon><View /></el-icon>
-                  查看详情
-                </el-button>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </el-card>
-
-    <el-card style="margin-top: 20px">
-      <template #header>
-        <span>部门与成员管理</span>
-      </template>
-
-      <el-tabs v-model="activeTab" type="card">
-        <el-tab-pane label="部门列表" name="departments">
+      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+        <!-- 组织数据 -->
+        <el-tab-pane label="组织数据" name="org">
+          <el-divider content-position="left">部门</el-divider>
           <div class="filter-toolbar">
-            <el-form :inline="true">
-              <el-form-item label="平台">
-                <el-select v-model="deptQuery.platform" placeholder="请选择平台" clearable>
-                  <el-option label="飞书" value="FEISHU" />
-                  <el-option label="钉钉" value="DINGTALK" />
-                  <el-option label="企业微信" value="WECOM" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="部门名称">
-                <el-input v-model="deptQuery.keyword" placeholder="请输入部门名称" clearable />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="loadDepartments">查询</el-button>
-                <el-button @click="resetDeptQuery">重置</el-button>
-              </el-form-item>
-            </el-form>
+            <el-select
+              v-model="deptStatusFilter"
+              placeholder="状态过滤"
+              clearable
+              style="width: 160px"
+              @change="onDeptFilterChange"
+            >
+              <el-option label="正常" value="ACTIVE" />
+              <el-option label="停用" value="INACTIVE" />
+            </el-select>
+            <el-button type="primary" @click="openDeptDialog()">新增部门</el-button>
           </div>
-
-          <el-table :data="departments" border stripe v-loading="deptLoading" row-key="id" :tree-props="{ children: 'children' }">
-            <el-table-column prop="name" label="部门名称" min-width="200" />
-            <el-table-column prop="platform" label="平台" width="100">
+          <el-table
+            v-loading="deptLoading"
+            :data="departments"
+            border
+            stripe
+            highlight-current-row
+            @row-click="handleDeptRowClick"
+          >
+            <el-table-column prop="deptCode" label="部门编码" width="160" />
+            <el-table-column prop="deptName" label="部门名称" min-width="180" />
+            <el-table-column prop="deptLevel" label="层级" width="80" />
+            <el-table-column prop="leaderName" label="负责人" width="120" />
+            <el-table-column prop="syncSource" label="同步来源" width="110">
+              <template #default="{ row }">{{ platformName(row.syncSource) }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100" />
+            <el-table-column prop="externalId" label="平台侧ID" min-width="140" show-overflow-tooltip />
+            <el-table-column label="操作" width="140" fixed="right">
               <template #default="{ row }">
-                <el-tag>{{ getPlatformName(row.platform) }}</el-tag>
+                <el-button link type="primary" @click.stop="openDeptDialog(row)">编辑</el-button>
+                <el-button link type="danger" @click.stop="handleDeleteDept(row)">删除</el-button>
               </template>
             </el-table-column>
-            <el-table-column prop="externalId" label="外部ID" width="200" show-overflow-tooltip />
-            <el-table-column prop="memberCount" label="成员数" width="100" />
-            <el-table-column prop="parentName" label="上级部门" min-width="150" show-overflow-tooltip />
-            <el-table-column prop="order" label="排序" width="80" />
-            <el-table-column prop="syncTime" label="同步时间" width="180" />
           </el-table>
-          <el-pagination
-            v-model:current-page="deptQuery.page"
-            v-model:page-size="deptQuery.size"
-            :total="deptTotal"
-            :page-sizes="[10, 20, 50, 100]"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="loadDepartments"
-            @current-change="loadDepartments"
-          />
+          <Pagination class="pager" :total="deptTotal" @change="onDeptPageChange" />
+
+          <el-divider content-position="left">员工{{ employeeDeptName ? `（${employeeDeptName}）` : '' }}</el-divider>
+          <div class="filter-toolbar">
+            <el-select
+              v-model="employeeDeptId"
+              placeholder="按部门过滤"
+              clearable
+              filterable
+              style="width: 220px"
+              @change="onEmployeeFilterChange"
+            >
+              <el-option
+                v-for="dept in deptOptions"
+                :key="dept.id"
+                :label="dept.deptName"
+                :value="dept.id"
+              />
+            </el-select>
+          </div>
+          <el-table v-loading="employeeLoading" :data="employees" border stripe>
+            <el-table-column prop="employeeCode" label="工号" width="140" />
+            <el-table-column prop="employeeName" label="姓名" width="120" />
+            <el-table-column prop="deptName" label="部门" min-width="140" />
+            <el-table-column prop="position" label="职位" width="120" />
+            <el-table-column prop="mobile" label="手机号" width="140" />
+            <el-table-column prop="email" label="邮箱" min-width="160" show-overflow-tooltip />
+            <el-table-column label="绑定用户ID" width="110">
+              <template #default="{ row }">{{ row.userId ?? '-' }}</template>
+            </el-table-column>
+            <el-table-column prop="syncSource" label="同步来源" width="110">
+              <template #default="{ row }">{{ platformName(row.syncSource) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="90" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="showEmployeeDetail(row)">详情</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <Pagination class="pager" :total="employeeTotal" @change="onEmployeePageChange" />
         </el-tab-pane>
 
-        <el-tab-pane label="成员列表" name="members">
+        <!-- 同步历史 -->
+        <el-tab-pane label="同步历史" name="history">
           <div class="filter-toolbar">
-            <el-form :inline="true">
-              <el-form-item label="平台">
-                <el-select v-model="memberQuery.platform" placeholder="请选择平台" clearable>
-                  <el-option label="飞书" value="FEISHU" />
-                  <el-option label="钉钉" value="DINGTALK" />
-                  <el-option label="企业微信" value="WECOM" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="姓名">
-                <el-input v-model="memberQuery.keyword" placeholder="请输入姓名" clearable />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="loadMembers">查询</el-button>
-                <el-button @click="resetMemberQuery">重置</el-button>
-              </el-form-item>
-            </el-form>
+            <el-select
+              v-model="historySourceFilter"
+              placeholder="同步来源"
+              clearable
+              style="width: 160px"
+              @change="onHistoryFilterChange"
+            >
+              <el-option v-for="(name, key) in PLATFORM_NAMES" :key="key" :label="name" :value="key" />
+            </el-select>
+            <el-select
+              v-model="historyStatusFilter"
+              placeholder="同步状态"
+              clearable
+              style="width: 160px"
+              @change="onHistoryFilterChange"
+            >
+              <el-option label="成功" value="SUCCESS" />
+              <el-option label="失败" value="FAILED" />
+              <el-option label="进行中" value="RUNNING" />
+            </el-select>
           </div>
-
-          <el-table :data="members" border stripe v-loading="memberLoading">
-            <el-table-column prop="name" label="姓名" width="120" />
-            <el-table-column prop="platform" label="平台" width="100">
-              <template #default="{ row }">
-                <el-tag>{{ getPlatformName(row.platform) }}</el-tag>
-              </template>
+          <el-table v-loading="historyLoading" :data="syncHistories" border stripe>
+            <el-table-column prop="syncType" label="同步对象" width="120" />
+            <el-table-column label="来源" width="110">
+              <template #default="{ row }">{{ platformName(row.syncSource) }}</template>
             </el-table-column>
-            <el-table-column prop="externalId" label="外部ID" width="200" show-overflow-tooltip />
-            <el-table-column prop="mobile" label="手机号" width="130" />
-            <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
-            <el-table-column prop="departments" label="所属部门" min-width="200" show-overflow-tooltip>
+            <el-table-column label="状态" width="110">
               <template #default="{ row }">
-                <el-tag v-for="(dept, index) in row.departments" :key="index" size="small" style="margin: 2px">
-                  {{ dept }}
+                <el-tag :type="syncStatusTagType(row.syncStatus)" size="small">
+                  {{ row.syncStatus }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="isActive" label="状态" width="80">
-              <template #default="{ row }">
-                <el-tag :type="row.isActive ? 'success' : 'info'">
-                  {{ row.isActive ? '在职' : '离职' }}
-                </el-tag>
-              </template>
+            <el-table-column label="开始时间" width="180">
+              <template #default="{ row }">{{ formatTime(row.startTime) }}</template>
             </el-table-column>
-            <el-table-column prop="syncTime" label="同步时间" width="180" />
-          </el-table>
-          <el-pagination
-            v-model:current-page="memberQuery.page"
-            v-model:page-size="memberQuery.size"
-            :total="memberTotal"
-            :page-sizes="[10, 20, 50, 100]"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="loadMembers"
-            @current-change="loadMembers"
-          />
-        </el-tab-pane>
-
-        <el-tab-pane label="同步日志" name="logs">
-          <el-table :data="syncLogs" border stripe v-loading="logLoading">
-            <el-table-column prop="platform" label="平台" width="100">
-              <template #default="{ row }">
-                <el-tag>{{ getPlatformName(row.platform) }}</el-tag>
-              </template>
+            <el-table-column label="耗时" width="100">
+              <template #default="{ row }">{{ row.duration != null ? `${row.duration}s` : '-' }}</template>
             </el-table-column>
-            <el-table-column prop="syncType" label="同步类型" width="100">
-              <template #default="{ row }">
-                <el-tag :type="row.syncType === 'full' ? 'warning' : 'primary'">
-                  {{ row.syncType === 'full' ? '全量' : '增量' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="row.status === 'success' ? 'success' : row.status === 'failed' ? 'danger' : 'info'">
-                  {{ row.status === 'success' ? '成功' : row.status === 'failed' ? '失败' : '进行中' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="addedCount" label="新增" width="80" />
-            <el-table-column prop="updatedCount" label="更新" width="80" />
-            <el-table-column prop="removedCount" label="删除" width="80" />
-            <el-table-column prop="duration" label="耗时(秒)" width="100" />
+            <el-table-column prop="deptCount" label="部门数" width="90" />
+            <el-table-column prop="employeeCount" label="员工数" width="90" />
             <el-table-column prop="errorMessage" label="错误信息" min-width="200" show-overflow-tooltip />
-            <el-table-column prop="startTime" label="开始时间" width="180" />
-            <el-table-column prop="endTime" label="结束时间" width="180" />
           </el-table>
-          <el-pagination
-            v-model:current-page="logQuery.page"
-            v-model:page-size="logQuery.size"
-            :total="logTotal"
-            :page-sizes="[10, 20, 50]"
-            layout="total, sizes, prev, pager, next"
-            @size-change="loadSyncLogs"
-            @current-change="loadSyncLogs"
-          />
+          <Pagination class="pager" :total="historyTotal" @change="onHistoryPageChange" />
+        </el-tab-pane>
+
+        <!-- 同步操作 -->
+        <el-tab-pane label="同步操作" name="sync">
+          <el-divider content-position="left">触发同步</el-divider>
+          <el-form :inline="true" class="sync-form">
+            <el-form-item label="平台">
+              <el-select v-model="syncForm.platform" style="width: 160px">
+                <el-option v-for="(name, key) in PLATFORM_NAMES" :key="key" :label="name" :value="key" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="同步对象">
+              <el-radio-group v-model="syncForm.syncType">
+                <el-radio-button value="DEPARTMENT">部门</el-radio-button>
+                <el-radio-button value="MEMBER">成员</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="全量同步">
+              <el-switch v-model="syncForm.fullSync" />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" :loading="syncing" @click="handleTriggerSync">
+                触发同步
+              </el-button>
+            </el-form-item>
+          </el-form>
+
+          <el-divider content-position="left">同步任务</el-divider>
+          <div class="filter-toolbar">
+            <el-select
+              v-model="taskPlatformFilter"
+              placeholder="平台过滤"
+              clearable
+              style="width: 160px"
+              @change="onTaskFilterChange"
+            >
+              <el-option v-for="(name, key) in PLATFORM_NAMES" :key="key" :label="name" :value="key" />
+            </el-select>
+          </div>
+          <el-table v-loading="taskLoading" :data="syncTasks" border stripe>
+            <el-table-column prop="id" label="任务ID" width="100" />
+            <el-table-column label="平台" width="120">
+              <template #default="{ row }">{{ platformName(row.platform) }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="110">
+              <template #default="{ row }">
+                <el-tag :type="syncStatusTagType(row.state)" size="small">{{ row.state }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="cursor" label="游标" min-width="140" show-overflow-tooltip />
+            <el-table-column prop="failureMessage" label="失败信息" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="version" label="版本" width="80" />
+          </el-table>
+          <Pagination class="pager" :total="taskTotal" @change="onTaskPageChange" />
+
+          <el-divider content-position="left">平台映射</el-divider>
+          <div class="filter-toolbar">
+            <el-select
+              v-model="mappingPlatformFilter"
+              placeholder="平台过滤"
+              clearable
+              style="width: 160px"
+              @change="loadMappings"
+            >
+              <el-option v-for="(name, key) in PLATFORM_NAMES" :key="key" :label="name" :value="key" />
+            </el-select>
+          </div>
+          <el-table v-loading="mappingLoading" :data="mappings" border stripe>
+            <el-table-column prop="id" label="ID" width="90" />
+            <el-table-column label="平台" width="120">
+              <template #default="{ row }">{{ platformName(row.platform) }}</template>
+            </el-table-column>
+            <el-table-column prop="externalOrgId" label="平台部门ID" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="apexDeptId" label="本地部门ID" width="120" />
+            <el-table-column prop="externalUserId" label="平台成员ID" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="apexUserId" label="本地用户ID" width="120" />
+            <el-table-column label="更新时间" width="180">
+              <template #default="{ row }">{{ formatTime(row.updatedAt) }}</template>
+            </el-table-column>
+          </el-table>
         </el-tab-pane>
       </el-tabs>
+
+      <!-- 部门编辑对话框 -->
+      <el-dialog
+        v-model="deptDialog.visible"
+        :title="deptDialog.id ? '编辑部门' : '新增部门'"
+        width="560px"
+      >
+        <el-form ref="deptFormRef" :model="deptDialog.form" :rules="deptRules" label-width="100px">
+          <el-form-item label="部门编码" prop="deptCode">
+            <el-input
+              v-model="deptDialog.form.deptCode"
+              :disabled="!!deptDialog.id"
+              placeholder="租户内唯一，如 D-0001"
+            />
+          </el-form-item>
+          <el-form-item label="部门名称" prop="deptName">
+            <el-input v-model="deptDialog.form.deptName" placeholder="请输入部门名称" />
+          </el-form-item>
+          <el-form-item label="上级部门" prop="parentId">
+            <el-select v-model="deptDialog.form.parentId" style="width: 100%">
+              <el-option label="根部门" :value="0" />
+              <el-option
+                v-for="dept in parentOptions"
+                :key="dept.id"
+                :label="dept.deptName"
+                :value="dept.id"
+                :disabled="dept.id === deptDialog.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="排序号" prop="sortOrder">
+            <el-input-number v-model="deptDialog.form.sortOrder" :min="0" :controls="false" />
+          </el-form-item>
+          <el-form-item label="负责人" prop="leaderName">
+            <el-input v-model="deptDialog.form.leaderName" placeholder="负责人姓名（选填）" />
+          </el-form-item>
+          <el-form-item label="联系电话" prop="phone">
+            <el-input v-model="deptDialog.form.phone" placeholder="联系电话（选填）" />
+          </el-form-item>
+          <el-form-item label="邮箱" prop="email">
+            <el-input v-model="deptDialog.form.email" placeholder="邮箱（选填）" />
+          </el-form-item>
+          <el-form-item label="状态" prop="status">
+            <el-radio-group v-model="deptDialog.form.status">
+              <el-radio value="ACTIVE">正常</el-radio>
+              <el-radio value="INACTIVE">停用</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="deptDialog.visible = false">取消</el-button>
+          <el-button type="primary" :loading="deptSaving" @click="submitDept">确定</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- 员工详情抽屉 -->
+      <el-drawer v-model="employeeDetailVisible" title="员工详情" size="440px">
+        <el-descriptions v-if="employeeDetail" :column="1" border>
+          <el-descriptions-item label="工号">{{ employeeDetail.employeeCode }}</el-descriptions-item>
+          <el-descriptions-item label="姓名">{{ employeeDetail.employeeName }}</el-descriptions-item>
+          <el-descriptions-item label="部门">{{ employeeDetail.deptName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="职位">{{ employeeDetail.position || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="职务">{{ employeeDetail.jobTitle || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="手机号">{{ employeeDetail.mobile || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="邮箱">{{ employeeDetail.email || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="性别">{{ employeeDetail.gender || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="生日">{{ employeeDetail.birthday || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="入职日期">{{ employeeDetail.hireDate || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="绑定用户ID">{{ employeeDetail.userId ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item label="同步来源">
+            {{ platformName(employeeDetail.syncSource) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="平台侧ID">{{ employeeDetail.externalId || '-' }}</el-descriptions-item>
+        </el-descriptions>
+      </el-drawer>
     </el-card>
   </div>
 </template>
 
-/**
- * 组织架构同步管理页面
- * ------------------------------------------------------------------
- * 功能说明:
- * 1. 多平台组织架构同步 - 支持飞书、钉钉、企业微信三大平台
- * 2. 同步状态监控 - 实时展示同步进度和统计信息
- * 3. 增量/全量同步 - 支持增量更新和强制全量同步两种模式
- * 4. 部门成员管理 - 查看已同步的部门和成员列表
- * 5. 同步日志查询 - 查看历史同步记录和错误信息
- * 
- * 权限要求:
- * - office:organization:view - 查看权限(必需)
- * - office:organization:sync - 执行同步操作
- * - office:organization:sync:full - 执行强制全量同步
- * 
- * @author system
- * @date 2024
- */
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, RefreshRight, View } from '@element-plus/icons-vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import Pagination from '@/components/Pagination.vue'
+import { showError } from '@/utils/request'
 import {
-  getSyncStatus,
-  triggerSync,
-  getPlatformName,
-  type OfficePlatform,
-  type OfficeSyncStatus,
-} from '@/api/office'
-import type { PageQuery } from '@/types'
-
-// 支持的办公平台列表
-const platforms: OfficePlatform[] = ['FEISHU', 'DINGTALK', 'WECOM']
-// 加载状态
-const loading = ref(false)
-// 各平台的同步状态
-const syncStatus = reactive<Record<string, OfficeSyncStatus>>({})
+  PLATFORM_NAMES,
+  createOrgDepartment,
+  deleteOrgDepartment,
+  getOrgEmployee,
+  listOrgDepartments,
+  listOrgEmployees,
+  listOrgMappings,
+  listOrgSyncHistory,
+  listOrgSyncTasks,
+  triggerOrgSync,
+  updateOrgDepartment,
+  type OrgDepartmentPayload,
+} from '@/api/office-new'
+import type { OrgSyncRequest } from '@/types'
+import type { OrganizationMapping, OrgDepartment, OrgEmployee, OrgSyncHistory, OrgSyncTask } from '@/types'
 
 // 当前激活的标签页
-const activeTab = ref('departments')
+const activeTab = ref('org')
+
+// ==================== 部门 ====================
+const deptLoading = ref(false)
+const departments = ref<OrgDepartment[]>([])
+const deptPage = ref(1)
+const deptSize = ref(10)
+const deptTotal = ref(0)
+const deptStatusFilter = ref<string>()
+const deptOptions = ref<OrgDepartment[]>([])
+
+// ==================== 员工 ====================
+const employeeLoading = ref(false)
+const employees = ref<OrgEmployee[]>([])
+const employeePage = ref(1)
+const employeeSize = ref(10)
+const employeeTotal = ref(0)
+const employeeDeptId = ref<number>()
+const employeeDeptName = ref('')
+
+// ==================== 同步历史 ====================
+const historyLoading = ref(false)
+const syncHistories = ref<OrgSyncHistory[]>([])
+const historyPage = ref(1)
+const historySize = ref(10)
+const historyTotal = ref(0)
+const historySourceFilter = ref<string>()
+const historyStatusFilter = ref<string>()
+
+// ==================== 同步操作 ====================
+const syncing = ref(false)
+const syncForm = reactive<OrgSyncRequest>({
+  platform: 'FEISHU',
+  syncType: 'DEPARTMENT',
+  fullSync: false,
+})
+const taskLoading = ref(false)
+const syncTasks = ref<OrgSyncTask[]>([])
+const taskPage = ref(1)
+const taskSize = ref(10)
+const taskTotal = ref(0)
+const taskPlatformFilter = ref<string>()
+const mappingLoading = ref(false)
+const mappings = ref<OrganizationMapping[]>([])
+const mappingPlatformFilter = ref<string>()
+
+/** 平台标识 → 中文名称（未知标识原样展示） */
+function platformName(platform?: string): string {
+  if (!platform) return '-'
+  return PLATFORM_NAMES[platform as keyof typeof PLATFORM_NAMES] || platform
+}
 
 // ==================== 部门管理 ====================
-const deptLoading = ref(false)
-const departments = ref<any[]>([])
-const deptQuery = reactive<PageQuery & { platform?: string; keyword?: string }>({
-  page: 1,
-  size: 10,
+const deptFormRef = ref<FormInstance>()
+const deptSaving = ref(false)
+const deptDialog = reactive<{ visible: boolean; id?: number; form: OrgDepartmentPayload }>({
+  visible: false,
+  id: undefined,
+  form: {
+    deptCode: '',
+    deptName: '',
+    parentId: 0,
+    sortOrder: 0,
+    leaderName: undefined,
+    phone: undefined,
+    email: undefined,
+    status: 'ACTIVE',
+  },
 })
-const deptTotal = ref(0)
+/** 部门必填校验（后端 DTO 无校验注解，编码在租户内唯一） */
+const deptRules: FormRules = {
+  deptCode: [{ required: true, message: '请输入部门编码', trigger: 'blur' }],
+  deptName: [{ required: true, message: '请输入部门名称', trigger: 'blur' }],
+}
 
-// ==================== 成员管理 ====================
-const memberLoading = ref(false)
-const members = ref<any[]>([])
-const memberQuery = reactive<PageQuery & { platform?: string; keyword?: string }>({
-  page: 1,
-  size: 10,
-})
-const memberTotal = ref(0)
-
-// ==================== 同步日志 ====================
-const logLoading = ref(false)
-const syncLogs = ref<any[]>([])
-const logQuery = reactive<PageQuery>({ page: 1, size: 10 })
-const logTotal = ref(0)
+/** 上级部门可选项（编辑时排除自身，避免自引用） */
+const parentOptions = computed(() =>
+  deptOptions.value.filter((dept) => dept.id !== deptDialog.id),
+)
 
 /**
- * 加载所有平台的同步状态
+ * 按父部门推导 deptLevel/deptPath（后端照抄存储，不计算）。
  */
-async function loadAllSyncStatus() {
-  loading.value = true
+function deriveDeptFields(): { deptLevel: number; deptPath: string } {
+  const parent = deptOptions.value.find((dept) => dept.id === deptDialog.form.parentId)
+  const code = deptDialog.form.deptCode
+  if (parent) {
+    const level = (parent.deptLevel ?? 1) + 1
+    const path = parent.deptPath ? `${parent.deptPath}/${code}` : `${parent.deptCode}/${code}`
+    return { deptLevel: level, deptPath: path }
+  }
+  return { deptLevel: 1, deptPath: code }
+}
+
+/** 打开部门对话框（无参为新增） */
+function openDeptDialog(row?: OrgDepartment): void {
+  Object.assign(deptDialog.form, {
+    deptCode: row?.deptCode ?? '',
+    deptName: row?.deptName ?? '',
+    parentId: row?.parentId ?? 0,
+    sortOrder: row?.sortOrder ?? 0,
+    leaderName: row?.leaderName,
+    phone: row?.phone,
+    email: row?.email,
+    status: row?.status ?? 'ACTIVE',
+  })
+  deptDialog.id = row?.id
+  deptDialog.visible = true
+}
+
+/** 提交部门新增/编辑 */
+async function submitDept(): Promise<void> {
+  if (!deptFormRef.value) return
+  await deptFormRef.value.validate()
+  deptSaving.value = true
   try {
-    for (const platform of platforms) {
-      const status = await getSyncStatus(platform)
-      syncStatus[platform] = status
+    const payload: OrgDepartmentPayload = {
+      ...deptDialog.form,
+      ...deriveDeptFields(),
     }
+    if (deptDialog.id) {
+      await updateOrgDepartment(deptDialog.id, payload)
+      ElMessage.success('部门已更新')
+    } else {
+      await createOrgDepartment(payload)
+      ElMessage.success('部门已创建')
+    }
+    deptDialog.visible = false
+    await Promise.all([loadDepartments(), loadDeptOptions()])
   } catch (error) {
-    ElMessage.error('加载同步状态失败')
+    showError(error, '保存部门失败')
   } finally {
-    loading.value = false
+    deptSaving.value = false
   }
 }
 
-/**
- * 执行单个平台的同步操作
- * @param platform 平台类型
- * @param fullSync 是否强制全量同步
- */
-async function handleSync(platform: OfficePlatform, fullSync: boolean) {
-  const action = fullSync ? '强制全量同步' : '增量同步'
-  await ElMessageBox.confirm(`确认执行${getPlatformName(platform)}的${action}?`, '提示', { type: 'info' })
+/** 删除部门（后端无级联检查，提示用户关注子部门与员工） */
+async function handleDeleteDept(row: OrgDepartment): Promise<void> {
   try {
-    await triggerSync({ platform, syncDepartments: true, syncMembers: true } as any)
-    ElMessage.success(`${action}已启动`)
-    await loadAllSyncStatus()
-    const timer = setInterval(async () => {
-      const status = await getSyncStatus(platform)
-      syncStatus[platform] = status
-      if (!status.syncing) {
-        clearInterval(timer)
-        if (status.lastSuccess) {
-          ElMessage.success(`${getPlatformName(platform)}同步完成`)
-        } else {
-          ElMessage.error(`${getPlatformName(platform)}同步失败: ${status.lastError}`)
-        }
-      }
-    }, 3000)
+    await ElMessageBox.confirm(
+      `确认删除部门「${row.deptName}」？删除不影响其子部门与员工，请自行处理归属。`,
+      '提示',
+      { type: 'warning' },
+    )
+  } catch {
+    return
+  }
+  try {
+    await deleteOrgDepartment(row.id)
+    ElMessage.success('部门已删除')
+    await Promise.all([loadDepartments(), loadDeptOptions()])
   } catch (error) {
-    ElMessage.error(`${action}失败`)
+    showError(error, '删除部门失败')
   }
 }
 
-/**
- * 批量同步所有平台
- */
-async function handleSyncAll() {
-  await ElMessageBox.confirm('确认对所有平台执行增量同步?', '提示', { type: 'info' })
-  for (const platform of platforms) {
-    try {
-      await triggerSync({ platform, syncDepartments: true, syncMembers: true } as any)
-    } catch (error) {
-      console.error(`Sync ${platform} failed`, error)
-    }
+// ==================== 员工详情 ====================
+const employeeDetailVisible = ref(false)
+const employeeDetail = ref<OrgEmployee | null>(null)
+
+/** 打开员工详情抽屉（拉取详情接口，取全量字段） */
+async function showEmployeeDetail(row: OrgEmployee): Promise<void> {
+  try {
+    employeeDetail.value = await getOrgEmployee(row.id)
+    employeeDetailVisible.value = true
+  } catch (error) {
+    showError(error, '加载员工详情失败')
   }
-  ElMessage.success('批量同步已启动')
-  await loadAllSyncStatus()
 }
 
-/**
- * 查看平台详情
- * @param platform 平台类型
- */
-function handleViewDetails(platform: OfficePlatform) {
-  ElMessage.info(`查看${getPlatformName(platform)}详情功能待实现`)
+/** 同步状态 → 标签样式 */
+function syncStatusTagType(status?: string): 'info' | 'success' | 'warning' | 'danger' {
+  switch (status) {
+    case 'SUCCESS':
+      return 'success'
+    case 'FAILED':
+      return 'danger'
+    case 'RUNNING':
+      return 'warning'
+    default:
+      return 'info'
+  }
 }
 
-/**
- * 加载部门列表
- */
-async function loadDepartments() {
+/** 时间戳 → 本地化展示 */
+function formatTime(time?: string): string {
+  if (!time) return '-'
+  return new Date(time).toLocaleString('zh-CN')
+}
+
+/** 加载部门当前页 */
+async function loadDepartments(): Promise<void> {
   deptLoading.value = true
   try {
-    departments.value = []
-    deptTotal.value = 0
+    const result = await listOrgDepartments({
+      pageNum: deptPage.value,
+      pageSize: deptSize.value,
+      status: deptStatusFilter.value,
+    })
+    departments.value = result.list || []
+    deptTotal.value = result.total
   } catch (error) {
-    ElMessage.error('加载部门列表失败')
+    showError(error, '加载部门列表失败')
   } finally {
     deptLoading.value = false
   }
 }
 
-/**
- * 重置部门查询条件
- */
-function resetDeptQuery() {
-  deptQuery.platform = undefined
-  deptQuery.keyword = undefined
-  loadDepartments()
-}
-
-/**
- * 加载成员列表
- */
-async function loadMembers() {
-  memberLoading.value = true
+/** 加载部门下拉选项（员工过滤用，一次取 200 条） */
+async function loadDeptOptions(): Promise<void> {
   try {
-    members.value = []
-    memberTotal.value = 0
-  } catch (error) {
-    ElMessage.error('加载成员列表失败')
-  } finally {
-    memberLoading.value = false
+    const result = await listOrgDepartments({ pageNum: 1, pageSize: 200 })
+    deptOptions.value = result.list || []
+  } catch {
+    deptOptions.value = []
   }
 }
 
-/**
- * 重置成员查询条件
- */
-function resetMemberQuery() {
-  memberQuery.platform = undefined
-  memberQuery.keyword = undefined
-  loadMembers()
+/** 加载员工当前页 */
+async function loadEmployees(): Promise<void> {
+  employeeLoading.value = true
+  try {
+    const result = await listOrgEmployees({
+      pageNum: employeePage.value,
+      pageSize: employeeSize.value,
+      deptId: employeeDeptId.value,
+    })
+    employees.value = result.list || []
+    employeeTotal.value = result.total
+  } catch (error) {
+    showError(error, '加载员工列表失败')
+  } finally {
+    employeeLoading.value = false
+  }
 }
 
-/**
- * 加载同步日志
- */
-async function loadSyncLogs() {
-  logLoading.value = true
+/** 加载同步历史当前页 */
+async function loadHistories(): Promise<void> {
+  historyLoading.value = true
   try {
-    syncLogs.value = []
-    logTotal.value = 0
+    const result = await listOrgSyncHistory({
+      pageNum: historyPage.value,
+      pageSize: historySize.value,
+      syncSource: historySourceFilter.value,
+      syncStatus: historyStatusFilter.value,
+    })
+    syncHistories.value = result.list || []
+    historyTotal.value = result.total
   } catch (error) {
-    ElMessage.error('加载同步日志失败')
+    showError(error, '加载同步历史失败')
   } finally {
-    logLoading.value = false
+    historyLoading.value = false
+  }
+}
+
+/** 加载同步任务当前页（后端为 page/size 口径，返回数组无总数） */
+async function loadTasks(): Promise<void> {
+  taskLoading.value = true
+  try {
+    const list = await listOrgSyncTasks({
+      platform: taskPlatformFilter.value,
+      page: taskPage.value,
+      size: taskSize.value,
+    })
+    syncTasks.value = list
+    taskTotal.value = list.length
+  } catch (error) {
+    showError(error, '加载同步任务失败')
+  } finally {
+    taskLoading.value = false
+  }
+}
+
+/** 加载平台映射列表 */
+async function loadMappings(): Promise<void> {
+  mappingLoading.value = true
+  try {
+    mappings.value = await listOrgMappings(mappingPlatformFilter.value)
+  } catch (error) {
+    showError(error, '加载平台映射失败')
+  } finally {
+    mappingLoading.value = false
+  }
+}
+
+/** 部门过滤变化（重置页码） */
+function onDeptFilterChange(): void {
+  deptPage.value = 1
+  loadDepartments()
+}
+
+/** 部门分页变化 */
+function onDeptPageChange(page: number, size: number): void {
+  deptPage.value = page
+  deptSize.value = size
+  loadDepartments()
+}
+
+/** 点击部门行 → 过滤该部门员工 */
+function handleDeptRowClick(row: OrgDepartment): void {
+  employeeDeptId.value = row.id
+  employeeDeptName.value = row.deptName
+  employeePage.value = 1
+  loadEmployees()
+}
+
+/** 员工过滤变化（重置页码） */
+function onEmployeeFilterChange(): void {
+  employeeDeptName.value =
+    deptOptions.value.find((dept) => dept.id === employeeDeptId.value)?.deptName || ''
+  employeePage.value = 1
+  loadEmployees()
+}
+
+/** 员工分页变化 */
+function onEmployeePageChange(page: number, size: number): void {
+  employeePage.value = page
+  employeeSize.value = size
+  loadEmployees()
+}
+
+/** 历史过滤变化（重置页码） */
+function onHistoryFilterChange(): void {
+  historyPage.value = 1
+  loadHistories()
+}
+
+/** 历史分页变化 */
+function onHistoryPageChange(page: number, size: number): void {
+  historyPage.value = page
+  historySize.value = size
+  loadHistories()
+}
+
+/** 任务过滤变化（重置页码） */
+function onTaskFilterChange(): void {
+  taskPage.value = 1
+  loadTasks()
+}
+
+/** 任务分页变化 */
+function onTaskPageChange(page: number, size: number): void {
+  taskPage.value = page
+  taskSize.value = size
+  loadTasks()
+}
+
+/** 触发组织同步 */
+async function handleTriggerSync(): Promise<void> {
+  syncing.value = true
+  try {
+    const result = await triggerOrgSync({ ...syncForm })
+    if (result.success) {
+      ElMessage.success(result.message || `同步任务已提交（任务ID ${result.taskId ?? '-'}）`)
+    } else {
+      ElMessage.warning(result.message || '同步任务提交未成功')
+    }
+    taskPage.value = 1
+    await Promise.all([loadTasks(), loadHistories()])
+  } catch (error) {
+    showError(error, '触发同步失败')
+  } finally {
+    syncing.value = false
+  }
+}
+
+/** Tab 切换时按需加载 */
+function handleTabChange(tab: string | number): void {
+  if (tab === 'history' && syncHistories.value.length === 0) loadHistories()
+  if (tab === 'sync' && syncTasks.value.length === 0) {
+    loadTasks()
+    loadMappings()
   }
 }
 
 onMounted(() => {
-  loadAllSyncStatus()
   loadDepartments()
-  loadMembers()
-  loadSyncLogs()
+  loadDeptOptions()
+  loadEmployees()
 })
 </script>
 
 <style scoped lang="scss">
 .organization-container {
-  padding: 20px;
+  padding: 0;
 }
 
 .card-header {
@@ -469,33 +722,18 @@ onMounted(() => {
   align-items: center;
 }
 
-.platform-card {
-  margin-bottom: 20px;
-}
-
-.platform-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.platform-title {
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.sync-info {
-  min-height: 300px;
-}
-
-.sync-actions {
-  margin-top: 16px;
+.filter-toolbar {
+  margin-bottom: 12px;
   display: flex;
   gap: 8px;
-  justify-content: center;
 }
 
-.filter-toolbar {
-  margin-bottom: 16px;
+.pager {
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+.sync-form {
+  margin-bottom: 8px;
 }
 </style>

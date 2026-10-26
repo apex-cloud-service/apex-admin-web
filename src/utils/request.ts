@@ -11,7 +11,7 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import { CODE_UNAUTHORIZED, RESULT_SUCCESS } from '@/settings'
-import { getRefreshToken, getToken, setRefreshToken, setToken, clearSession } from '@/utils/auth'
+import { getRefreshToken, getToken, setRefreshToken, setToken, clearSession, getTenantId } from '@/utils/auth'
 import { refreshToken } from '@/api/auth'
 import type { Result } from '@/types'
 
@@ -37,12 +37,18 @@ const service = axios.create({
   timeout: 30000,
 })
 
-/** 请求拦截：注入 Bearer Token */
+/** 请求拦截：注入 Bearer Token 与租户标识 */
 service.interceptors.request.use(
   (config) => {
     const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+    }
+    // 租户作用域由后端从令牌解析；此头仅作匹配声明（网关会剥离重建）。
+    // 仅当登录响应返回过 tenantId 时携带，值与服务端签发一致，不会触发 403。
+    const tenantId = getTenantId()
+    if (tenantId) {
+      config.headers['X-Tenant-Id'] = tenantId
     }
     return config
   },

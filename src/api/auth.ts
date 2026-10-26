@@ -1,9 +1,10 @@
 /**
  * 认证相关 API
  * ------------------------------------------------------------------
- * 覆盖：图形验证码、账号密码登录、登出、角色/权限查询。
+ * 覆盖：图形验证码、账号密码登录、登出、角色/权限查询，
+ * 以及系统角色与权限的管理（CRUD，与登录链路同源数据域）。
  */
-import { get, post } from '@/utils/request'
+import { del, get, post } from '@/utils/request'
 import type { CaptchaVO, LoginResult } from '@/types'
 
 /** 登录请求体 */
@@ -22,6 +23,11 @@ export interface LoginPayload {
   deviceId?: string
   /** 客户端平台标识 */
   platform?: string
+  /**
+   * 租户 ID 声明（可选，仅用于登录时的租户匹配校验，不能切换租户）。
+   * 认证中心登录链路使用；单体登录后端会忽略该字段。缺省时后端使用 default 租户。
+   */
+  tenantId?: string
 }
 
 /**
@@ -101,4 +107,114 @@ export async function getMyPermissions(): Promise<string[]> {
  */
 export function refreshToken(refreshToken: string): Promise<LoginResult> {
   return post<LoginResult>('/api/v1/auth/refresh', { refreshToken, deviceId: 'apex-admin-web', platform: 'web' })
+}
+
+/** ========== 系统角色与权限管理 ========== */
+
+/** 系统角色（后端 RoleDTO） */
+export interface SystemRole {
+  id: number
+  name: string
+  code: string
+  description?: string
+  /** 0=禁用 1=正常 */
+  status?: number
+  createTime?: string
+}
+
+/** 系统角色创建/更新请求体（后端 RoleRequest） */
+export interface SystemRolePayload {
+  /** 更新时必填 */
+  id?: number
+  name: string
+  code: string
+  description?: string
+  /** 0=禁用 1=正常，默认 1 */
+  status?: number
+}
+
+/** 系统权限（后端 PermissionDTO） */
+export interface SystemPermission {
+  id: number
+  name: string
+  code: string
+  description?: string
+  /** 1=菜单 2=按钮 3=接口 */
+  type: number
+  status?: number
+  createTime?: string
+}
+
+/** 系统权限创建/更新请求体（后端 PermissionRequest，code 格式为 模块:操作） */
+export interface SystemPermissionPayload {
+  /** 更新时必填 */
+  id?: number
+  name: string
+  code: string
+  description?: string
+  /** 1=菜单 2=按钮 3=接口 */
+  type: number
+  status?: number
+}
+
+/**
+ * 查询全部系统角色。
+ */
+export function listSystemRoles(): Promise<SystemRole[]> {
+  return get<SystemRole[]>('/api/v1/auth/roles')
+}
+
+/**
+ * 创建系统角色。
+ * @param payload 角色内容
+ */
+export function createSystemRole(payload: SystemRolePayload): Promise<SystemRole> {
+  return post<SystemRole>('/api/v1/auth/roles', payload)
+}
+
+/**
+ * 更新系统角色。
+ * @param payload 角色内容（id 必填）
+ */
+export function updateSystemRole(payload: SystemRolePayload): Promise<SystemRole> {
+  return post<SystemRole>('/api/v1/auth/roles/update', payload)
+}
+
+/**
+ * 删除系统角色（存在关联数据时后端返回 409）。
+ * @param id 角色 ID
+ */
+export function deleteSystemRole(id: number): Promise<void> {
+  return del<void>(`/api/v1/auth/roles/${id}`)
+}
+
+/**
+ * 查询全部系统权限。
+ */
+export function listSystemPermissions(): Promise<SystemPermission[]> {
+  return get<SystemPermission[]>('/api/v1/auth/permissions')
+}
+
+/**
+ * 创建系统权限。
+ * @param payload 权限内容
+ */
+export function createSystemPermission(payload: SystemPermissionPayload): Promise<SystemPermission> {
+  return post<SystemPermission>('/api/v1/auth/permissions', payload)
+}
+
+/**
+ * 更新系统权限。
+ * @param payload 权限内容（id 必填）
+ */
+export function updateSystemPermission(payload: SystemPermissionPayload): Promise<SystemPermission> {
+  return post<SystemPermission>('/api/v1/auth/permissions/update', payload)
+}
+
+/**
+ * 删除系统权限（存在关联数据时后端返回 409）。
+ * @param id 权限 ID
+ */
+export function deleteSystemPermission(id: number): Promise<void> {
+  return del<void>(`/api/v1/auth/permissions/${id}`)
 }

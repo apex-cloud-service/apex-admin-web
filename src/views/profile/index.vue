@@ -15,6 +15,9 @@
       </el-descriptions-item>
       <el-descriptions-item label="生日">{{ identity?.birthday ?? '-' }}</el-descriptions-item>
       <el-descriptions-item label="最后登录">{{ identity?.lastLoginTime ?? '-' }}</el-descriptions-item>
+      <el-descriptions-item label="租户">
+        {{ identity?.tenantId || '-' }}
+      </el-descriptions-item>
       <el-descriptions-item label="角色">
         <el-tag v-for="role in identity?.roles || []" :key="role" size="small" style="margin-right: 6px">
           {{ role }}

@@ -13,6 +13,7 @@
 - 新增菜单驱动页面必须同步 `src/router/dynamic.ts` 的 `VIEW_REGISTRY` 与后端菜单 `component` 字段；文件存在不等于路由已注册。
 - 普通列表通常用 `page/size` 和 `list/total`；工作流用 `pageNum/pageSize` 和 `records/total`。以具体 API 类型为准，不能全局替换。
 - 会话读写使用 `src/utils/auth.ts`，不可自行引入 `access_token` 等存储键。
+- 租户作用域由后端从令牌解析；前端仅在登录响应返回 `tenantId` 时记录（`apex.admin.tenant-id`）并附带 `X-Tenant-Id` 请求头，不实现租户切换/管理界面，详见 `docs/guides/auth-tenant-adaptation.md`。
 - 菜单展示、按钮展示和后端接口鉴权是三个不同层次。前端隐藏元素不能替代后端权限校验。
 - 不在浏览器配置中保存客户端密钥、数据库密码等秘密；`VITE_*` 会进入前端产物。
 - 优先复用现有组件、类型和工具；不把未接入的工具描述成全局机制。
@@ -23,12 +24,13 @@
 
 | 任务 | 首先阅读 | 重点约束 |
 | --- | --- | --- |
-| 登录与令牌 | `stores/user.ts`、`utils/auth.ts`、`utils/request.ts`、`api/auth.ts` | 身份初始化、401 单飞刷新、单次重放 |
+| 登录与令牌 | `stores/user.ts`、`utils/auth.ts`、`utils/request.ts`、`api/auth.ts` | 身份初始化、401 单飞刷新、单次重放、租户声明（可选 `tenantId`，`VITE_AUTH_TENANT_ENABLED` 控制） |
 | 页面与菜单 | `router/index.ts`、`router/dynamic.ts`、`layouts/AdminLayout.vue` | 静态/动态路由、注册表、hidden |
 | 按钮权限 | `stores/permission.ts`、`directives/permission.ts` | 空列表放行、多码任一满足、移除 DOM |
 | 常规 CRUD | 相邻页面、对应 `api/*.ts`、`types/index.ts` | DTO、分页、错误提示与刷新行为 |
-| 工作流 | `api/workflow.ts`、`types/workflow.ts`、`views/workflow/` | 特殊分页、静态入口、组件接入范围 |
-| 办公平台 | `api/office.ts`、`api/office-new.ts`、`views/office/` | 业务接口与配置绑定接口分离、version |
+| 工作流 | `api/workflow.ts`、`types/workflow.ts`、`views/workflow/` | 特殊分页、静态入口、待办办理语义、组件接入范围 |
+| 站内信 | `api/message.ts`、`views/office/message/`、`layouts/AdminLayout.vue` | 收件箱/模板契约、未读轮询、数组响应口径 |
+| 办公平台 | `api/office.ts`、`api/office-new.ts`、`views/office/` | 业务接口与配置绑定接口分离、version、组织同步契约 |
 | 文件上传 | `api/file.ts`、两个上传组件 | Element Plus/XHR 路径不经过 Axios 拦截器 |
 | 部署 | `vite.config.ts`、`Dockerfile`、`docker/nginx.conf` | 构建期变量与运行期反代变量 |
 
@@ -57,17 +59,18 @@ src/
 
 | 业务域 | 主要源码 | 接口边界/页面职责 |
 | --- | --- | --- |
-| 认证与用户 | `auth.ts`、`user.ts`、`oauth2.ts` | 验证码、密码登录、角色权限、当前用户、标准 OAuth2 |
-| 系统管理 | `system.ts`、`database.ts` | 用户/角色/菜单/部门/字典/参数/定时任务、数据库配置 |
+| 认证与用户 | `auth.ts`、`user.ts`、`oauth2.ts` | 验证码、密码登录（可选租户声明）、我的角色/权限、系统角色与权限 CRUD、当前用户、用户导出、标准 OAuth2 |
+| 系统管理 | `system.ts`、`database.ts` | 用户/角色/菜单/部门/字典/参数/定时任务、数据库配置与数据源管理 |
 | 认证管理与 SSO | `auth-config.ts`、`sso.ts` | 管理端配置页面；与浏览器登录回调区分 |
-| 代码生成器 | `generator.ts` | 数据源、表扫描、生成及模板管理 |
+| 代码生成器 | `generator.ts` | 数据源、表扫描、生成配置与生成、按配置历史（预览/模板/回滚后端未提供端点） |
 | 监控与日志 | `monitor.ts`、`log.ts` | 登录/审计/API 日志、在线用户、大盘、运行和业务日志 |
 | 数据管理 | `document.ts`、`chart.ts` | 文档与图表 CRUD、状态操作、数据查询 |
-| 工作流 | `workflow.ts` | 定义、实例、统计、任务与高级操作 |
-| 办公平台 | `office.ts`、`office-new.ts` | 消息/审批/组织/日历/文档，以及应用配置和绑定管理 |
-| 文件与搜索 | `file.ts`、`search.ts` | 文件接口、上传组件、顶栏全文搜索 |
+| 工作流 | `workflow.ts` | 实例、统计、待办任务办理与高级操作（流程定义管理接口后端未提供） |
+| 站内信 | `message.ts` | 收件箱/已发送/发送/未读数与消息模板管理（`/api/v1/messages`、`/admin-api/v1/message-templates`） |
+| 办公平台 | `office.ts`、`office-new.ts` | 业务接口与配置绑定接口分离、version、组织同步（部门/员工/同步历史/触发同步/映射） |
+| 文件与搜索 | `file.ts`、`search.ts` | 文件接口、上传组件、顶栏全文搜索与索引重建 |
 
-后端路径按现有 API 区分：`/api/v1/**` 为认证、用户和文件等接口；`/admin-api/v1/**` 为管理接口；`/api/workflow/**` 为工作流高级操作；`/api/office/**` 为办公业务；标准 OAuth2 使用 `/oauth2/authorize`、`/oauth2/token`。
+后端路径按现有 API 区分：`/api/v1/**` 为认证、用户、文件、站内信和办公平台接入等接口；`/admin-api/v1/**` 为管理接口；`/api/workflow/**` 为工作流高级操作；`/api/office/**` 为办公业务；标准 OAuth2 使用 `/oauth2/authorize`、`/oauth2/token`。
 
 ## 3. 架构图
 
@@ -168,10 +171,11 @@ sequenceDiagram
     U->>V: 账号、密码、验证码
     V->>V: 表单校验
     V->>S: login(params)
-    S->>A: loginType=PASSWORD / deviceId / platform
+    S->>A: loginType=PASSWORD / deviceId / platform / tenantId?
     A->>B: POST /api/v1/auth/login
-    B-->>S: accessToken / refreshToken?
+    B-->>S: accessToken / refreshToken? / tenantId?
     S->>L: 保存令牌
+    S->>L: 清残留后记录 tenantId（响应返回时）
     S->>S: loadIdentity()
     par 用户信息
         S->>B: GET /api/v1/user/info
@@ -190,7 +194,7 @@ sequenceDiagram
     R-->>U: 展示目标页面
 ```
 
-API 请求均通过请求层，图中并行请求直接指向后端是为了展示业务时序。不要把“登录接口成功”与“身份初始化成功”视为同一个状态。登出会调用后端登出 API，并在 finally 中执行本地清理，后端失败不阻塞本地退出。
+API 请求均通过请求层，图中并行请求直接指向后端是为了展示业务时序。不要把“登录接口成功”与“身份初始化成功”视为同一个状态。登出会调用后端登出 API，并在 finally 中执行本地清理，后端失败不阻塞本地退出。登录页租户标识输入由 `VITE_AUTH_TENANT_ENABLED` 控制（默认关闭）；`tenantId` 仅作登录时的租户匹配声明，租户作用域由后端从令牌解析，请求层仅在会话记录了 tenantId 时附带 `X-Tenant-Id` 头。
 
 ### 4.2 路由守卫业务流程
 
@@ -259,7 +263,6 @@ flowchart TD
 | `/workflow/monitor`、`/workflow/instances/:id` | 工作流监控与实例详情 |
 | `/workflow/monitor/dashboard` | 工作流重定向入口 |
 | `/demo/file-upload`、`/demo/file-upload-enhanced` | 隐藏演示页 |
-| `/monitor/trace` | 链路追踪查询 |
 | `/:pathMatch(.*)*` | NotFound 兜底 |
 
 上述入口在 `router/index.ts` 中定义，不依赖后端菜单；具体 public/hidden 属性以该文件为准。系统、监控、办公、数据和个人中心等菜单页面依赖动态注册。`VIEW_REGISTRY` 同时含部分静态页面 loader，不应以注册表存在推断页面仅支持动态路由。
@@ -498,7 +501,7 @@ sequenceDiagram
     end
 ```
 
-工作流列表查询使用 `pageNum/pageSize`，返回 `records/total`；普通 `Pagination` 组件的绑定参数不等于接口查询字段，需要页面适配。定义、实例、统计、待办、通过和驳回使用 `/admin-api/v1/workflows/**`；回退、转办、委派、挂起和恢复使用 `/api/workflow/**`。
+工作流列表查询使用 `pageNum/pageSize`，返回 `records/total`；普通 `Pagination` 组件的绑定参数不等于接口查询字段，需要页面适配。实例、统计使用 `/admin-api/v1/workflows/**`；待办任务查询与办理（complete，仅携带 `comment`，固定为通过语义）使用 `/api/v1/workflows/tasks/**`；回退、转办、委派、挂起和恢复使用 `/api/workflow/**`。后端未提供流程定义管理、任务驳回和 `tasks/my` 等接口，前端不得调用这些路径。待办任务在 `workflow/monitor` 页的「待办任务」Tab 中办理，回退目标节点取自实例详情的流程定义节点。
 
 ### 7.3 TaskActions 能力边界
 
@@ -603,6 +606,9 @@ flowchart TD
 | 401 后仍未恢复 | refreshToken、认证端点排除、authRetried、刷新结果是否含 accessToken |
 | 上传 401 与其他请求行为不同 | Element Plus/XHR 没有经过 request.ts 拦截器 |
 | 工作流分页为空 | 是否误用 page/size 或 list/total |
+| 工作流待办为空或 404 | 是否使用 `/api/v1/workflows/tasks/pending`、办理仅 complete+comment、任务是否分配给当前用户 |
+| 站内信收件箱为空或分页异常 | inbox/sent 返回纯数组（total 取数组长度）、接收人须为绑定办公员工的系统用户 ID、网关 office-message 路由 |
+| 组织同步页无数据 | `/admin-api/v1/org/**` 与 `/api/v1/office/organization/**` 契约、同步任务为 page/size 且返回数组 |
 | 办公绑定分页/筛选不符合预期 | 数组响应、total 计算、查询重置页码、status 未传入 |
 | OAuth2 回调失败 | sessionStorage 上下文、state 一次性消费、redirect_uri、PKCE、token 代理 |
 | Docker 首页正常但接口失败 | API_PROXY_PASS、外部网络、后端 DNS、代理 location |
