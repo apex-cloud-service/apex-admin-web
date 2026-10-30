@@ -172,6 +172,33 @@
             </el-form-item>
           </el-form>
 
+          <el-divider content-position="left">同步向导（推荐）</el-divider>
+          <el-form :inline="true" class="sync-form">
+            <el-form-item label="平台">
+              <el-select v-model="wizardForm.platform" style="width: 160px">
+                <el-option v-for="(name, key) in PLATFORM_NAMES" :key="key" :label="name" :value="key" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="同步对象">
+              <el-radio-group v-model="wizardForm.syncType">
+                <el-radio-button value="DEPARTMENT">部门</el-radio-button>
+                <el-radio-button value="MEMBER">成员</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item>
+              <el-button :loading="wizardLoading" @click="handleWizardPreflight">预检</el-button>
+              <el-button type="primary" :loading="wizardLoading" @click="handleWizardPreview">预览</el-button>
+              <el-button type="success" :loading="wizardLoading" :disabled="!wizardReady" @click="handleWizardExecute">执行同步</el-button>
+            </el-form-item>
+          </el-form>
+          <el-alert v-if="wizardMessage" :title="wizardMessage" :type="wizardReady ? 'success' : 'warning'" :closable="false" style="margin-bottom: 12px" />
+          <el-descriptions v-if="wizardPreview" :column="4" border style="margin-bottom: 12px">
+            <el-descriptions-item label="样本数">{{ wizardPreview.sampleCount }}</el-descriptions-item>
+            <el-descriptions-item label="已映射">{{ wizardPreview.mappedCount }}</el-descriptions-item>
+            <el-descriptions-item label="新增">{{ wizardPreview.newCount }}</el-descriptions-item>
+            <el-descriptions-item label="还有更多">{{ wizardPreview.hasMore ? '是' : '否' }}</el-descriptions-item>
+          </el-descriptions>
+
           <el-divider content-position="left">同步任务</el-divider>
           <div class="filter-toolbar">
             <el-select
@@ -197,6 +224,11 @@
             <el-table-column prop="cursor" label="游标" min-width="140" show-overflow-tooltip />
             <el-table-column prop="failureMessage" label="失败信息" min-width="200" show-overflow-tooltip />
             <el-table-column prop="version" label="版本" width="80" />
+            <el-table-column label="操作" width="90" fixed="right">
+              <template #default="{ row }">
+                <el-button v-if="row.state === 'FAILED'" link type="primary" @click="handleWizardRetry(row)">重试</el-button>
+              </template>
+            </el-table-column>
           </el-table>
           <Pagination class="pager" :total="taskTotal" @change="onTaskPageChange" />
 
@@ -325,6 +357,13 @@ import {
   updateOrgDepartment,
   type OrgDepartmentPayload,
 } from '@/api/office-new'
+import {
+  executeOrgSync,
+  preflightOrgSync,
+  previewOrgSync,
+  retryWizardSyncTask,
+  type SyncPreviewResult,
+} from '@/api/office-sync-wizard'
 import type { OrgSyncRequest } from '@/types'
 import type { OrganizationMapping, OrgDepartment, OrgEmployee, OrgSyncHistory, OrgSyncTask } from '@/types'
 
@@ -365,6 +404,16 @@ const syncForm = reactive<OrgSyncRequest>({
   syncType: 'DEPARTMENT',
   fullSync: false,
 })
+
+// ==================== 同步向导（预检/预览/执行） ====================
+const wizardLoading = ref(false)
+const wizardForm = reactive<{ platform: string; syncType: 'DEPARTMENT' | 'MEMBER' }>({
+  platform: 'FEISHU',
+  syncType: 'DEPARTMENT',
+})
+const wizardReady = ref(false)
+const wizardMessage = ref('')
+const wizardPreview = ref<SyncPreviewResult | null>(null)
 const taskLoading = ref(false)
 const syncTasks = ref<OrgSyncTask[]>([])
 const taskPage = ref(1)
@@ -692,6 +741,70 @@ async function handleTriggerSync(): Promise<void> {
     showError(error, '触发同步失败')
   } finally {
     syncing.value = false
+  }
+}
+
+/** 同步向导：预检（确认必要配置是否就绪） */
+async function handleWizardPreflight(): Promise<void> {
+  wizardLoading.value = true
+  wizardPreview.value = null
+  try {
+    const result = await preflightOrgSync(wizardForm.platform)
+    wizardReady.value = result.ready
+    wizardMessage.value = result.ready
+      ? '预检通过，可以执行同步'
+      : `预检未通过，缺少：${result.missingItems.join('、') || '未知项'}`
+  } catch (error) {
+    wizardReady.value = false
+    showError(error, '预检失败')
+  } finally {
+    wizardLoading.value = false
+  }
+}
+
+/** 同步向导：预览（估算变更规模，不落库） */
+async function handleWizardPreview(): Promise<void> {
+  wizardLoading.value = true
+  try {
+    wizardPreview.value = await previewOrgSync(wizardForm.platform, wizardForm.syncType)
+  } catch (error) {
+    showError(error, '预览失败')
+  } finally {
+    wizardLoading.value = false
+  }
+}
+
+/** 同步向导：执行（创建同步任务） */
+async function handleWizardExecute(): Promise<void> {
+  wizardLoading.value = true
+  try {
+    const result = await executeOrgSync({ ...wizardForm, fullSync: false })
+    if (result.success) {
+      ElMessage.success(result.message || `同步任务已提交（任务ID ${result.taskId ?? '-'}）`)
+    } else {
+      ElMessage.warning(result.message || '同步任务提交未成功')
+    }
+    taskPage.value = 1
+    await Promise.all([loadTasks(), loadHistories()])
+  } catch (error) {
+    showError(error, '执行同步失败')
+  } finally {
+    wizardLoading.value = false
+  }
+}
+
+/** 重试失败的同步任务（向导创建的任务） */
+async function handleWizardRetry(row: OrgSyncTask): Promise<void> {
+  try {
+    const result = await retryWizardSyncTask(row.id)
+    if (result.success) {
+      ElMessage.success('重试已提交')
+    } else {
+      ElMessage.warning(result.message || '重试提交未成功')
+    }
+    await loadTasks()
+  } catch (error) {
+    showError(error, '重试失败')
   }
 }
 

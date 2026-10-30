@@ -377,3 +377,80 @@ export interface ResumeInstancePayload {
   /** 恢复说明 */
   reason: string
 }
+
+// ========== 流程定义管理（/api/v2/workflow-definitions） ==========
+
+/** 工作流节点（后端 WorkflowNodeDTO） */
+export interface WorkflowDefinitionNode {
+  nodeId: string
+  /** START/APPROVAL/END */
+  nodeType: string
+  nodeName: string
+  /** SPECIFIED_USER/INITIATOR */
+  approverType?: string
+  approverValue?: string
+  approvalStrategy?: string
+  timeoutHours?: number
+  timeoutAction?: string
+  position?: Record<string, unknown>
+}
+
+/** 工作流连线（后端 WorkflowEdgeDTO） */
+export interface WorkflowDefinitionEdge {
+  edgeId: string
+  sourceNodeId: string
+  targetNodeId: string
+  condition?: string
+}
+
+/** 工作流定义（后端 WorkflowDefinitionDTO，查询接口口径） */
+export interface WorkflowDefinitionInfo {
+  id: number
+  code: string
+  name: string
+  description?: string
+  version: number
+  enabled: boolean
+  /** DRAFT/PUBLISHED/DISABLED */
+  status: string
+  publishedAt?: string
+  publishedBy?: number
+  nodes?: WorkflowDefinitionNode[]
+  edges?: WorkflowDefinitionEdge[]
+}
+
+/** 工作流定义写操作返回（后端领域对象 WorkflowDefinition，字段与查询 DTO 不同） */
+export interface WorkflowDefinitionEntity {
+  id: number
+  workflowCode: string
+  workflowName: string
+  description?: string
+  version: number
+  /** 原始 DAG JSON 字符串 */
+  dagJson: string
+  /** 1=启用 0=禁用（注意与查询 DTO 的 boolean 不同） */
+  enabled: number
+  status: string
+  publishedAt?: string
+  publishedBy?: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 工作流定义创建请求（后端 CreateWorkflowDefinitionRequest） */
+export interface WorkflowDefinitionCreatePayload {
+  /** 流程编码（≤100，字母开头，仅字母/数字/下划线/短横线） */
+  workflowCode: string
+  /** 流程名称（≤200） */
+  workflowName: string
+  description?: string
+  /** DAG JSON（≤60000 字符，含 nodes/edges） */
+  dagJson: string
+}
+
+/** 工作流定义更新请求（后端 UpdateWorkflowDefinitionRequest，无 code/version） */
+export interface WorkflowDefinitionUpdatePayload {
+  workflowName: string
+  description?: string
+  dagJson: string
+}

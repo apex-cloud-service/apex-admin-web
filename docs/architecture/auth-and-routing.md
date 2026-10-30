@@ -57,16 +57,27 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     A[路由跳转触发 beforeEach] --> B{to.meta.public?}
-    B -- 是 --> Z[放行<br/>login / oauth2/callback]
+    B -- 是 --> Z[放行<br/>login / oauth2/callback / office/callback]
     B -- 否 --> C{已有 Token?}
     C -- 否 --> D[重定向 /login<br/>携带 redirect=to.fullPath]
     C -- 是 --> E{身份已初始化?<br/>user store initialized}
-    E -- 是 --> Z
-    E -- 否 --> F[调用 loadIdentity 并构建动态路由]
-    F --> G{成功?}
-    G -- 是 --> H[replace 回 to.fullPath]
-    G -- 否 --> I[静默降级：仅保留静态路由<br/>登录页仍可用]
+    E -- 否 --> F[loadIdentity：并行拉取<br/>user/info + roles/my + permissions/my]
+    F --> G{用户信息加载成功?}
+    G -- 否 --> I[clearLocal 并跳转 /login<br/>该分支不携带 redirect]
+    G -- 是 --> J{动态路由已添加?}
+    E -- 是 --> J
+    J -- 否 --> K[setupDynamicRoutes<br/>菜单树 → VIEW_REGISTRY 注册]
+    K --> L{注册成功?}
+    L -- 否 --> M[降级为静态路由并记录警告]
+    L -- 是 --> N[重新解析 to.fullPath]
+    M --> N
+    J -- 是 --> N
+    N --> O{解析结果非 NotFound?}
+    O -- 是 --> P[replace 原目标，重新匹配后放行]
+    O -- 否 --> Z
 ```
+
+失败后未完成注册的动态路由会在后续导航再次尝试；只有「无 Token」分支明确保留 `redirect` 回跳地址。
 
 ## 4. 令牌无感刷新（已实现）
 
@@ -189,17 +200,19 @@ flowchart TD
 | `status` | 0=停用 / 1=正常 | **不受影响** | **不受影响** | 历史种子数据取值与后端枚举不一致，路由生成刻意不按 status 过滤，避免全量菜单丢失 |
 | `visible` | 0=隐藏 / 1=显示 | 仍注册、可直接访问 | 仅 `visible=1` 显示 | 隐藏只写 `meta.hidden` |
 
-### VIEW_REGISTRY 全量清单（与 dynamic.ts:21-54 一致）
+### VIEW_REGISTRY 全量清单（与 dynamic.ts:21-59 一致）
 
-系统管理：`system/user/index`、`system/role/index`、`system/menu/index`、`system/dept/index`、`system/dict/index`、`system/config/index`、`system/database/index`、`system/job/index`、`system/job/query`、`system/generator/index`、`system/auth/index`、`system/sso/index`
+系统管理：`system/user/index`、`system/role/index`、`system/menu/index`、`system/dept/index`、`system/dict/index`、`system/config/index`、`system/database/index`、`system/job/index`、`system/job/query`、`system/generator/index`、`system/auth/index`、`system/sso/index`、`system/masking/index`、`system/tenant/index`、`system/security/index`
 
-监控：`monitor/loginlog/index`、`monitor/audit/index`、`monitor/api-call-log/index`、`monitor/online/index`、`monitor/dashboard/index`、`monitor/runtime-log/index`、`monitor/business-log/index`
+监控：`monitor/loginlog/index`、`monitor/audit/index`、`monitor/api-call-log/index`、`monitor/online/index`、`monitor/dashboard/index`、`monitor/runtime-log/index`、`monitor/operations/index`、`monitor/business-log/index`
 
 数据管理：`data/document/index`、`data/chart/index`
 
 办公平台：`office/message/index`、`office/approval/index`、`office/config/index`、`office/bindings/index`、`office/console/index`、`office/organization/index`、`office/calendar/index`、`office/document/index`
 
-其他：`profile/index`、`dashboard/index`、`workflow/monitor/index`
+工作流：`workflow/monitor/index`、`workflow/definition/index`
+
+其他：`profile/index`、`dashboard/index`
 
 > **新增页面三步**：建视图文件 → 在 VIEW_REGISTRY 登记 loader → 后端菜单 `component` 字段同名。缺一步即 404。
 
@@ -239,4 +252,4 @@ flowchart TD
 
 ---
 
-**最后更新**：2026-09-27（依据 src/ 当前实现全量核对；修正"Token 刷新未实现"的过时结论）
+**最后更新**：2026-10-30（依据 src/ 当前实现核对：路由守卫失败分支、VIEW_REGISTRY 全量清单含脱敏/租户/账号安全/运维健康/工作流定义）

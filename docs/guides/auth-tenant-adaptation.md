@@ -15,12 +15,21 @@
 
 | 事项 | 结论 | 依据 |
 | --- | --- | --- |
-| 租户管理页（CRUD/列表/配额） | **不做** | 后端 `TenantApplicationService` 具备完整生命周期但**无任何 HTTP 入口**；实现计划文档明确“缺管理 HTTP 入口，界面延后交付” |
-| 租户切换器（选租户再登录） | **不做** | 无候选租户列表端点；计划文档将其列为后续规划，业务令牌必须绑定唯一租户 |
+| 租户管理页（CRUD/列表/配额） | **已实施**（2026-10-30 更新） | 后端已装配 `PlatformTenantRouter`（`/api/v2/platform/tenants`：分页/详情/创建/生命周期/配额，权限码 `tenant:read|create|lifecycle|quota`）。前端页面 `views/system/tenant/`，契约要点：分页参数为 pageNum/pageSize 且必填；生命周期动作仅接受小写 `disable/enable/freeze/unfreeze/deactivate/archive`；配额以 null 表示不限；写操作携带 `expectedVersion` 乐观锁 |
+| 租户切换器（选租户再登录） | **不做** | 平台租户端点面向平台运维账号，不供普通登录用户枚举；业务令牌仍绑定唯一租户 |
 | 强制携带 `X-Tenant-Id` 请求头 | **不做** | 网关（`JwtSignatureFilter`）先剥离再从 JWT 重建该头，浏览器携带与否不影响下游；携带错误值反而触发 403 |
 | 权限码模型 / `stores/permission` / `v-permission` | **无需改动** | 权限码格式仍为 `模块:资源:操作`；`/api/v1/auth/permissions/my` 返回结构不变；`ResourcePermission` 是后端切面级校验，前端无感知 |
 | 调用认证中心授权快照端点 | **禁止** | `GET /auth/v1/authorization/users/{userId}` 仅限专用 reader 账号，普通用户调用返回 403 |
-| 管理端角色/权限 CRUD 接口 | **无需改动** | 前端使用单体 `/api/v1/auth/roles|permissions`，本次无契约变化（auth-center 侧 `/auth/v1/roles` 新增 `@RequireAdminRole` 403 校验，前端不调用该端点） |
+| 管理端角色/权限 CRUD 接口 | **无需改动** | 前端使用 `/api/v1/auth/roles|permissions`，本次无契约变化（auth-center 侧 `/auth/v1/roles` 不供前端调用） |
+
+### 2.1.1 后端实现补充（2026-10-30 复核）
+
+| 能力 | 后端实现 | 前端影响 |
+| --- | --- | --- |
+| 统一权限解析 | `PermissionService.getPermissionsByUserId`：开关 `apex.features.auth-center-permission`（默认 false）为 true 时走 `UnifiedAuthorizationService`（认证中心授权快照，缓存 TTL 0~30s），否则走本地 `user→role→permission` RBAC 查询 | 无；`/permissions/my` 返回口径不变 |
+| 方法级权限校验 | `@RequirePermission` + `RequirePermissionAspect`：权限码**精确匹配**（无通配符），`value()` 逗号分隔多码按 `Logical.OR`/`AND` 组合；要求主体带非空 `tenantId` | 无；核对权限码可用个人中心「权限明细」 |
+| 租户上下文 | `TenantAspect` 拦截 `@TenantAware`（当前仅 workflow-service 三个 Handler 使用）：从可信主体取租户，校验 `X-Tenant-Id` 一致性（不一致 403），写入 `TenantContext` | 无；请求层已按登录响应记录值附带该头 |
+| 数据隔离 | 提供 `TenantContext` 装配机制；`TenantLineInnerInterceptor` 未作为全局强制启用（仅 `application-enterprise.yml` 与测试涉及） | 无 |
 
 ### 2.2 已补充的前端功能（本仓库变更）
 
@@ -35,6 +44,7 @@
 | `src/stores/user.ts` | 登录时透传 `tenantId`；登录响应返回 `tenantId` 时写入会话并合并进 identity |
 | `src/utils/request.ts` | 请求拦截器在会话存在租户 ID 时附带 `X-Tenant-Id`（值来自登录响应，与令牌签发一致，不会触发 403；未记录时不发送，单体部署零影响） |
 | `src/views/login/index.vue` | 登录页新增可选“租户标识”输入框，仅当 `VITE_AUTH_TENANT_ENABLED=true` 时渲染，格式校验与后端一致（`[A-Za-z0-9._-]{1,64}`） |
+| `src/views/profile/index.vue` | 新增“我的权限明细”对话框：按权限码首段（模块）分组、支持搜索，用于核对后端 `@RequirePermission` 精确匹配所需的权限码 |
 | `src/env.d.ts` / `.env.example` | 声明并说明 `VITE_AUTH_TENANT_ENABLED` |
 
 ## 3. 部署配置说明
@@ -51,14 +61,17 @@
 2. 登录页出现“租户标识”输入框；留空时后端使用 `default` 租户，填写时仅作匹配校验（与用户归属租户不一致将返回 403“租户不匹配”）。
 3. 登录响应返回 `tenantId` 后，前端将其记录到会话，并在后续请求中附带 `X-Tenant-Id` 请求头（可用于网关按租户灰度等场景；网关仍以令牌为准重建该头）。
 
-### 3.3 明确不支持
+### 3.3 当前边界
 
-- 前端不提供租户管理、租户切换界面；待后端补齐租户管理 HTTP 入口后另行评审交付。
+- 平台租户管理已提供：前端 `views/system/tenant/` 对接 `/api/v2/platform/tenants`，支持分页、详情、创建、生命周期和配额管理。
+- 前端不提供业务侧租户切换界面。当前登录态绑定单一租户，租户管理端点面向具备平台运维权限的管理人员，不用于让普通业务用户枚举或切换租户。
 
 ## 4. 后续触发点（重新评审条件）
 
 出现以下任一情况时需重新评审本方案：
 
-1. 后端提供租户列表/租户管理 HTTP 端点（届时补管理页面与权限码）。
+1. ~~后端为 `TenantApplicationService` 装配 HTTP Router~~ → 已于 2026-10-30 交付 `/api/v2/platform/tenants`，租户管理页已落地（见 §2.1）。
 2. 统一权限认证计划进入实施（登录切换到 `/auth/v1/login`、令牌改由认证中心签发），需核对 `accountId`/`clientType` 等新增字段。
 3. 权限码格式或 `/api/v1/auth/permissions/my` 返回结构变化（影响 `stores/permission` 与 `v-permission`）。
+4. `apex.features.auth-center-permission` 默认开启或授权缓存 TTL 上限调整（影响权限变更生效时延，可提示用户重新登录）。
+5. 租户端点扩展为支持业务侧租户切换（届时评估切换器与租户上下文刷新）。

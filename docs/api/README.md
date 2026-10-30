@@ -1,6 +1,6 @@
 # API 接口目录
 
-> 本文与 [src/api/](../../src/api/) 当前实现逐一对齐（2026-09-27 核对）。新增/修改接口后必须同步更新本文，否则视为文档缺陷。
+> 本文依据当前前端源码、类型定义、页面调用和代理配置核对（2026-10-30）。它记录前端已封装的接口及已确认的页面接入状态；后端实现、生产网关和第三方服务行为仍需在对应环境中外部核验。新增/修改接口后必须同步更新本文，否则视为文档缺陷。
 
 ## 1. 通用约定
 
@@ -17,17 +17,19 @@
 
 | 前缀 | 用途 | 代理（开发/生产） |
 |------|------|-------------------|
-| `/api/v1/**` | 业务接口：认证、当前用户、文件、OAuth2、办公平台登录/回调 | Vite proxy `/api`、Nginx `/api/` |
+| `/api/v1/**` | 业务接口：认证、当前用户、文件、OAuth2、办公平台登录/回调、站内信、MFA、审计日志 | Vite proxy `/api`、Nginx `/api/` |
+| `/api/v2/**` | 第二代接口：租户管理、工作流定义、运维健康、文件分享、办公会议室/同步向导 | 同 `/api` |
 | `/admin-api/v1/**` | 管理后台接口：系统管理、监控、日志、SSO、生成器、认证配置等 | Vite proxy `/admin-api`、Nginx `/admin-api/` |
 | `/api/workflow/**` | 工作流高级操作（回退/转办/委派/挂起/恢复） | 同 `/api` |
-| `/api/office/**` | 办公平台业务操作（消息/审批/日历/文档） | 同 `/api` |
-| `/oauth2/token`、`/oauth2/authorize`、`/oauth2/userinfo` | OAuth2 标准端点 | Vite `^/oauth2/(authorize\|token)`、Nginx 同规则 |
+| `/api/office/**` | 前端办公平台业务 API 使用的路径前缀（消息/审批/日历/文档）；仓库内仅能确认相关调用和开发代理配置 | 同 `/api` |
+| `/api/mfa/**`、`/api/ip-access-control/**` | 认证中心的 MFA 与 IP 访问控制（参数走 query） | 同 `/api` |
+| `/oauth2/token`、`/oauth2/authorize`、`/oauth2/userinfo` | OAuth2 标准端点 | Vite/Nginx 当前仅代理 `authorize` 与 `token`；`userinfo` 未配置专用代理 |
 
 ### 1.3 分页口径（三套并存）
 
 | 口径 | 请求 | 响应 | 使用范围 |
 |------|------|------|---------|
-| **统一口径** | `PageQuery{page, size}` | `PageResponse{list, total, pageNum, pageSize, pages, hasNext}` | 除工作流外的分页模块 |
+| **常规分页** | 以具体 API 类型和页面调用为准，常见为 `page/size` | 以具体 API 类型为准，常见为 `list/total` | 系统、监控、数据等部分列表；不存在所有非工作流模块统一使用同一分页 DTO 的规则 |
 | **工作流口径** | `{pageNum, pageSize}` | `{records, total}`（待办 `/api/v1/workflows/tasks/pending` 返回通用 PageResponse） | 仅 [src/api/workflow.ts](../../src/api/workflow.ts) |
 | **数组响应（无分页包装）** | 各接口自行携带分页参数 | 纯数组（total 以数组长度近似） | 站内信 inbox/sent（pageNum/pageSize）、组织同步任务（page/size）、办公绑定列表（page/size）、消息模板列表（无分页参数） |
 
@@ -72,7 +74,7 @@
 | PUT | `/admin-api/v1/users/{id}/roles` | `assignUserRoles(id, roleIds)` | 分配角色（整体替换） |
 | GET | `/admin-api/v1/staff-roles` | `listStaffRoles()` | 可分配角色列表 |
 | GET | `/admin-api/v1/export/users` | `exportUsers()` | 导出用户 Excel（Blob，固定前 100 条） |
-| DELETE | `/admin-api/v1/users/{id}` | `deleteUser(id)` | 删除用户（预留，后端当前未暴露） |
+| DELETE | `/admin-api/v1/users/{id}` | `deleteUser(id)` | 删除用户（前端 API 已封装；页面接入和后端可用性需分别核验） |
 
 ### 2.3 系统管理 [src/api/system.ts](../../src/api/system.ts)
 
@@ -95,7 +97,7 @@
 | GET | `/admin-api/v1/database/current` | `getCurrentDatabaseInfo()` | 当前数据库信息 |
 | GET | `/admin-api/v1/database/datasources` | `listDataSources(pageNum, pageSize)` | 数据源分页列表（url/username 已脱敏） |
 | POST | `/admin-api/v1/database/datasources` | `createDataSource(payload)` | 创建数据源（DataSourceRequest，密码必填） |
-| PUT | `/admin-api/v1/database/datasources/{id}` | `updateDataSource(id, payload)` | 更新数据源（密码必填，后端 @NotBlank） |
+| PUT | `/admin-api/v1/database/datasources/{id}` | `updateDataSource(id, payload)` | 更新数据源；请求字段要求以 `DataSourceRequest` 和后端实际校验为准 |
 | DELETE | `/admin-api/v1/database/datasources/{id}` | `deleteDataSource(id)` | 删除数据源 |
 | GET | `/admin-api/v1/database/datasources/{id}/metrics` | `getDataSourceMetrics(id)` | 连接池指标 |
 
@@ -136,11 +138,15 @@
 
 ### 2.8 工作流 [src/api/workflow.ts](../../src/api/workflow.ts)（⚠️ 工作流分页口径）
 
-**流程实例**：`listWorkflowInstances`（GET `/admin-api/v1/workflows/instances`）、`getWorkflowInstanceDetail`（GET `/instances/{id}`）。后端未提供流程定义管理接口，前端已移除相关函数。
+**流程实例**：`listWorkflowInstances`（GET `/admin-api/v1/workflows/instances`）、`getWorkflowInstanceDetail`（GET `/admin-api/v1/workflows/instances/{id}`）。
 
-**统计**：`getWorkflowStatistics`（GET `/statistics`）、`getWorkflowTrend(days)`（GET `/statistics/trend`）。
+**流程定义**（`/api/v2/workflow-definitions`）：`listWorkflowDefinitions`（GET，必填 `pageNum/pageSize`，返回 `PageResponse<WorkflowDefinitionInfo>`）、`getWorkflowDefinition(id)`（GET `/{id}`）、`createWorkflowDefinition(payload)`（POST）、`updateWorkflowDefinition(id, payload)`（PUT `/{id}`）、`validateWorkflowDefinition(id)`（POST `/{id}/validate`）、`publishWorkflowDefinition(id)`（POST `/{id}/publish`）、`toggleWorkflowDefinition(id, enabled)`（POST `/{id}/enable` 或 `/{id}/disable`）、`listWorkflowDefinitionVersions(id)`（GET `/{id}/versions`）。查询接口返回 DTO，写接口返回领域对象；两类字段不可混用。
+
+**统计**：`getWorkflowStatistics`（GET `/admin-api/v1/workflows/statistics`）、`getWorkflowTrend(days)`（GET `/admin-api/v1/workflows/statistics/trend`）。
 
 **待办任务**（前缀 `/api/v1/workflows/tasks`）：`getMyPendingTasks`（GET `/pending`，pageNum/pageSize→PageResponse）、`completeTask(taskId, comment)`（POST `/{taskId}/complete`，请求体仅 `comment`，后端固定为通过语义）。办理界面位于 `workflow/monitor` 页「待办任务」Tab。
+
+**发起流程**：`startWorkflowInstance(workflowCode, { businessKey, contextJson? })`（POST `/api/v1/workflows/{workflowCode}/instances`，businessKey 必填 ≤200、contextJson 选填 JSON 字符串 ≤10000，发起人取当前登录用户）。入口位于 `workflow/monitor` 页顶部「发起流程」；虽然已有流程定义管理 API，但当前对话框仍由调用方手动输入 `workflowCode`，未接入定义列表选择。
 
 **高级操作**（注意前缀是 `/api/workflow`，不是 `/admin-api/v1`）：
 
@@ -174,11 +180,11 @@
 | — | — | `buildAuthUrl(config)` | 前端构建授权 URL（S256 PKCE + 一次性 state） |
 | POST | `/oauth2/token` | `exchangeToken(request)` | 表单编码换取令牌 |
 | — | — | `consumeAuthorization(state)` | 一次性取出授权上下文（取出即失效） |
-| GET | `/oauth2/userinfo` | `getUserInfo()` | 获取用户信息 |
-| POST | `/api/v1/auth/social/{provider}` | `socialLogin(request)` | 社交登录（微信/GitHub 等，body 携带 code + state） |
+| GET | `/oauth2/userinfo` | `getUserInfo()` | API 已定义；当前未发现页面调用点，且 Vite/Nginx 未配置该端点的专用代理 |
+| POST | `/api/v1/auth/social/{provider}` | `socialLogin(request)` | API 已定义；当前未发现页面调用点，登录页 provider 按钮统一走标准 OAuth2 PKCE，不调用此接口 |
 | — | — | `verifyState(state)` | state 校验 |
 
-回调处理页面：`/oauth2/callback`（静态路由，public）。
+当前页面接入：登录页各 provider 按钮均调用 `buildAuthUrl()`，统一走标准 OAuth2 授权码 + S256 PKCE；回调处理页面为 `/oauth2/callback`（静态路由，public）。`getUserInfo()` 与 `socialLogin()` 仅保留 API 封装，当前没有页面调用点。
 
 ### 2.13 认证配置管理 [src/api/auth-config.ts](../../src/api/auth-config.ts)（前缀 `/admin-api/v1/auth/config`）
 
@@ -211,7 +217,7 @@
 
 ### 2.15 代码生成器 [src/api/generator.ts](../../src/api/generator.ts)（前缀 `/admin-api/v1/generator`）
 
-> 路径已与后端 `GeneratorAdminRouter` 逐一对齐（2026-10-26 核对）。代码预览、模板管理、历史回滚后端无对应端点，前端已移除相关封装与页面入口；此前文档记载的 `/generate`、`/preview`、`/templates`、`/history`、`/history/{id}/rollback`、`/datasources/test` 均为不存在的端点。
+> 本节仅记录当前前端已封装并被页面使用的生成器接口。数据源测试已由 `testDataSourceConnection(id)` 封装，并由代码生成器页面的“测试连接”操作调用；代码预览、模板管理和历史回滚当前没有对应的前端 API 封装或页面入口。后端是否提供这些未接入能力需在后端仓库或目标环境中核验。
 
 | 子域 | 路径 | 函数 |
 |------|------|------|
@@ -245,6 +251,11 @@
 | POST | `/api/v1/office/organization/sync` | `triggerOrgSync(payload)` | 触发组织同步（platform/syncType/fullSync） |
 | GET | `/api/v1/office/organization/sync/tasks` | `listOrgSyncTasks(params)` | 同步任务列表（⚠️ page/size 口径，返回数组） |
 | GET | `/api/v1/office/organization/mappings` | `listOrgMappings(platform?)` | 平台组织映射列表（apex 侧 ID 为字符串） |
+| GET | `/admin-api/v1/org/departments/{id}` | `getOrgDepartment(id)` | 部门详情 |
+| POST | `/admin-api/v1/org/departments` | `createOrgDepartment(payload)` | 创建部门（后端 DTO 无校验注解；返回体不含生成 id，须刷新列表） |
+| PUT | `/admin-api/v1/org/departments/{id}` | `updateOrgDepartment(id, payload)` | 更新部门（deptLevel/deptPath 由前端推导，后端照抄存储） |
+| DELETE | `/admin-api/v1/org/departments/{id}` | `deleteOrgDepartment(id)` | 删除部门；前端未实现级联关系预检，实际删除约束需以后端响应为准 |
+| GET | `/admin-api/v1/org/employees/{id}` | `getOrgEmployee(id)` | 员工详情 |
 
 **[src/api/message.ts](../../src/api/message.ts)**（站内信与消息模板，被 `office/message` 页与 `layouts/AdminLayout.vue` 引用）：
 
@@ -256,29 +267,147 @@
 | GET | `/api/v1/messages/{id}` | `getMessageDetail(id)` | 消息详情 |
 | PUT | `/api/v1/messages/{id}/read` | `markMessageRead(id)` | 标记已读 |
 | PUT | `/api/v1/messages/read-all` | `markAllMessagesRead()` | 全部已读 |
-| GET | `/api/v1/messages/unread/count` | `getUnreadCount()` | 未读数（顶栏 30s 轮询） |
+| GET | `/api/v1/messages/unread/count` | `getUnreadCount()` | 未读数（顶栏 60s 轮询兜底 + WebSocket 推送刷新） |
+| POST | `/api/v1/messages/ws-ticket` | `issueMessageSocketTicket()` | 签发 30s 一次性 WebSocket 握手票据（供 `utils/message-socket.ts` 消费） |
 | GET | `/admin-api/v1/message-templates` | `listMessageTemplates()` | 启用模板列表（数组，无分页） |
 | POST | `/admin-api/v1/message-templates` | `createMessageTemplate(payload)` | 创建模板 |
 | PUT | `/admin-api/v1/message-templates/{templateId}` | `updateMessageTemplate(id, payload)` | 更新模板 |
 | DELETE | `/admin-api/v1/message-templates/{templateId}` | `deleteMessageTemplate(id)` | 删除模板 |
 
+> 站内信 WebSocket：`utils/message-socket.ts` 以 `POST ws-ticket`（Bearer）换一次性票据，握手 `WS /api/v1/messages/ws?ticket=`；服务端 20s 推 `{"type":"ping"}`，客户端回文本 `pong`；连接寿命上限 1h，断线由管理器自动重连（5s→30s 退避）。前置条件：vite `/api` 代理已开 `ws:true`，nginx 有 `= /api/v1/messages/ws` 专用 location，office-service 的 `office.messages.allowed-origins` 须包含前端 Origin。
+
+**[src/api/masking.ts](../../src/api/masking.ts)**（数据脱敏，被 `system/masking` 页引用；前端 API 和页面调用已确认，生产网关路由需外部核验）：
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/api/v1/masking/rules` | `listMaskingRules()` | 当前租户授权的规则（Map<版本, Map<字段路径, {type, customRule}>>） |
+| POST | `/api/v1/masking/batch` | `maskBatch(version, documents)` | 批量脱敏（1~100 个 JSON 文档，请求体上限 256KB） |
+
 **[src/api/office.ts](../../src/api/office.ts)**（综合接口，被 `office/approval`、`office/calendar`、`office/document` 引用；`office/message` 与 `office/organization` 已改用 `message.ts` / `office-new.ts`）：
 
 | 子域 | 前缀 | 代表函数 |
 |------|------|---------|
-| 平台配置/连通性 | `/admin-api/v1/office/config/{platform}`、`/test` | `getPlatformConfig` / `savePlatformConfig` / `testConnectivity`（⚠️ 后端无对应实现） |
-| 绑定（旧版函数） | `/admin-api/v1/office/bindings/**` | `getBindings` / `approveBinding` / `rejectBinding` / `unbindBinding`（页面实际使用 `office-new.ts` 版本） |
-| 组织同步（旧版函数） | `/admin-api/v1/office/sync/{platform}/**` | `getSyncStatus` / `triggerSync`（⚠️ 后端无对应实现，已由 `office-new.ts` 组织同步函数替代） |
-| 消息（管理） | POST `/admin-api/v1/office/messages/send` | `sendMessage`（⚠️ 后端无对应实现，站内信已由 `message.ts` 替代） |
-| 审批/日历/文件（管理查询） | `/admin-api/v1/office/approvals`、`/calendar/events`、`/files` | `getApprovals` / `getAdminCalendarEvents` / `getFiles`（⚠️ 后端无对应实现） |
+| 平台配置/连通性 | `/admin-api/v1/office/config/{platform}`、`/test` | `getPlatformConfig` / `savePlatformConfig` / `testConnectivity`（旧版前端封装，当前页面改用 `office-new.ts` 的应用配置；端点可用性需外部核验） |
+| 绑定（旧版函数） | `/admin-api/v1/office/bindings/**` | `getBindings` / `approveBinding` / `rejectBinding` / `unbindBinding`（旧版前端封装，页面实际使用 `office-new.ts` 版本） |
+| 组织同步（旧版函数） | `/admin-api/v1/office/sync/{platform}/**` | `getSyncStatus` / `triggerSync`（旧版前端封装，当前由 `office-sync-wizard.ts` 与 `office-new.ts` 承担相关页面能力） |
+| 消息（管理） | POST `/admin-api/v1/office/messages/send` | `sendMessage`（旧版前端封装，当前站内信页面使用 `message.ts`） |
+| 管理端文件查询 | `/admin-api/v1/office/files` | `getFiles`（旧版前端封装，当前页面接入状态和端点可用性需外部核验） |
 | 消息（业务） | `/api/office/messages/**`（text/image/file/card/sent/{id}） | `sendTextMessage` 等 |
-| 审批（业务） | `/api/office/approvals/**`（发起/详情/同意/撤销/pending/initiated） | `initiateApproval` 等 |
+| 审批（业务） | `/api/office/approvals`（发起/详情/同意/撤销/pending/initiated） | `initiateApproval` / `getApprovalDetail` / `approveProcess` / `cancelApproval` / `getPendingApprovals` / `getMyInitiatedApprovals`（⚠️ 列表元素字段为 processName/currentNode/createdAt，路径参数为 processInstanceId；approverId 必填） |
 | 日历（业务） | `/api/office/calendar/events/**`（CRUD/查询/my） | `createCalendarEvent` 等 |
 | 文档（业务） | `/api/office/documents/**`（CRUD/copy/move/share/my） | `createDocument` 等 |
 
-> 多模块并存是过渡状态：`office-new.ts` 覆盖应用配置、绑定管理与组织同步，`message.ts` 覆盖站内信与模板，`office.ts` 覆盖审批/日历/文档业务操作（其中 `/api/office/**` 前缀当前无网关路由，需后端补路由后方可访问）。新增办公页面时优先查看页面实际 import 的模块，不要凭前缀猜测。
+> 多模块按职责拆分：`office-new.ts` 覆盖平台状态、登录、应用配置、绑定管理与组织同步，`office-sync-wizard.ts` 覆盖同步向导（预检/预览/执行/重试），`message.ts` 覆盖站内信与模板，`office.ts` 覆盖审批/日历/文档业务操作。当前仓库可确认这些 API 封装、页面调用和开发代理配置；生产网关是否完整转发对应路径需在部署环境核验。新增办公页面时优先查看页面实际 import 的模块，不要凭前缀猜测。
 
-### 2.17 自动生成接口
+### 2.16.1 文件分享 [src/api/file-share.ts](../../src/api/file-share.ts)（前缀 `/api/v2/file-shares`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| POST | `/api/v2/files/{fileId}/shares` | `createFileShare(fileId, expireSeconds?)` | 创建分享（返回一次性明文 token 与 shareId） |
+| GET | `/api/v2/files/{fileId}/shares` | `listFileShares(fileId, query)` | 分享列表（仅所有者；page/size/status；不返回令牌与摘要） |
+| DELETE | `/api/v2/file-shares/{shareId}` | `revokeFileShare(shareId)` | 撤销分享（幂等） |
+| POST | `/api/v2/file-shares/exchange` | `exchangeFileShare(token)` | 凭 token 换取元信息（匿名） |
+| POST | `/api/v2/file-shares/download` | `downloadFileShare(token)` | 凭 token 下载（匿名，二进制流） |
+
+> 页面 `data/file-share/` 提供「我的分享」按文件 ID 查询与撤销；明文 token 仅创建响应返回一次。
+
+**分片上传契约（`/api/v1/file/chunk/**`，已加固）**：init 校验分片大小 ≤64MB（`file.upload.max-chunk-bytes`）、分片总数上限（`file.upload.max-total-chunks`）与 `chunkSize*totalChunks ≥ fileSize`；upload 校验单片不超过初始化 chunkSize 与剩余字节数，并计算/校验分片 MD5（32 位 hex）；merge 消费 `fileName/contentType/md5`，在上传流中计算最终 MD5，不匹配时删除最终对象并释放会话；`(file_id, chunk_index, deleted)` 唯一约束（file-service V7）+ 仓储 `saveIfAbsent` 保证并发幂等，败者删除临时对象后返回已保存分片；非法数字查询参数统一返回 400；Sentinel 限流规则已对齐实际 `/api/v1/file/chunk/**` 前缀。
+
+### 2.16.2 会议室 [src/api/meeting-room.ts](../../src/api/meeting-room.ts)（前缀 `/api/v2/office/meeting-rooms`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/api/v2/office/meeting-rooms` | `listMeetingRooms(query)` | 分页（pageNum/pageSize/status/keyword；列表元素 equipment 可能是 JSON 字符串） |
+| GET | `/api/v2/office/meeting-rooms/enabled` | `listEnabledMeetingRooms()` | 启用会议室 |
+| GET | `/api/v2/office/meeting-rooms/available` | `listAvailableMeetingRooms(startTime, endTime)` | 时间段可用 |
+| GET/POST/PUT/DELETE | `/api/v2/office/meeting-rooms[/{id}]` | `getMeetingRoom` / `createMeetingRoom` / `updateMeetingRoom` / `deleteMeetingRoom` | 台账 CRUD（写操作需 `office:meeting-room:manage`） |
+| POST | `/api/v2/office/meeting-rooms/{id}/bookings` | `bookMeetingRoom(id, payload)` | 预订（需 `office:meeting-room:book`） |
+| DELETE | `/api/v2/office/meeting-rooms/{roomId}/bookings/{eventId}` | `cancelMeetingRoomBooking` | 取消预订 |
+
+### 2.16.3 组织同步向导 [src/api/office-sync-wizard.ts](../../src/api/office-sync-wizard.ts)（前缀 `/api/v2/office/sync`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| POST | `/api/v2/office/sync/preflight` | `preflightOrgSync(platform)` | 预检（返回 ready 与缺失项） |
+| POST | `/api/v2/office/sync/preview` | `previewOrgSync(platform, syncType)` | 预览变更规模（不落库） |
+| POST | `/api/v2/office/sync/tasks` | `executeOrgSync(payload)` | 创建同步任务 |
+| GET | `/api/v2/office/sync/tasks` | `listWizardSyncTasks(params)` | 任务列表（⚠️ page/size，返回数组） |
+| GET | `/api/v2/office/sync/tasks/{taskId}` | `getWizardSyncTask(taskId)` | 任务详情 |
+| POST | `/api/v2/office/sync/tasks/{taskId}/retry` | `retryWizardSyncTask(taskId)` | 重试失败任务 |
+
+### 2.16.4 密码找回 [src/api/password-recovery.ts](../../src/api/password-recovery.ts)（前缀 `/auth/v2/password-recovery`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| POST | `/auth/v2/password-recovery/requests` | `initiatePasswordRecovery(channel, contact)` | 提交申请（channel 仅 EMAIL/SMS），返回 recoveryId |
+| POST | `/auth/v2/password-recovery/verifications` | `verifyPasswordRecovery(recoveryId, code)` | 校验验证码，返回一次性 confirmToken |
+| POST | `/auth/v2/password-recovery/confirmations` | `confirmPasswordRecovery(recoveryId, confirmToken, newPassword)` | 确认重设；`sessionRevocation=PENDING` 表示会话撤销未完成 |
+
+> 入口在登录页「忘记密码？」。前端按当前 API 类型和页面表单调用密码找回接口；限流策略及账号存在性响应语义需以后端实现和实际环境核验。
+
+### 2.17 租户管理 [src/api/tenant.ts](../../src/api/tenant.ts)（前缀 `/api/v2/platform/tenants`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/api/v2/platform/tenants` | `listTenants(query)` | 租户分页（⚠️ pageNum/pageSize 必填；tenantCode/tenantName 模糊，status 精确） |
+| GET | `/api/v2/platform/tenants/{id}` | `getTenant(id)` | 租户详情 |
+| POST | `/api/v2/platform/tenants` | `createTenant(payload)` | 创建租户；编码唯一性和后续可变更性需以后端契约核验 |
+| POST | `/api/v2/platform/tenants/{id}/actions` | `changeTenantStatus(id, {action, expectedVersion})` | 生命周期（disable/enable/freeze/unfreeze/deactivate/archive，小写） |
+| PUT | `/api/v2/platform/tenants/{id}/quota` | `updateTenantQuota(id, {maxUsers, maxStorageMb, expectedVersion})` | 配额调整（null=不限） |
+
+> 权限码：`tenant:read` / `tenant:create` / `tenant:lifecycle` / `tenant:quota`。页面 `views/system/tenant/`。
+
+### 2.18 账号安全（MFA 与 IP 访问控制）[src/api/mfa.ts](../../src/api/mfa.ts)、[src/api/ip-access-control.ts](../../src/api/ip-access-control.ts)
+
+**MFA**（前缀 `/api/mfa`，用户与租户取自可信请求属性）：
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| POST | `/api/mfa/totp/enable` | `enableTotp()` | 生成 TOTP 密钥与二维码 |
+| POST | `/api/mfa/totp/activate?code=` | `activateTotp(code)` | 动态码激活，返回备用码 |
+| POST | `/api/mfa/sms/enable?phoneNumber=` | `enableSmsMfa(phone)` | 启用短信 MFA |
+| POST | `/api/mfa/email/enable?email=` | `enableEmailMfa(email)` | 启用邮箱 MFA |
+| DELETE | `/api/mfa/{type}` | `disableMfa(type)` | 关闭（TOTP/SMS/EMAIL） |
+| POST | `/api/mfa/verify?code=&type=` | `verifyMfaCode(code, type)` | 校验动态码 |
+| POST | `/api/mfa/send-code?type=` | `sendMfaCode(type)` | 发送验证码 |
+| GET | `/api/mfa/configs` | `listMfaConfigs()` | 我的配置（⚠️ 裸数组） |
+| GET | `/api/mfa/status` | `getMfaStatus()` | 是否启用任意 MFA |
+| POST | `/api/mfa/backup-codes/regenerate` | `regenerateBackupCodes()` | 重生成备用码 |
+| POST | `/api/mfa/backup-codes/verify?code=` | `verifyBackupCode(code)` | 校验备用码 |
+| POST | `/api/mfa/unlock?userId=&type=` | `unlockMfa(userId, type)` | 解锁（需管理员） |
+
+**IP 访问控制**（前缀 `/api/ip-access-control`，⚠️ 写操作参数全部走 query string）：
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/api/ip-access-control/whitelist` / `blacklist` | `listIpRules(type)` | 列表（⚠️ 裸数组） |
+| POST | `/api/ip-access-control/whitelist?ipAddress=&description=` | `addIpRule('WHITELIST', ...)` | 新增白名单 |
+| POST | `/api/ip-access-control/blacklist?ipAddress=&description=&durationMinutes=` | `addIpRule('BLACKLIST', ...)` | 新增黑名单（不传时长为永久） |
+| DELETE | `/api/ip-access-control/whitelist|blacklist?ipAddress=` | `removeIpRuleByAddress` | 按地址移除 |
+| DELETE | `/api/ip-access-control/{ruleId}` | `deleteIpRule(id)` | 按 ID 删除 |
+| PUT | `/api/ip-access-control/{ruleId}/enable|disable` | `toggleIpRule(id, enabled)` | 启停规则 |
+| POST | `/api/ip-access-control/cleanup` | `cleanupIpRules()` | 清理过期（返回数量） |
+| POST | `/api/ip-access-control/check?ipAddress=` | `checkIpAccess(ip)` | 放行检查 |
+
+> 页面 `views/system/security/`（两个 Tab）。MFA 配置与 IP 规则列表均为裸数组，无 `Result` 包装。
+
+### 2.19 运维健康 [src/api/operations.ts](../../src/api/operations.ts)（前缀 `/api/v2/operations`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/health-report` | `getHealthReport()` | 实时健康报告（分组条目含建议） |
+| POST | `/health-snapshots` | `captureHealthSnapshot()` | 现场采集快照 |
+| GET | `/health-snapshots` | `listHealthSnapshots(query)` | 快照分页（⚠️ page/size 口径） |
+| GET | `/health-trend` | `getHealthTrend(query)` | 趋势（from 缺省回看 7 天，limit ≤500） |
+| GET | `/tenant-health-summary` | `getTenantHealthSummary()` | 租户健康汇总 |
+| POST | `/health-snapshots/export-tasks` | `createHealthExportTask(query)` | 提交异步导出任务 |
+| GET | `/health-snapshots/export-tasks/{id}` | `getHealthExportTask(id)` | 查询任务（⚠️ 无列表端点） |
+| GET | `/health-snapshots/export-tasks/{id}/download` | `downloadHealthExportTask(id)` | 下载结果（CSV 流） |
+| GET | `/health-snapshots/export` | `exportHealthSnapshots(query)` | 同步导出（CSV 流，上限 5000 行） |
+
+> 当前前端仅封装 health-report、snapshots、trend 等运维健康子路径，未封装 `GET /api/v2/operations` 根路径。页面位于 `views/monitor/operations/`；根路径是否提供由后端接口契约决定。
+
+### 2.20 自动生成接口
 
 `npm run generate:api`（openapi-generator-cli 7.2.0，typescript-axios，配置见 [openapitools.json](../../openapitools.json)）依据 `glob: "openapi.json"` 从根目录 `openapi.json` 生成代码到 `src/api/generated/`。该 OpenAPI 规范文件由后端接口导出提供，当前仓库未内置（`.gitignore` 也未忽略），执行前须先将其放到根目录；`src/api/generated/` 亦为生成目录，当前仓库不存在。生成物为辅助参考，业务代码仍以手写 [src/api/](../../src/api/) 模块为准。
 
@@ -303,10 +432,10 @@ try {
 
 1. 在对应业务域文件（或新建 `src/api/{domain}.ts`）中封装**类型化函数**，禁止页面直接调用 axios；
 2. 复用 `get/post/put/del`，泛型标注返回类型（禁止 `Promise<any>`）；
-3. 非工作流模块分页一律使用 `PageQuery{page, size}` / `PageResponse`；
+3. 分页接口必须按对应 API 类型、页面调用和后端契约定义参数及响应结构；不能将 `page/size`、`pageNum/pageSize` 或数组响应全局互换；
 4. 写 JSDoc（含 `@param`/`@returns`），文件头注释列出后端接口；
 5. 同步更新本文与 [AGENTS.md](../../AGENTS.md) 的模块清单。
 
 ---
 
-**最后更新**：2026-09-27（依据 src/api/ 逐文件核对）
+**最后更新**：2026-10-30（依据前端源码、类型定义、页面调用和代理配置核对；后端及生产部署状态需外部核验）

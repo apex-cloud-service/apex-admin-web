@@ -2,8 +2,8 @@
  * 代码生成器 API
  * ------------------------------------------------------------------
  * 提供数据源管理、表结构扫描、代码生成配置、代码生成与生成历史查询。
- * 路径已与后端 GeneratorAdminRouter（GeneratorAdminRouter.java）逐一对齐；
- * 代码预览、模板管理、生成历史回滚后端未提供对应端点，不在本模块封装。
+ * 当前模块封装数据源、连接测试、表结构扫描、生成配置、代码生成与生成历史；
+ * 代码预览、模板管理和生成历史回滚没有对应的前端 API 封装。
  */
 import { del, get, post, put } from '@/utils/request'
 import type { PageQuery, PageResponse } from '@/types'

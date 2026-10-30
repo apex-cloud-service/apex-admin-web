@@ -158,7 +158,7 @@
  * ------------------------------------------------------------------
  * 实现图表的 CRUD 操作、ECharts 图表渲染、状态管理等功能
  */
-import { ref, reactive, onBeforeUnmount } from 'vue'
+import { ref, reactive, onBeforeUnmount, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Search, Refresh, Plus, Edit, Delete, View } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
@@ -166,6 +166,9 @@ import Pagination from '@/components/Pagination.vue'
 import { listCharts, createChart, updateChart, deleteChart, getChartDetail, getChartData } from '@/api/chart'
 import type { Chart, ChartData } from '@/types'
 import { showError } from '@/utils/request'
+import { useAppStore } from '@/stores/app'
+
+const appStore = useAppStore()
 
 /** 列表加载状态 */
 const loading = ref(false)
@@ -216,6 +219,8 @@ const chartDialogVisible = ref(false)
 const chartLoading = ref(false)
 /** 当前查看的图表信息 */
 const currentChart = ref<Chart | null>(null)
+/** 当前查看图表的 ID（主题切换重绘用） */
+const currentChartId = ref<string>('')
 /** 图表容器 DOM 引用 */
 const chartRef = ref<HTMLElement>()
 /** ECharts 实例（需在组件销毁时手动释放） */
@@ -330,9 +335,12 @@ const handleEdit = async (row: Chart): Promise<void> => {
  */
 const handleViewChart = async (row: Chart): Promise<void> => {
   chartLoading.value = true
+  currentChartId.value = row.id
   try {
     currentChart.value = await getChartDetail(row.id)
     chartDialogVisible.value = true
+    // 对话框打开期间监听窗口尺寸变化，关闭时由 handleChartDialogClose 移除
+    window.addEventListener('resize', handleChartResize)
     setTimeout(async () => {
       await renderChart(row.id)
       chartLoading.value = false
@@ -464,19 +472,36 @@ const handleDialogClose = (): void => {
 
 /**
  * 处理图表展示对话框关闭
- * 释放 ECharts 实例资源
+ * 释放 ECharts 实例资源并移除 resize 监听
  */
 const handleChartDialogClose = (): void => {
+  window.removeEventListener('resize', handleChartResize)
   if (chartInstance) {
     chartInstance.dispose()
     chartInstance = null
   }
 }
 
+/** 窗口尺寸变化时自适应当前图表 */
+const handleChartResize = (): void => {
+  chartInstance?.resize()
+}
+
+// 主题切换后重绘当前图表（沿用渲染函数内的配色逻辑）
+watch(
+  () => appStore.theme,
+  () => {
+    if (chartDialogVisible.value && currentChartId.value) {
+      renderChart(currentChartId.value)
+    }
+  },
+)
+
 /**
  * 组件销毁前释放 ECharts 实例资源
  */
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleChartResize)
   if (chartInstance) {
     chartInstance.dispose()
     chartInstance = null

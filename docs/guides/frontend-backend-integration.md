@@ -1,295 +1,247 @@
-# 前后端接口对接说明文档
+# 数据库配置采集与数据源管理前端接口联调指南
 
-## 概述
+## 1. 文档边界
 
-数据库配置功能的前后端已完全对接，本文档说明三个接口的对接实现细节。
+本文档只描述当前前端仓库已实现并可核对的调用链、请求参数、响应类型、页面行为和代理边界。事实来源包括：
 
-## 接口对接清单
+- [数据库 API](../../src/api/database.ts)
+- [全局类型](../../src/types/index.ts)
+- [数据库配置页](../../src/views/system/database/index.vue)
+- [统一请求封装](../../src/utils/request.ts)
 
-### 1. 测试数据库连接
+后端 Handler、Service、DTO 类名、权限注解、数据库驱动实现、实际部署连通性和生产环境权限结果不属于本仓库可单独证明的事实，需要在目标后端环境另行核验。
 
-#### 前端实现
+请求通过统一请求层发送。若后端返回数字 `code`，请求层在成功时解包 `data`，页面和 API 函数收到的是业务数据，不是完整的 `Result` 对象；不含数字 `code` 的响应按请求层约定保留原始数据。
 
-**API 函数** ([src/api/database.ts](../../src/api/database.ts)):
-```typescript
-export function testDatabaseConnection(
-  config: DatabaseConfig & { password: string }
-): Promise<DatabaseTestResult> {
-  return post<DatabaseTestResult>('/admin-api/v1/database/test', config)
-}
+## 2. 页面与业务范围
+
+数据库配置页包含两个 Tab：
+
+| Tab | 功能 | 页面状态 |
+| --- | --- | --- |
+| 配置采集 | 测试连接、生成 YAML/env/Docker Compose 配置、查询当前数据库信息 | 页面挂载时查询当前数据库信息；提交操作分别管理 loading |
+| 数据源管理 | 数据源分页列表、新增、编辑、删除、查看连接池指标 | 页面挂载时加载列表；使用服务端分页和 `list/total` |
+
+配置采集表单字段为：
+
+- `dbType`: `mysql` 或 `postgresql`
+- `host`
+- `port`
+- `database`
+- `username`
+- `password`
+- `connectionParams`（可选）
+- `environment`: `dev`、`test` 或 `prod`
+
+配置采集页面提示密码仅用于一次性测试和配置导出。数据源管理的密码在新增和编辑时都要求重新输入，后端不回显旧密码。
+
+## 3. 接口清单
+
+| 前端函数 | 方法 | 路径 | 返回类型 |
+| --- | --- | --- | --- |
+| `testDatabaseConnection` | POST | `/admin-api/v1/database/test` | `DatabaseTestResult` |
+| `generateDeploymentConfig` | POST | `/admin-api/v1/database/generate-config` | `DeploymentConfigResult` |
+| `getCurrentDatabaseInfo` | GET | `/admin-api/v1/database/current` | `CurrentDatabaseInfo` |
+| `listDataSources` | GET | `/admin-api/v1/database/datasources` | `PageResponse<DataSourceInfo>` |
+| `createDataSource` | POST | `/admin-api/v1/database/datasources` | `DataSourceInfo` |
+| `updateDataSource` | PUT | `/admin-api/v1/database/datasources/{id}` | `DataSourceInfo` |
+| `deleteDataSource` | DELETE | `/admin-api/v1/database/datasources/{id}` | `void` |
+| `getDataSourceMetrics` | GET | `/admin-api/v1/database/datasources/{id}/metrics` | `DataSourceMetrics` |
+
+除分页查询外，路径参数 `id` 均为数字类型。具体请求由 `src/api/database.ts` 使用 `get`、`post`、`put` 和 `del` 封装。
+
+## 4. 配置采集接口
+
+### 4.1 测试数据库连接
+
+```ts
+POST /admin-api/v1/database/test
 ```
 
-**页面调用** ([src/views/system/database/index.vue](../../src/views/system/database/index.vue)):
-```typescript
-const handleTest = async () => {
-  if (!formRef.value) return
-
-  try {
-    await formRef.value.validate()
-    testing.value = true
-
-    const result = await testDatabaseConnection(form)
-
-    if (result.success) {
-      ElMessage.success(`连接成功！${result.version ? '版本: ' + result.version : ''}`)
-    } else {
-      ElMessage.error(result.message || '连接失败')
-    }
-  } catch (error: any) {
-    if (error?.constructor?.name !== 'Error') {
-      showError(error)
-    }
-  } finally {
-    testing.value = false
-  }
-}
-```
-
-#### 后端实现
-
-**Handler** (DatabaseConfigHandler.java：`apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/DatabaseConfigHandler.java`):
-```java
-@RequirePermission("system:database:test")
-@Operation(operationId = "testDatabaseConnection", summary = "测试数据库连接")
-public Mono<ServerResponse> testConnection(ServerRequest request) {
-    return parseBody(request, DatabaseConfigRequest.class)
-            .flatMap(databaseConfigService::testConnection)
-            .flatMap(this::buildSuccess);
-}
-```
-
-**路由**: `POST /admin-api/v1/database/test`
-
-#### 数据流转
-
-1. 用户在前端填写数据库配置表单
-2. 点击"测试连接"按钮触发 `handleTest()`
-3. 前端验证表单（必填字段、端口范围）
-4. 调用 `testDatabaseConnection()` 发送 POST 请求
-5. 后端 Handler 接收请求并校验权限
-6. Service 使用 HikariCP 创建临时连接测试
-7. 返回测试结果（成功/失败 + 版本信息）
-8. 前端显示成功或失败消息
-
-#### 请求示例
+请求体为 `DatabaseConfig & { password: string }`：
 
 ```json
 {
   "dbType": "mysql",
-  "host": "localhost",
+  "host": "<database-host>",
   "port": 3306,
-  "database": "apex_db",
-  "username": "root",
-  "password": "password123",
-  "connectionParams": "useSSL=false&serverTimezone=Asia/Shanghai",
+  "database": "<database-name>",
+  "username": "<database-user>",
+  "password": "<database-password>",
+  "connectionParams": "useSSL=false",
   "environment": "dev"
 }
 ```
 
-#### 响应示例
-
-**成功**:
-```json
-{
-  "code": 0,
-  "msg": "成功",
-  "data": {
-    "success": true,
-    "message": "连接成功",
-    "version": "MySQL 8.0.35"
-  },
-  "traceId": "abc123"
-}
-```
-
-**失败**:
-```json
-{
-  "code": 0,
-  "msg": "成功",
-  "data": {
-    "success": false,
-    "message": "连接失败: Access denied for user 'root'@'localhost'",
-    "version": null
-  },
-  "traceId": "def456"
-}
-```
-
-### 2. 生成部署配置
-
-#### 前端实现
-
-**API 函数** ([src/api/database.ts](../../src/api/database.ts)):
-```typescript
-export function generateDeploymentConfig(
-  config: DatabaseConfig & { password: string }
-): Promise<DeploymentConfigResult> {
-  return post<DeploymentConfigResult>('/admin-api/v1/database/generate-config', config)
-}
-```
-
-**页面调用** ([src/views/system/database/index.vue](../../src/views/system/database/index.vue)):
-```typescript
-const handleGenerate = async () => {
-  if (!formRef.value) return
-
-  try {
-    await formRef.value.validate()
-    generating.value = true
-
-    const result = await generateDeploymentConfig(form)
-
-    exportDialog.yaml = result.yaml
-    exportDialog.env = result.env
-    exportDialog.dockerCompose = result.dockerCompose || ''
-    exportDialog.activeTab = 'yaml'
-    exportDialog.visible = true
-
-    ElMessage.success('配置生成成功')
-  } catch (error) {
-    showError(error)
-  } finally {
-    generating.value = false
-  }
-}
-```
-
-#### 后端实现
-
-**Handler** (DatabaseConfigHandler.java：`apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/DatabaseConfigHandler.java`):
-```java
-@RequirePermission("system:database:generate")
-@Operation(operationId = "generateDeploymentConfig", summary = "生成部署配置")
-public Mono<ServerResponse> generateConfig(ServerRequest request) {
-    return parseBody(request, DatabaseConfigRequest.class)
-            .flatMap(databaseConfigService::generateDeploymentConfig)
-            .flatMap(this::buildSuccess);
-}
-```
-
-**路由**: `POST /admin-api/v1/database/generate-config`
-
-#### 数据流转
-
-1. 用户填写完数据库配置后点击"生成配置"
-2. 前端验证表单完整性
-3. 调用 `generateDeploymentConfig()` 发送 POST 请求
-4. 后端 Handler 接收请求并校验权限
-5. Service 生成三种格式配置（YAML/env/docker-compose）
-6. 返回生成的配置内容
-7. 前端弹出对话框展示三种配置
-8. 用户可切换查看并一键复制
-
-#### 响应示例
+返回 `DatabaseTestResult`：
 
 ```json
 {
-  "code": 0,
-  "msg": "成功",
-  "data": {
-    "yaml": "spring:\n  datasource:\n    url: jdbc:mysql://localhost:3306/apex_db\n    username: root\n    password: ${DB_PASSWORD}\n    driver-class-name: com.mysql.cj.jdbc.Driver\n    hikari:\n      maximum-pool-size: 20\n      minimum-idle: 5\n      connection-timeout: 30000\n      idle-timeout: 600000\n      max-lifetime: 1800000\n",
-    "env": "DB_URL=jdbc:mysql://localhost:3306/apex_db\nDB_USERNAME=root\nDB_PASSWORD=password123\nDB_DRIVER=com.mysql.cj.jdbc.Driver\n",
-    "dockerCompose": "version: '3.8'\nservices:\n  database:\n    image: mysql:8.0\n    container_name: apex-database\n    ports:\n      - \"3306:3306\"\n    environment:\n      MYSQL_ROOT_PASSWORD: password123\n      MYSQL_DATABASE: apex_db\n      MYSQL_USER: root\n      MYSQL_PASSWORD: password123\n    volumes:\n      - db_data:/var/lib/mysql\n    networks:\n      - apex-network\n\nvolumes:\n  db_data:\n\nnetworks:\n  apex-network:\n    driver: bridge\n"
-  },
-  "traceId": "ghi789"
+  "success": true,
+  "message": "<connection-result>",
+  "version": "<database-version>"
 }
 ```
 
-#### UI 交互
+`version` 为可选字段。页面先执行表单校验，再调用接口；`success=true` 时显示成功消息和可用版本，`success=false` 时显示 `message`。请求异常交给现有错误处理逻辑，表单校验失败不会发起请求。
 
-- 配置导出弹窗使用 Element Plus Tabs 组件
-- 三个标签页：YAML 配置、环境变量、Docker Compose
-- 每个标签页右上角有"复制"按钮
-- 使用 `navigator.clipboard.writeText()` 实现一键复制
+### 4.2 生成部署配置
 
-### 3. 获取当前数据库信息
-
-#### 前端实现
-
-**API 函数** ([src/api/database.ts](../../src/api/database.ts)):
-```typescript
-export function getCurrentDatabaseInfo(): Promise<CurrentDatabaseInfo> {
-  return get<CurrentDatabaseInfo>('/admin-api/v1/database/current')
-}
+```ts
+POST /admin-api/v1/database/generate-config
 ```
 
-**页面调用** ([src/views/system/database/index.vue](../../src/views/system/database/index.vue)):
-```typescript
-const fetchCurrentDb = async () => {
-  try {
-    currentDb.value = await getCurrentDatabaseInfo()
-  } catch (error) {
-    console.error('获取当前数据库信息失败:', error)
-  }
-}
-
-onMounted(() => {
-  fetchCurrentDb()
-})
-```
-
-#### 后端实现
-
-**Handler** (DatabaseConfigHandler.java：`apex-scaffold/apex-interfaces/src/main/java/com/apex/scaffold/interfaces/handler/DatabaseConfigHandler.java`):
-```java
-@RequirePermission("system:database:info")
-@Operation(operationId = "getCurrentDatabaseInfo", summary = "获取当前数据库信息")
-public Mono<ServerResponse> getCurrentInfo(ServerRequest request) {
-    return databaseConfigService.getCurrentDatabaseInfo()
-            .flatMap(this::buildSuccess);
-}
-```
-
-**路由**: `GET /admin-api/v1/database/current`
-
-#### 数据流转
-
-1. 页面加载时（`onMounted`）自动调用 `fetchCurrentDb()`
-2. 调用 `getCurrentDatabaseInfo()` 发送 GET 请求
-3. 后端 Handler 接收请求并校验权限
-4. Service 查询应用当前使用的 DataSource 信息
-5. 返回数据库类型、版本和驱动版本
-6. 前端使用 Element Plus Descriptions 组件展示
-7. 失败时静默处理（仅控制台输出）
-
-#### 响应示例
+请求体与连接测试相同，密码只随本次请求发送：
 
 ```json
 {
-  "code": 0,
-  "msg": "成功",
-  "data": {
-    "type": "MySQL",
-    "version": "8.0.35",
-    "driverVersion": "mysql-connector-j-8.0.33 (Revision: 5)"
-  },
-  "traceId": "jkl012"
+  "dbType": "postgresql",
+  "host": "<database-host>",
+  "port": 5432,
+  "database": "<database-name>",
+  "username": "<database-user>",
+  "password": "<database-password>",
+  "connectionParams": "",
+  "environment": "test"
 }
 ```
 
-#### UI 展示
+返回 `DeploymentConfigResult`：
 
-```vue
-<el-descriptions :column="2" border>
-  <el-descriptions-item label="数据库类型">
-    <el-tag>{{ currentDb.type }}</el-tag>
-  </el-descriptions-item>
-  <el-descriptions-item label="数据库版本">
-    {{ currentDb.version }}
-  </el-descriptions-item>
-  <el-descriptions-item v-if="currentDb.driverVersion" label="驱动版本">
-    {{ currentDb.driverVersion }}
-  </el-descriptions-item>
-</el-descriptions>
+```json
+{
+  "yaml": "<yaml-content>",
+  "env": "<environment-content>",
+  "dockerCompose": "<optional-compose-content>"
+}
 ```
 
-## 类型定义对照
+页面将三个字段写入配置展示弹窗，并在 YAML、环境变量和 Docker Compose Tab 之间切换。`dockerCompose` 是可选字段，页面缺省按空字符串展示。文档示例不填入真实密码；生成内容的脱敏和密钥管理由后端契约及部署环境另行确认。
 
-### 前端类型 ([src/types/index.ts](../../src/types/index.ts))
+### 4.3 获取当前数据库信息
 
-```typescript
-export interface DatabaseConfig {
+```ts
+GET /admin-api/v1/database/current
+```
+
+返回 `CurrentDatabaseInfo`：
+
+```json
+{
+  "type": "<database-type>",
+  "version": "<database-version>",
+  "driverVersion": "<optional-driver-version>"
+}
+```
+
+页面挂载时调用该接口，在描述列表中展示 `type`、`version` 和可选的 `driverVersion`。当前页面请求失败时只写入控制台，不弹出统一错误提示。
+
+## 5. 数据源管理接口
+
+### 5.1 分页查询数据源
+
+```ts
+GET /admin-api/v1/database/datasources?pageNum=<page>&pageSize=<size>
+```
+
+分页参数使用 `pageNum/pageSize`，不是普通列表常见的 `page/size`。返回 `PageResponse<DataSourceInfo>`：
+
+```json
+{
+  "list": [
+    {
+      "id": 1,
+      "name": "<data-source-name>",
+      "type": "<database-type>",
+      "driver": "<driver-class>",
+      "url": "<masked-jdbc-url>",
+      "username": "<masked-username>",
+      "poolSize": 10,
+      "activeConnections": 2,
+      "status": "UP",
+      "createdAt": "<timestamp>",
+      "updatedAt": "<timestamp>"
+    }
+  ],
+  "total": 1,
+  "pageNum": 1,
+  "pageSize": 20,
+  "pages": 1,
+  "hasNext": false
+}
+```
+
+`hasNext` 可选。页面读取 `list` 和 `total`，分页变化后重新请求。数据源列表不应被文档描述为返回明文密码。
+
+### 5.2 新增数据源
+
+```ts
+POST /admin-api/v1/database/datasources
+```
+
+请求体为 `DataSourcePayload`：
+
+```json
+{
+  "name": "<data-source-name>",
+  "type": "<database-type>",
+  "driver": "<driver-class>",
+  "url": "<jdbc-url>",
+  "username": "<database-user>",
+  "password": "<database-password>",
+  "minIdle": 2,
+  "maxPoolSize": 10,
+  "connectionTimeout": 30000,
+  "idleTimeout": 600000
+}
+```
+
+返回新建后的 `DataSourceInfo`。页面在对话框提交前校验表单，成功后关闭对话框并刷新列表；密码字段不会从列表记录回填。
+
+### 5.3 更新数据源
+
+```ts
+PUT /admin-api/v1/database/datasources/{id}
+```
+
+请求体仍为 `DataSourcePayload`，返回更新后的 `DataSourceInfo`。当前页面编辑数据源时要求重新填写密码，不能使用“密码留空即保持原值”的前端语义；后端是否支持其他更新策略需以实际接口契约为准。
+
+### 5.4 删除数据源
+
+```ts
+DELETE /admin-api/v1/database/datasources/{id}
+```
+
+成功时返回 `void`。页面先显示确认框，用户取消确认不应被当成接口失败；确认后执行删除，成功时刷新当前列表。
+
+### 5.5 查询连接池指标
+
+```ts
+GET /admin-api/v1/database/datasources/{id}/metrics
+```
+
+返回 `DataSourceMetrics`，字段均为可选：
+
+| 字段 | 含义 | 单位 |
+| --- | --- | --- |
+| `totalConnections` | 连接总数 | 个 |
+| `activeConnections` | 活跃连接数 | 个 |
+| `idleConnections` | 空闲连接数 | 个 |
+| `waitingThreads` | 等待线程数 | 个 |
+| `averageGetTime` | 平均获取连接时间 | 毫秒 |
+| `averageUsageTime` | 平均连接使用时间 | 毫秒 |
+| `maxWaitTime` | 最大等待时间 | 毫秒 |
+| `totalConnectionsCreated` | 创建连接总数 | 个 |
+| `totalConnectionsFailed` | 创建连接失败总数 | 个 |
+
+页面从数据源行操作中打开指标展示。指标单位依据当前前端类型和页面文案约定，不据此推断后端监控实现细节。
+
+## 6. 类型对照
+
+### 6.1 数据库配置和采集结果
+
+```ts
+interface DatabaseConfig {
   dbType: 'mysql' | 'postgresql'
   host: string
   port: number
@@ -299,177 +251,144 @@ export interface DatabaseConfig {
   environment: 'dev' | 'test' | 'prod'
 }
 
-export interface DatabaseTestResult {
+interface DatabaseTestResult {
   success: boolean
   message: string
   version?: string
 }
 
-export interface DeploymentConfigResult {
+interface DeploymentConfigResult {
   yaml: string
   env: string
   dockerCompose?: string
 }
 
-export interface CurrentDatabaseInfo {
+interface CurrentDatabaseInfo {
   type: string
   version: string
   driverVersion?: string
 }
 ```
 
-### 后端 DTO (apex-application/dto/admin：`apex-scaffold/apex-application/src/main/java/com/apex/scaffold/application/dto/admin`)
+### 6.2 数据源和指标
 
-```java
-// DatabaseConfigRequest.java
-public class DatabaseConfigRequest {
-    private String dbType;
-    private String host;
-    private Integer port;
-    private String database;
-    private String username;
-    private String password;
-    private String connectionParams;
-    private String environment;
+```ts
+interface DataSourceInfo {
+  id: number
+  name: string
+  type: string
+  driver: string
+  url: string
+  username: string
+  poolSize?: number
+  activeConnections?: number
+  status?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
-// DatabaseTestResultDTO.java
-public class DatabaseTestResultDTO {
-    private Boolean success;
-    private String message;
-    private String version;
-}
-
-// DeploymentConfigResultDTO.java
-public class DeploymentConfigResultDTO {
-    private String yaml;
-    private String env;
-    private String dockerCompose;
-}
-
-// CurrentDatabaseInfoDTO.java
-public class CurrentDatabaseInfoDTO {
-    private String type;
-    private String version;
-    private String driverVersion;
+interface DataSourcePayload {
+  name: string
+  type: string
+  driver: string
+  url: string
+  username: string
+  password: string
+  minIdle?: number
+  maxPoolSize?: number
+  connectionTimeout?: number
+  idleTimeout?: number
 }
 ```
 
-**类型映射**：前后端类型字段完全一致，遵循 camelCase 命名约定。
+通用分页类型为 `PageResponse<T>`，核心字段为 `list`、`total`、`pageNum`、`pageSize` 和 `pages`，`hasNext` 可选。
 
-## 错误处理
+## 7. 页面处理流程
 
-### 前端错误处理
+### 7.1 配置采集流程
 
-1. **表单验证错误**：
-   - Element Plus Form 自动显示字段级验证消息
-   - 阻止 API 调用
+```mermaid
+flowchart TD
+    A[填写数据库配置] --> B{表单校验}
+    B -->|失败| C[显示字段校验信息]
+    B -->|通过| D{选择操作}
+    D --> E[POST database/test]
+    D --> F[POST database/generate-config]
+    E --> G{success}
+    G -->|true| H[显示成功与版本]
+    G -->|false| I[显示 message]
+    F --> J[打开配置弹窗]
+    J --> K[YAML / env / Compose Tab]
+    A -.页面挂载.-> L[GET database/current]
+    L --> M[展示当前数据库信息]
+```
 
-2. **网络错误**：
-   - 使用 `showError(error)` 统一处理
-   - 显示友好的错误提示
-   - 不会导致页面崩溃
+### 7.2 数据源管理流程
 
-3. **业务错误**：
-   - 测试连接失败：显示后端返回的详细错误信息
-   - 配置生成失败：显示错误消息
-   - 查询数据库信息失败：静默处理（控制台输出）
+```mermaid
+flowchart TD
+    A[进入数据源管理 Tab] --> B[GET datasources?pageNum&pageSize]
+    B --> C[读取 list / total]
+    C --> D[展示分页列表]
+    D --> E{用户操作}
+    E --> F[新增或编辑]
+    F --> G[填写 DataSourcePayload，密码必填]
+    G --> H[POST 或 PUT datasources]
+    H --> I[刷新列表]
+    E --> J[确认删除]
+    J -->|取消| D
+    J -->|确认| K[DELETE datasources/id]
+    K --> I
+    E --> L[GET datasources/id/metrics]
+    L --> M[展示连接池指标]
+```
 
-### 后端错误处理
+### 7.3 页面与接口时序
 
-1. **参数验证错误**：
-   - Jakarta Validation 自动验证
-   - 返回 400 Bad Request + 详细字段错误
+```mermaid
+sequenceDiagram
+    actor U as 操作用户
+    participant V as 数据库配置页
+    participant R as request.ts
+    participant B as 后端接口
 
-2. **权限错误**：
-   - `@RequirePermission` 拦截
-   - 返回 403 Forbidden
+    U->>V: 打开数据库配置页
+    V->>R: getCurrentDatabaseInfo()
+    R->>B: GET /admin-api/v1/database/current
+    B-->>R: 当前数据库信息
+    R-->>V: CurrentDatabaseInfo
 
-3. **业务错误**：
-   - 连接测试失败：返回 `success: false` + 错误信息
-   - 不抛出异常，确保前端能正常处理
+    U->>V: 打开数据源管理 Tab
+    V->>R: listDataSources(pageNum, pageSize)
+    R->>B: GET /admin-api/v1/database/datasources
+    B-->>R: PageResponse<DataSourceInfo>
+    R-->>V: list / total
 
-## 安全设计
+    U->>V: 新增、编辑或删除数据源
+    V->>R: create / update / delete
+    R->>B: 对应 HTTP 请求
+    B-->>R: 业务结果
+    R-->>V: 成功或错误
+    V->>R: 重新查询数据源列表
+```
 
-1. **密码传输**：
-   - HTTPS 加密传输（生产环境）
-   - 密码仅用于一次性操作，不保存
+## 8. 错误处理与安全边界
 
-2. **权限控制**：
-   - 所有接口需要 `system:database:*` 权限
-   - 基于 Spring Security 响应式认证
+- 表单校验失败时页面不调用接口。
+- 统一请求层负责认证头、响应解包、HTTP 错误转换和现有 Token 刷新规则；上传组件的独立 XHR 规则不适用于本页面。
+- 连接测试的业务失败由 `success/message` 表达；配置生成异常使用现有 `showError`；当前数据库信息查询失败目前只记录控制台日志。
+- 真实数据库密码不得写入文档、日志、源码或构建期公开变量。示例统一使用占位符。
+- 前端页面中的按钮展示不能替代后端接口鉴权。具体权限码、响应包装、参数校验和错误状态码需要结合目标后端接口文档或实际环境验证。
+- 生产环境是否使用 HTTPS、后端是否脱敏返回连接地址和用户名、密码是否落库，均不能仅由当前前端仓库推出。
 
-3. **参数验证**：
-   - 前端：Element Plus Form Rules
-   - 后端：Jakarta Bean Validation
+## 9. 联调检查清单
 
-4. **错误信息**：
-   - 不暴露敏感系统信息
-   - 连接失败返回适度的错误描述
+1. 代理或部署网关能够转发 `/admin-api` 路径。
+2. 八个接口的 HTTP 方法、路径和字段与本文及 `src/api/database.ts` 一致。
+3. 配置采集接口接收密码，数据源列表和详情响应不回显明文密码。
+4. 数据源分页请求使用 `pageNum/pageSize`，响应可被页面读取为 `list/total`。
+5. 配置生成结果至少提供 `yaml` 和 `env`，`dockerCompose` 缺省时页面仍可展示。
+6. 连接池时间指标按毫秒解释，其他单位以实际后端契约为准。
+7. 目标环境中的认证、权限、数据库可达性、错误响应、代理连通性和实际部署结果已单独验证。
 
-## 测试建议
-
-### 功能测试
-
-1. **连接测试**：
-   - ✅ MySQL 正确配置
-   - ✅ PostgreSQL 正确配置
-   - ✅ 错误的主机/端口
-   - ✅ 错误的用户名/密码
-   - ✅ 不存在的数据库
-
-2. **配置生成**：
-   - ✅ MySQL 配置导出
-   - ✅ PostgreSQL 配置导出
-   - ✅ 带连接参数的配置
-   - ✅ 不同环境（dev/test/prod）
-   - ✅ 三种格式的一键复制
-
-3. **当前数据库信息**：
-   - ✅ MySQL 环境查询
-   - ✅ PostgreSQL 环境查询
-   - ✅ 页面加载自动查询
-
-### 非功能测试
-
-1. **性能**：
-   - 连接测试超时时间：5秒
-   - 配置生成响应时间：< 1秒
-
-2. **并发**：
-   - 多次快速点击测试连接
-   - 多个用户同时使用
-
-3. **兼容性**：
-   - Chrome/Edge/Firefox
-   - 不同数据库版本
-
-## 故障排查
-
-### 前端问题
-
-| 问题 | 可能原因 | 解决方案 |
-|------|---------|---------|
-| 接口 404 | 路由未注册 | 检查后端 ApiRouter 配置 |
-| 接口 403 | 权限不足 | 检查菜单权限配置 |
-| 类型错误 | 类型不匹配 | 运行 `vue-tsc --noEmit` 检查 |
-| 复制失败 | 浏览器不支持 | 提示手动复制 |
-
-### 后端问题
-
-| 问题 | 可能原因 | 解决方案 |
-|------|---------|---------|
-| 编译失败 | 依赖缺失 | 检查 HikariCP 依赖 |
-| 连接超时 | 网络或防火墙 | 检查数据库网络可达性 |
-| 驱动错误 | 驱动不匹配 | 检查 MySQL/PostgreSQL 驱动版本 |
-
-## 总结
-
-✅ **前端**：完整实现三个接口对接  
-✅ **后端**：完整实现三个接口服务  
-✅ **类型**：前后端类型完全一致  
-✅ **错误处理**：统一错误处理机制  
-✅ **安全**：权限控制 + 参数验证  
-✅ **文档**：完整的使用说明和示例  
-
-前后端接口对接已全部完成并经过验证，可以直接使用！
+本文档确认的是前端调用链和类型定义已在本仓库核对，不等同于后端接口已经在某个环境部署成功或完成端到端验收。

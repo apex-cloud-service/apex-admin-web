@@ -2,7 +2,7 @@
 
 本文件是本仓库的开发入口，说明当前实现、模块边界、关键业务链路和变更约束。修改前先定位相关源码；文档与实现不一致时，以执行代码、类型定义和配置为依据，并同步修正文档。历史分析文档和文件头注释不能代替实现核对。
 
-**核对日期：2026-10-01。** 本次依据前端仓库核对；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
+**核对日期：2026-10-30。** 本次依据前端仓库核对；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
 
 ## 1. 开发入口与关键约束
 
@@ -10,10 +10,10 @@
 - 技术栈：Vue 3.5、Vite 6、TypeScript ~5.7、Vue Router 4、Pinia 2、Element Plus 2、Axios、ECharts 5、CropperJS 1。
 - 页面使用 `<script setup lang="ts">`；路径别名 `@` 指向 `src/`。
 - 常规接口在 `src/api/` 按业务域封装，复用 `src/utils/request.ts` 的 `request/get/post/put/del`，页面不新建 Axios 实例。
-- 新增菜单驱动页面必须同步 `src/router/dynamic.ts` 的 `VIEW_REGISTRY` 与后端菜单 `component` 字段；文件存在不等于路由已注册。
-- 普通列表通常用 `page/size` 和 `list/total`；工作流用 `pageNum/pageSize` 和 `records/total`。以具体 API 类型为准，不能全局替换。
+- 新增菜单驱动页面必须同步 `src/router/dynamic.ts` 的 `VIEW_REGISTRY` 与后端菜单 `component` 字段；文件存在不等于路由已注册。后端菜单/权限种子脚本位于 `apex-system/src/main/resources/db/migration/{mysql,postgresql}/`（菜单 `path` 约定：目录用绝对路径如 `/platform`，子菜单用相对段如 `tenant`，由前端 `resolvePath` 与 Vue Router 共同拼接）。
+- 普通列表通常用 `page/size` 和 `list/total`；工作流实例列表用 `pageNum/pageSize` 和 `records/total`，工作流待办任务用 `pageNum/pageSize` 但响应为 `PageResponse`，页面读 `list/total`。以具体 API 类型为准，不能全局替换。
 - 会话读写使用 `src/utils/auth.ts`，不可自行引入 `access_token` 等存储键。
-- 租户作用域由后端从令牌解析；前端仅在登录响应返回 `tenantId` 时记录（`apex.admin.tenant-id`）并附带 `X-Tenant-Id` 请求头，不实现租户切换/管理界面，详见 `docs/guides/auth-tenant-adaptation.md`。
+- 租户作用域由后端从令牌解析；前端仅在登录响应返回 `tenantId` 时记录（`apex.admin.tenant-id`）并附带 `X-Tenant-Id` 请求头，详见 `docs/guides/auth-tenant-adaptation.md`。平台运维侧的租户台账已提供 HTTP 端点 `/api/v2/platform/tenants`（分页/详情/创建/生命周期/配额），管理页见 `views/system/tenant/`；但**业务侧仍无租户切换器**，登录态绑定单一租户。后端开启 `apex.features.auth-center-permission` 时权限改由认证中心统一授权（带 ≤30s 短期缓存），前端权限码消费方式不变。
 - 菜单展示、按钮展示和后端接口鉴权是三个不同层次。前端隐藏元素不能替代后端权限校验。
 - 不在浏览器配置中保存客户端密钥、数据库密码等秘密；`VITE_*` 会进入前端产物。
 - 优先复用现有组件、类型和工具；不把未接入的工具描述成全局机制。
@@ -28,9 +28,13 @@
 | 页面与菜单 | `router/index.ts`、`router/dynamic.ts`、`layouts/AdminLayout.vue` | 静态/动态路由、注册表、hidden |
 | 按钮权限 | `stores/permission.ts`、`directives/permission.ts` | 空列表放行、多码任一满足、移除 DOM |
 | 常规 CRUD | 相邻页面、对应 `api/*.ts`、`types/index.ts` | DTO、分页、错误提示与刷新行为 |
-| 工作流 | `api/workflow.ts`、`types/workflow.ts`、`views/workflow/` | 特殊分页、静态入口、待办办理语义、组件接入范围 |
-| 站内信 | `api/message.ts`、`views/office/message/`、`layouts/AdminLayout.vue` | 收件箱/模板契约、未读轮询、数组响应口径 |
-| 办公平台 | `api/office.ts`、`api/office-new.ts`、`views/office/` | 业务接口与配置绑定接口分离、version、组织同步契约 |
+| 工作流 | `api/workflow.ts`、`types/workflow.ts`、`views/workflow/` | 特殊分页、静态入口、发起流程（workflowCode 调用方提供）、待办办理语义、组件接入范围 |
+| 站内信 | `api/message.ts`、`utils/message-socket.ts`、`views/office/message/`、`layouts/AdminLayout.vue` | 收件箱/模板契约、WebSocket 推送（ticket/pong/1h 重连）、数组响应口径；AdminLayout 未读角标 = 60s 轮询 + WS 推送触发刷新 |
+| 数据脱敏 | `api/masking.ts`、`views/system/masking/` | 规则只读（启动配置）、批量试算；本仓库可确认前端路径与开发代理，目标网关路由需外部核验 |
+| 租户管理 | `api/tenant.ts`、`views/system/tenant/` | `/api/v2/platform/tenants`、pageNum/pageSize 必填、生命周期动作小写枚举、配额 null=不限、version 乐观锁 |
+| 账号安全 | `api/mfa.ts`、`api/ip-access-control.ts`、`views/system/security/` | MFA configs 与 IP 规则列表均为裸数组；IP 写操作走 query 参数（非 body） |
+| 运维健康 | `api/operations.ts`、`views/monitor/operations/` | 前端封装 health-report、snapshots、trend 和导出相关子路径；快照分页为 page/size；未封装根路径与导出任务列表，端点是否存在需以目标后端契约为准 |
+| 办公平台 | `api/office.ts`、`api/office-new.ts`、`views/office/` | 业务接口与配置绑定接口分离、version、组织同步与部门 CRUD；绑定列表双接口并存（数组口径 / `/bindings/page` 真实分页） |
 | 文件上传 | `api/file.ts`、两个上传组件 | Element Plus/XHR 路径不经过 Axios 拦截器 |
 | 部署 | `vite.config.ts`、`Dockerfile`、`docker/nginx.conf` | 构建期变量与运行期反代变量 |
 
@@ -62,15 +66,19 @@ src/
 | 认证与用户 | `auth.ts`、`user.ts`、`oauth2.ts` | 验证码、密码登录（可选租户声明）、我的角色/权限、系统角色与权限 CRUD、当前用户、用户导出、标准 OAuth2 |
 | 系统管理 | `system.ts`、`database.ts` | 用户/角色/菜单/部门/字典/参数/定时任务、数据库配置与数据源管理 |
 | 认证管理与 SSO | `auth-config.ts`、`sso.ts` | 管理端配置页面；与浏览器登录回调区分 |
-| 代码生成器 | `generator.ts` | 数据源、表扫描、生成配置与生成、按配置历史（预览/模板/回滚后端未提供端点） |
+| 代码生成器 | `generator.ts` | 数据源、已保存数据源连接测试、表扫描、生成配置、生成与按配置历史；当前没有预览、模板管理和历史回滚的前端入口 |
 | 监控与日志 | `monitor.ts`、`log.ts` | 登录/审计/API 日志、在线用户、大盘、运行和业务日志 |
-| 数据管理 | `document.ts`、`chart.ts` | 文档与图表 CRUD、状态操作、数据查询 |
-| 工作流 | `workflow.ts` | 实例、统计、待办任务办理与高级操作（流程定义管理接口后端未提供） |
-| 站内信 | `message.ts` | 收件箱/已发送/发送/未读数与消息模板管理（`/api/v1/messages`、`/admin-api/v1/message-templates`） |
-| 办公平台 | `office.ts`、`office-new.ts` | 业务接口与配置绑定接口分离、version、组织同步（部门/员工/同步历史/触发同步/映射） |
+| 数据管理 | `document.ts`、`chart.ts`、`file-share.ts` | 文档与图表 CRUD、状态操作、数据查询；文件分享含创建、列表（按文件 ID、仅所有者）、撤销、兑换和下载 |
+| 工作流 | `workflow.ts` | 发起实例、实例、统计、待办任务办理、高级操作与流程定义管理（`/api/v2/workflow-definitions`） |
+| 租户管理 | `tenant.ts` | `/api/v2/platform/tenants` 分页/详情/创建/生命周期/配额（权限码 tenant:*） |
+| 账号安全 | `mfa.ts`、`ip-access-control.ts` | MFA 配置与 IP 白/黑名单（`/api/mfa`、`/api/ip-access-control`） |
+| 运维健康 | `operations.ts` | `/api/v2/operations/*` 报告/快照/趋势/导出 |
+| 站内信 | `message.ts` | 收件箱/已发送/发送/未读数、WebSocket 推送与消息模板管理（`/api/v1/messages`、`/admin-api/v1/message-templates`） |
+| 办公平台 | `office.ts`、`office-new.ts`、`office-sync-wizard.ts`、`meeting-room.ts` | 业务接口与配置绑定接口分离、version、组织同步（部门 CRUD/员工/同步历史/触发同步/映射）、同步向导（预检/预览/执行/重试）、会议室；绑定查询有 `/bindings`（数组）与 `/bindings/page`（真实分页 + status 过滤）两套 |
+| 数据脱敏 | `masking.ts` | 规则只读查询与批量脱敏试算（`/api/v1/masking`） |
 | 文件与搜索 | `file.ts`、`search.ts` | 文件接口、上传组件、顶栏全文搜索与索引重建 |
 
-后端路径按现有 API 区分：`/api/v1/**` 为认证、用户、文件、站内信和办公平台接入等接口；`/admin-api/v1/**` 为管理接口；`/api/workflow/**` 为工作流高级操作；`/api/office/**` 为办公业务；标准 OAuth2 使用 `/oauth2/authorize`、`/oauth2/token`。
+后端路径按现有 API 区分：`/api/v1/**` 为认证、用户、文件、站内信和办公平台接入等接口；`/api/v2/**` 为租户管理、工作流定义、运维健康、文件分享与办公会议室/同步向导；`/admin-api/v1/**` 为管理接口；`/api/workflow/**` 为工作流高级操作；`/api/office/**` 为办公业务接口；`/api/mfa/**` 与 `/api/ip-access-control/**` 为认证中心安全能力；标准 OAuth2 使用 `/oauth2/authorize`、`/oauth2/token`。本仓库可确认前端调用路径，目标环境网关是否暴露这些路径需外部核验。
 
 ## 3. 架构图
 
@@ -150,6 +158,8 @@ flowchart LR
 开发服务器默认 `0.0.0.0:5173`，代理目标取 `VITE_API_PROXY_TARGET`，缺省 `http://127.0.0.1:8080`。Vite 对 `/api`、`/admin-api` 及 OAuth2 授权/令牌路径配置代理。构建包含 vendor 分包，生产移除 console/debugger，分析报告为 `dist/stats.html`。
 
 Docker 使用 Node 18 Alpine 构建和 Nginx 运行两个阶段；当前安装命令是 `npm install`。`VITE_API_BASE_URL` 在构建时注入，运行时修改不能重写已打包的 JavaScript；`API_PROXY_PASS` 只影响 Nginx upstream。Compose 依赖外部网络 `apex-scaffold_apex-network`；首页健康检查仅证明静态服务可访问。
+
+站内信 WebSocket 需要额外代理配置：vite 开发代理 `/api` 已设 `ws: true`；nginx 有 `= /api/v1/messages/ws` 专用 location（转发 `Upgrade`/`Connection`，读超时 3600s，置于 `/api/` 之前）。生产还须由后端显式配置 `ROUTE_OFFICE_WS_URI`（与 `ROUTE_OFFICE_MESSAGE_URI` 指向同一 office 实例，票据与连接为单实例内存态），并在 office-service 的 `office.messages.allowed-origins` 中加入前端 Origin（缺省拒绝所有握手，403）。
 
 ## 4. 登录、路由与权限
 
@@ -272,6 +282,8 @@ flowchart TD
 `v-permission="'system:user:create'"` 使用 `permission` Store 检查权限。逗号分隔的多个权限码满足任意一个即可；**权限列表为空时当前实现直接放行**。角色和权限接口失败会降级为空数组，因此前端不是严格拒绝的安全边界。
 
 指令在 mounted/updated 执行，无权限时移除 DOM；没有恢复锚点，后续权限变化不能可靠恢复被移除元素。路由 meta.perms 不能被描述为已实现全路由权限拦截。新增权限控制应同时核对后端鉴权，不能因按钮隐藏就省略服务端校验。
+
+后端 `@RequirePermission` 为**权限码精确匹配**（逗号分隔多码按 `Logical.OR`/`AND` 组合，无通配符），权限来源为「用户 → 角色 → 权限」RBAC 查询；开启 `apex.features.auth-center-permission` 后改由认证中心统一授权（含 ≤30s 短期缓存），权限码语义不变。前端 `v-permission` 的任一满足语义与后端 OR 一致，但前端放行不代表后端放行——核对权限码时以「我的权限明细」（个人中心按模块分组展示）为准。
 
 ## 5. 请求处理、错误与令牌刷新
 
@@ -418,25 +430,25 @@ sequenceDiagram
     participant V as bindings 页面
     participant API as office-new.ts / request.ts
     participant B as 后端
-    A->>V: 选择平台并查询
-    V->>API: listBindings(platform, page, size)
-    API->>B: GET /admin-api/v1/office/bindings
-    B-->>V: OfficeBindingResponse 数组，含 id / version
-    A->>V: 通过或拒绝
+    A->>V: 选择平台（必选）与状态并查询
+    V->>API: listBindingsPage(platform, status?, page, size)
+    API->>B: GET /admin-api/v1/office/bindings/page
+    B-->>V: PageResponse{list, total}，记录含 id / version
+    A->>V: 通过或拒绝（PENDING）
     V->>V: 操作确认
     V->>API: reviewBinding(id, { approved, version })
     API->>B: POST /admin-api/v1/office/bindings/{id}/review
     alt 后端接受版本
         B-->>V: 成功
-        V->>API: 重新查询
+        V->>API: 重置页码后重新查询
     else 版本冲突或业务失败
         B-->>V: 错误
         V-->>A: 展示错误
     end
-    Note over V,B: 解绑使用 POST unbind，并在 query 中传 version
+    Note over V,B: 解绑（APPROVED）使用 DELETE /bindings/{id}/unbind?version={version}
 ```
 
-`office.ts` 负责办公业务，`office-new.ts` 负责平台状态、登录、应用配置和绑定。绑定列表当前返回数组，页面用数组长度作为 total；状态筛选未进入请求，查询函数会重置页码。不能描述为已具备可靠的标准服务端分页和状态过滤。修复这些行为属于代码任务，不应通过文档假设其已完成。
+`office.ts` 负责办公业务，`office-new.ts` 负责平台状态、登录、应用配置和绑定。绑定审批页（`views/office/bindings/index.vue`）已使用 `listBindingsPage`（`GET /admin-api/v1/office/bindings/page`），具备真实 `total` 与 `status`（PENDING/APPROVED/REJECTED/REVOKED）服务端过滤，platform 为必选条件。`views/office/console/index.vue` 仍使用数组口径的 `listBindings`（`GET /admin-api/v1/office/bindings`，返回数组，调用时固定 `page=1,size=100`）。审批与解绑均携带 `version` 乐观锁，冲突由后端拒绝。
 
 ## 7. 常规业务、工作流与上传
 
@@ -478,7 +490,7 @@ sequenceDiagram
     U->>V: 访问 /workflow/instances/:id
     V->>V: 将 route.params.id 转为 Number
     V->>API: getWorkflowInstanceDetail(id)
-    API->>B: GET /admin-api/v1/workflows/instances/{id}/detail
+    API->>B: GET /admin-api/v1/workflows/instances/{id}
     B-->>V: 实例信息 / 任务列表
     V-->>U: 展示详情
     alt RUNNING 且未挂起
@@ -501,7 +513,9 @@ sequenceDiagram
     end
 ```
 
-工作流列表查询使用 `pageNum/pageSize`，返回 `records/total`；普通 `Pagination` 组件的绑定参数不等于接口查询字段，需要页面适配。实例、统计使用 `/admin-api/v1/workflows/**`；待办任务查询与办理（complete，仅携带 `comment`，固定为通过语义）使用 `/api/v1/workflows/tasks/**`；回退、转办、委派、挂起和恢复使用 `/api/workflow/**`。后端未提供流程定义管理、任务驳回和 `tasks/my` 等接口，前端不得调用这些路径。待办任务在 `workflow/monitor` 页的「待办任务」Tab 中办理，回退目标节点取自实例详情的流程定义节点。
+工作流实例列表使用 `pageNum/pageSize`，返回 `records/total`；待办任务同样使用 `pageNum/pageSize`，但响应为 `PageResponse`，页面读 `list/total`；普通 `Pagination` 组件的绑定参数不等于接口查询字段，需要页面适配。实例、统计使用 `/admin-api/v1/workflows/**`；待办任务查询与办理（complete，仅携带 `comment`，固定为通过语义）使用 `/api/v1/workflows/tasks/**`；回退、转办、委派、挂起和恢复使用 `/api/workflow/**`。流程定义管理已由 `/api/v2/workflow-definitions` 提供（写接口返回领域对象、查询接口返回 DTO，字段名不可混用）；当前前端未封装或未调用任务驳回与 `tasks/my` 接口，相关后端能力需以目标服务契约核验。待办任务在 `workflow/monitor` 页的「待办任务」Tab 中办理，回退、转办、委派均由该页直接调用对应 API（不经过 TaskActions 组件），回退目标节点取自实例详情的流程定义节点。
+
+流程发起能力在 `workflow/monitor` 页的「发起流程」对话框：`startWorkflowInstance(workflowCode, { businessKey, contextJson? })` → `POST /api/v1/workflows/{workflowCode}/instances`。`businessKey` 必填（≤200 字符），`contextJson` 选填且必须是合法 JSON（≤10000 字符，前端校验），发起人取当前登录用户；流程定义可由 `/api/v2/workflow-definitions` 查询，但发起对话框仍由调用方手输 `workflowCode`。发起成功后重挂载实例列表 Tab 并切换到实例页签。
 
 ### 7.3 TaskActions 能力边界
 
@@ -582,7 +596,7 @@ flowchart TD
 
 当前 package.json 没有 lint 或独立 typecheck 脚本；类型检查使用上述 vue-tsc 或 build 命令。不得记录不存在的 `npm run lint`。Vitest 使用 happy-dom 和 `src/test/setup.ts`，覆盖率配置没有阈值；Playwright 已安装但尚无配置及 E2E 用例，不应宣称已有浏览器端自动化覆盖。
 
-请求刷新测试覆盖认证端点排除、单次重放、并发单飞及重放错误保留；另有 OAuth2 PKCE/state、认证配置 API 和校验工具测试。DOM 模拟测试不能替代真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证。
+请求刷新测试覆盖认证端点排除、单次重放、并发单飞及重放错误保留；另有 OAuth2 PKCE/state、认证配置 API 和校验工具测试。API 层还有 `api/message.test.ts`、`api/workflow.test.ts`、`api/office-new.test.ts`，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status）。DOM 模拟测试不能替代真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证。
 
 `VITE_API_PROXY_TARGET` 用于开发代理；`VITE_API_BASE_URL` 用于 Axios baseURL；OAuth2 客户端相关变量参照 `.env.example` 和 `env.d.ts`。不输出真实环境文件中的密钥，不把构建期与运行期配置混为一谈。
 
@@ -608,8 +622,20 @@ flowchart TD
 | 工作流分页为空 | 是否误用 page/size 或 list/total |
 | 工作流待办为空或 404 | 是否使用 `/api/v1/workflows/tasks/pending`、办理仅 complete+comment、任务是否分配给当前用户 |
 | 站内信收件箱为空或分页异常 | inbox/sent 返回纯数组（total 取数组长度）、接收人须为绑定办公员工的系统用户 ID、网关 office-message 路由 |
+| 站内信无实时推送 | nginx/vite 是否支持 WS 升级、office-service `office.messages.allowed-origins` 是否含当前 Origin、`ROUTE_OFFICE_WS_URI` 是否与 HTTP 路由同实例 |
+| 脱敏页 404 | 核对后端菜单 `component` 是否为 `system/masking/index`、`VIEW_REGISTRY` 是否登记，并在目标环境核验 `/api/v1/masking/**` 路由 |
+| 租户页空列表或 400 | 分页参数必须是 pageNum/pageSize（非 page/size）且必填；生命周期动作只接受小写 disable/enable/freeze/unfreeze/deactivate/archive |
+| 租户配额无法清空为不限 | 后端以 null 表示不限，前端须提交 null 而非 0 或省略 |
+| MFA/IP 页无数据 | `/api/mfa/configs` 与 `/api/ip-access-control/whitelist|blacklist` 返回**裸数组**（无 Result 包装）；IP 写操作参数走 query string |
+| 运维健康页 404 | 核对页面实际调用的 health-report、snapshots、trend 等子路径、菜单注册和目标环境路由；不能仅凭前端未封装根路径判断后端不存在 |
+| 工作流定义编辑无数据 | 写接口返回领域对象（workflowCode/workflowName/dagJson/enabled:number），查询接口返回 DTO（code/name/enabled:boolean），字段名不可混用 |
+| 办公审批列表空白或审批 400 | 列表元素字段为 processName/currentNode/createdAt（非 title/currentNodeName/createTime）；路径参数用 processInstanceId（非 approvalId）；approverId 必填且不能是空串（后端 @NotBlank） |
+| 文件分享列表为空 | 需先输入文件 ID 查询（`GET /api/v2/files/{fileId}/shares`，仅所有者可见）；明文 token 仅创建响应返回一次，不存储 |
+| 会议室列表设备为空 | 列表返回 Entity，equipment 可能是 JSON 字符串（详情接口才是数组），需前端解析 |
+| 密码找回不可用 | 依赖 `/auth/v2/password-recovery/**` 与已绑定的邮箱/手机号；`sessionRevocation=PENDING` 表示会话撤销未完成，不代表失败 |
+| 组织部门保存后无 ID 或层级为空 | createDepartment 返回体不含生成 id（须刷新列表）、deptLevel/deptPath 后端照抄不计算（前端推导） |
 | 组织同步页无数据 | `/admin-api/v1/org/**` 与 `/api/v1/office/organization/**` 契约、同步任务为 page/size 且返回数组 |
-| 办公绑定分页/筛选不符合预期 | 数组响应、total 计算、查询重置页码、status 未传入 |
+| 办公绑定分页/筛选不符合预期 | 审批页走 `/bindings/page`（真实 total + status 过滤，platform 必选）；console 页为数组口径 `listBindings`（固定 page=1,size=100）；version 乐观锁冲突 |
 | OAuth2 回调失败 | sessionStorage 上下文、state 一次性消费、redirect_uri、PKCE、token 代理 |
 | Docker 首页正常但接口失败 | API_PROXY_PASS、外部网络、后端 DNS、代理 location |
 

@@ -18,14 +18,14 @@
 
 ### API 文档
 
-- [API 接口目录](api/README.md) - 全量接口清单（按业务域，与 src/api/ 逐一对齐）、分页口径、错误处理约定
+- [API 接口目录](api/README.md) - 按业务域整理的前端 API 封装、已确认页面接入、分页口径和错误处理约定
 
 ### 开发指南
 
 - [部署指南](guides/deployment.md) - 生产环境部署配置
 - [前后端集成](guides/frontend-backend-integration.md) - 前后端联调和接口对接
 - [统一权限认证与多租户适配](guides/auth-tenant-adaptation.md) - 后端统一权限认证/多租户评审结论与前端适配说明
-- [功能配置与数据维护覆盖](guides/config-maintenance-coverage.md) - 配置/维护能力清单、后端未暴露能力的暂缓项
+- [功能配置与数据维护覆盖](guides/config-maintenance-coverage.md) - 配置/维护能力清单、前端接入状态与外部核验项
 - [数据库配置验证](guides/database-config-verification.md) - 数据库配置功能说明
 - [Mock 数据服务](guides/mock-data-service.md) - 前端开发 Mock 数据使用指南
 
@@ -122,7 +122,7 @@ apex-admin-web/
 - **implementation/** - 技术实现细节,面向开发者的代码实现说明
 - **analysis/** - 技术分析文档,包含架构分析、技术选型等
 - **architecture/** - 系统架构设计文档（含 Mermaid 架构图/流程图/时序图）
-- **api/** - API 接口目录（与 src/api/ 实现逐一对齐）
+- **api/** - API 接口目录（按前端 API 封装、类型、页面调用和代理配置核对）
 - **reference/** - 参考文档（测试指南、工具库与组合式函数参考）
 - **archived/** - 已完成或过时的历史文档归档
   - **project-reports/** - 项目报告、更新记录等临时性文档
@@ -159,5 +159,5 @@ apex-admin-web/
 
 ---
 
-**最后更新**: 2026-10-04  
+**最后更新**: 2026-10-30  
 **维护者**: Apex Admin Web Team

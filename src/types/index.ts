@@ -926,3 +926,238 @@ export interface MaskingBatchResult {
   /** 脱敏后的文档数组 */
   documents: unknown[]
 }
+
+/* ==================== 租户管理（/api/v2/platform/tenants，平台运维域） ==================== */
+
+/** 租户（后端 TenantDTO） */
+export interface TenantInfo {
+  id: number
+  /** 租户编码（全局唯一，创建后不可变更） */
+  tenantCode: string
+  tenantName: string
+  /** 租户管理员用户 ID */
+  adminUserId?: string
+  /** 套餐标识 */
+  packageCode?: string
+  /** 有效期至 */
+  expireTime?: string
+  /** 状态：ACTIVE/DISABLED/FROZEN/DEACTIVATED/ARCHIVED */
+  status: string
+  /** 最大用户数（null 表示不限制） */
+  maxUsers?: number | null
+  /** 最大存储容量 MB（null 表示不限制） */
+  maxStorageMb?: number | null
+  remark?: string
+  createTime?: string
+  /** 乐观锁版本 */
+  version?: number
+}
+
+/** 租户创建请求（后端 TenantCreateRequest） */
+export interface TenantCreatePayload {
+  /** 租户编码（1-64 位字母/数字/下划线/短横线，创建后不可变更） */
+  tenantCode: string
+  /** 租户名称（≤128） */
+  tenantName: string
+  adminUserId?: string
+  packageCode?: string
+  maxUsers?: number
+  maxStorageMb?: number
+  remark?: string
+}
+
+/** 租户状态流转动作（后端仅接受这些小写值） */
+export type TenantAction = 'disable' | 'enable' | 'freeze' | 'unfreeze' | 'deactivate' | 'archive'
+
+/** 租户生命周期动作请求（后端 TenantActionRequest） */
+export interface TenantActionPayload {
+  action: TenantAction
+  /** 可选乐观锁版本 */
+  expectedVersion?: number
+}
+
+/** 租户配额更新请求（后端 TenantQuotaUpdateRequest，null 表示不限制） */
+export interface TenantQuotaPayload {
+  maxUsers?: number | null
+  maxStorageMb?: number | null
+  expectedVersion?: number
+}
+
+/* ==================== 多因素认证 MFA（/api/mfa、/api/v1/mfa，认证中心） ==================== */
+
+/** MFA 类型 */
+export type MfaType = 'TOTP' | 'SMS' | 'EMAIL'
+
+/** 用户 MFA 配置（后端 MfaConfig；type/status 为枚举名） */
+export interface MfaConfigInfo {
+  id?: number
+  userId?: string
+  tenantId?: string
+  type: MfaType | 'BACKUP_CODE'
+  status: 'PENDING' | 'ACTIVE' | 'DISABLED' | 'LOCKED'
+  secret?: string
+  backupCodes?: string
+  deviceInfo?: string
+  lastVerifiedAt?: string
+  failedAttempts?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** TOTP 初始化结果（后端 TotpSetupInfo） */
+export interface TotpSetupInfo {
+  secret: string
+  qrCodeUrl: string
+  manualEntryKey: string
+}
+
+/** TOTP 激活结果（后端 MfaActivationResult） */
+export interface MfaActivationResult {
+  success: boolean
+  backupCodes: string[]
+}
+
+/** 备用码重生成结果（后端 BackupCodesResult） */
+export interface BackupCodesResult {
+  codes: string[]
+}
+
+/* ==================== IP 访问控制（/api/ip-access-control，认证中心） ==================== */
+
+/** IP 访问规则（后端 IpAccessControl） */
+export interface IpAccessRule {
+  id: number
+  tenantId?: string
+  /** IP 地址（支持 IP/CIDR/通配符） */
+  ipAddress: string
+  type: 'WHITELIST' | 'BLACKLIST'
+  description?: string
+  enabled: boolean
+  priority?: number
+  /** 过期时间（黑名单可设置有效期） */
+  expiresAt?: string
+  createdAt?: string
+  createdBy?: string
+  updatedAt?: string
+  updatedBy?: string
+}
+
+/* ==================== 工作流定义管理类型见 types/workflow.ts ==================== */
+
+/* ==================== 运维健康（/api/v2/operations） ==================== */
+
+/** 健康状态 */
+export type HealthStatus = 'UP' | 'DEGRADED' | 'DOWN' | 'UNKNOWN'
+
+/** 健康报告条目 */
+export interface HealthReportItem {
+  id: string
+  name: string
+  status: HealthStatus
+  scope?: string
+  service?: string
+  instance?: string
+  sampledAt?: string
+  source?: string
+  evidence?: string
+  recommendation?: string
+  ruleVersion?: string
+}
+
+/** 健康报告分组 */
+export interface HealthReportGroup {
+  category: string
+  title: string
+  status: HealthStatus
+  items: HealthReportItem[]
+}
+
+/** 健康报告（后端 HealthReportResponse） */
+export interface HealthReport {
+  generatedAt: string
+  service?: string
+  instance?: string
+  scope?: string
+  scopeNotice?: string
+  ruleVersion?: string
+  overallStatus: HealthStatus
+  summary?: string
+  counts?: {
+    up: number
+    degraded: number
+    down: number
+    unknown: number
+    notConfigured: number
+  }
+  groups?: HealthReportGroup[]
+}
+
+/** 健康快照（后端 HealthSnapshotDTO） */
+export interface HealthSnapshot {
+  id: number
+  captureSource?: string
+  serviceName?: string
+  instanceId?: string
+  scope?: string
+  ruleVersion?: string
+  overallStatus: HealthStatus
+  summary?: string
+  integrity?: string
+  upCount?: number
+  degradedCount?: number
+  downCount?: number
+  unknownCount?: number
+  notConfiguredCount?: number
+  generatedAt?: string
+  createTime?: string
+}
+
+/** 健康趋势数据点 */
+export interface HealthTrendPoint {
+  generatedAt: string
+  overallStatus: HealthStatus
+  upCount?: number
+  degradedCount?: number
+  downCount?: number
+  unknownCount?: number
+  notConfiguredCount?: number
+}
+
+/** 健康趋势（后端 HealthTrendDTO） */
+export interface HealthTrend {
+  from?: string
+  to?: string
+  sampleCount: number
+  ruleVersions?: string[]
+  distribution?: Array<{ status: string; count: number }>
+  startStatus?: HealthStatus
+  endStatus?: HealthStatus
+  improving?: boolean
+  points?: HealthTrendPoint[]
+}
+
+/** 租户健康汇总（后端 TenantHealthSummaryDTO） */
+export interface TenantHealthSummary {
+  snapshotAt?: string
+  overallStatus: HealthStatus
+  summary?: string
+  scope?: string
+  scopeNotice?: string
+  riskCounts?: { healthy: number; degraded: number; down: number; unknown: number }
+  recentTrend?: Array<{ generatedAt: string; overallStatus: HealthStatus }>
+}
+
+/** 健康快照导出任务（后端 HealthExportTaskDTO） */
+export interface HealthExportTask {
+  id: number
+  queryFrom?: string
+  queryTo?: string
+  queryStatus?: string
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+  attempts?: number
+  lastError?: string
+  fileName?: string
+  rowCount?: number
+  completedAt?: string
+  createTime?: string
+}

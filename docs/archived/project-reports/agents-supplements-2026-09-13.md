@@ -92,7 +92,7 @@ VITE_OAUTH2_CLIENT_ID=apex-admin-web-prod
 ```markdown
 ### 3.11 表单校验工具
 
-项目在 [src/utils/validate.ts](src/utils/validate.ts) 中封装了常用的表单字段校验规则，供 Element Plus 表单验证使用。
+项目在 [src/utils/validate.ts](../../../src/utils/validate.ts) 中封装了常用的表单字段校验规则，供 Element Plus 表单验证使用。
 
 #### 内置校验规则
 
@@ -199,7 +199,7 @@ export const validateEmployeeNo = (_rule: FormItemRule, value: string, callback:
 
 #### Token 存储
 
-会话令牌通过 [src/utils/auth.ts](src/utils/auth.ts) 统一管理，存储在 `localStorage`：
+会话令牌通过 [src/utils/auth.ts](../../../src/utils/auth.ts) 统一管理，存储在 `localStorage`：
 
 - **访问令牌**：`apex.admin.token`（有效期较短，如 2 小时）
 - **刷新令牌**：`apex.admin.refresh-token`（有效期较长，如 7 天）
@@ -241,7 +241,7 @@ clearSession(): void
 ```markdown
 ### 4.6 常量收敛与注释
 
-**所有魔法字符串/数字必须定义为常量并注释**，统一放在 [src/settings.ts](src/settings.ts)：
+**所有魔法字符串/数字必须定义为常量并注释**，统一放在 [src/settings.ts](../../../src/settings.ts)：
 
 ```typescript
 /** ========== 会话管理 ========== */
@@ -302,7 +302,7 @@ export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024
 
 #### 接口层
 
-[src/api/oauth2.ts](src/api/oauth2.ts) 提供 OAuth2 相关接口：
+[src/api/oauth2.ts](../../../src/api/oauth2.ts) 提供 OAuth2 相关接口：
 - **授权 URL 构建**：`GET /api/v1/oauth2/authorize/url`（获取第三方授权页面地址）
 - **授权回调处理**：`POST /api/v1/oauth2/callback`（用授权码换取访问令牌）
 
@@ -326,7 +326,7 @@ callback.vue 提取 code 和 state
 
 #### 视图层
 
-[src/views/oauth2/callback.vue](src/views/oauth2/callback.vue)：OAuth2 授权回调页面
+[src/views/oauth2/callback.vue](../../../src/views/oauth2/callback.vue)：OAuth2 授权回调页面
 - 路由：`/oauth2/callback`（静态路由，public: true）
 - 功能：接收授权码、调用后端换取 Token、保存会话并跳转
 

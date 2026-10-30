@@ -11,11 +11,15 @@
  * @module api/workflow
  */
 
-import { get, post } from '@/utils/request'
+import { get, post, put } from '@/utils/request'
 import type { PageResponse } from '@/types'
 import type {
   WorkflowPendingTask,
   WorkflowStartedInstance,
+  WorkflowDefinitionInfo,
+  WorkflowDefinitionEntity,
+  WorkflowDefinitionCreatePayload,
+  WorkflowDefinitionUpdatePayload,
   WorkflowInstance,
   WorkflowInstanceDetail,
   WorkflowStatistics,
@@ -152,4 +156,82 @@ export function suspendInstance(instanceId: number, data: SuspendInstancePayload
  */
 export function resumeInstance(instanceId: number, data: ResumeInstancePayload) {
   return post(`/api/workflow/instances/${instanceId}/resume`, data)
+}
+
+// ===== 流程定义管理（/api/v2/workflow-definitions） =====
+
+/**
+ * 分页查询流程定义
+ * @param params - workflowCode（精确）、status（DRAFT/PUBLISHED/DISABLED）与分页
+ */
+export function listWorkflowDefinitions(params: {
+  workflowCode?: string
+  status?: string
+  pageNum: number
+  pageSize: number
+}) {
+  return get<PageResponse<WorkflowDefinitionInfo>>('/api/v2/workflow-definitions', params)
+}
+
+/**
+ * 查询流程定义详情
+ * @param definitionId - 流程定义 ID
+ */
+export function getWorkflowDefinition(definitionId: number) {
+  return get<WorkflowDefinitionInfo>(`/api/v2/workflow-definitions/${definitionId}`)
+}
+
+/**
+ * 创建流程定义（初始为草稿）
+ * @param payload - 流程编码、名称与 DAG JSON
+ */
+export function createWorkflowDefinition(payload: WorkflowDefinitionCreatePayload) {
+  return post<WorkflowDefinitionEntity>('/api/v2/workflow-definitions', payload)
+}
+
+/**
+ * 更新流程定义（仅草稿可改；无流程编码与版本字段）
+ * @param definitionId - 流程定义 ID
+ * @param payload - 名称、描述与 DAG JSON
+ */
+export function updateWorkflowDefinition(
+  definitionId: number,
+  payload: WorkflowDefinitionUpdatePayload
+) {
+  return put<WorkflowDefinitionEntity>(`/api/v2/workflow-definitions/${definitionId}`, payload)
+}
+
+/**
+ * 校验流程定义 DAG
+ * @param definitionId - 流程定义 ID
+ */
+export function validateWorkflowDefinition(definitionId: number) {
+  return post<void>(`/api/v2/workflow-definitions/${definitionId}/validate`)
+}
+
+/**
+ * 发布流程定义
+ * @param definitionId - 流程定义 ID
+ */
+export function publishWorkflowDefinition(definitionId: number) {
+  return post<WorkflowDefinitionEntity>(`/api/v2/workflow-definitions/${definitionId}/publish`)
+}
+
+/**
+ * 启用/停用流程定义
+ * @param definitionId - 流程定义 ID
+ * @param enabled - true=启用
+ */
+export function toggleWorkflowDefinition(definitionId: number, enabled: boolean) {
+  return post<WorkflowDefinitionEntity>(
+    `/api/v2/workflow-definitions/${definitionId}/${enabled ? 'enable' : 'disable'}`
+  )
+}
+
+/**
+ * 查询同编码的全部历史版本
+ * @param definitionId - 流程定义 ID
+ */
+export function listWorkflowDefinitionVersions(definitionId: number) {
+  return get<WorkflowDefinitionInfo[]>(`/api/v2/workflow-definitions/${definitionId}/versions`)
 }

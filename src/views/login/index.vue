@@ -52,6 +52,9 @@
             登 录
           </el-button>
         </el-form-item>
+        <el-form-item>
+          <el-button link type="primary" @click="openRecoveryDialog">忘记密码？</el-button>
+        </el-form-item>
       </el-form>
 
       <el-divider>其他登录方式</el-divider>
@@ -83,6 +86,55 @@
         </el-tooltip>
       </div>
     </el-card>
+
+    <!-- 密码找回（三步：申请 → 校验验证码 → 重设密码） -->
+    <el-dialog v-model="recoveryVisible" title="找回密码" width="460px" @closed="resetRecovery">
+      <el-steps :active="recoveryStep" simple style="margin-bottom: 18px">
+        <el-step title="申请" />
+        <el-step title="验证" />
+        <el-step title="重设" />
+      </el-steps>
+
+      <el-form v-if="recoveryStep === 0" label-width="90px">
+        <el-form-item label="找回方式">
+          <el-radio-group v-model="recoveryForm.channel">
+            <el-radio value="EMAIL">邮箱</el-radio>
+            <el-radio value="SMS">手机号</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="联系方式">
+          <el-input
+            v-model="recoveryForm.contact"
+            :placeholder="recoveryForm.channel === 'EMAIL' ? '请输入已绑定邮箱' : '请输入已绑定手机号'"
+          />
+        </el-form-item>
+      </el-form>
+
+      <el-form v-else-if="recoveryStep === 1" label-width="90px">
+        <el-form-item label="验证码">
+          <el-input v-model="recoveryForm.code" maxlength="8" placeholder="请输入收到的验证码" />
+        </el-form-item>
+        <el-form-item>
+          <span class="recovery-hint">恢复单 {{ recoveryId }}，验证码有效期 {{ recoveryExpiresIn }} 秒</span>
+        </el-form-item>
+      </el-form>
+
+      <el-form v-else label-width="90px">
+        <el-form-item label="新密码">
+          <el-input v-model="recoveryForm.newPassword" type="password" show-password placeholder="请输入新密码" />
+        </el-form-item>
+        <el-form-item label="确认密码">
+          <el-input v-model="recoveryForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="recoveryVisible = false">取消</el-button>
+        <el-button type="primary" :loading="recoveryLoading" @click="handleRecoveryNext">
+          {{ recoveryStep === 2 ? '确认重设' : '下一步' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -97,6 +149,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { ChatDotRound, Key, Lock, OfficeBuilding, User } from '@element-plus/icons-vue'
 import { getCaptcha } from '@/api/auth'
+import {
+  confirmPasswordRecovery,
+  initiatePasswordRecovery,
+  verifyPasswordRecovery,
+  type PasswordRecoveryChannel,
+} from '@/api/password-recovery'
 import { buildAuthUrl } from '@/api/oauth2'
 import { useUserStore } from '@/stores/user'
 import { showError } from '@/utils/request'
@@ -204,6 +262,112 @@ async function handleSocialLogin(_provider: string): Promise<void> {
     window.location.href = authUrl
   } catch (error) {
     showError(error)
+  }
+}
+
+// ==================== 密码找回 ====================
+const recoveryVisible = ref(false)
+const recoveryStep = ref(0)
+const recoveryLoading = ref(false)
+const recoveryId = ref('')
+const recoveryExpiresIn = ref(0)
+const recoveryConfirmToken = ref('')
+const recoveryForm = reactive({
+  channel: 'EMAIL' as PasswordRecoveryChannel,
+  contact: '',
+  code: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+
+/** 打开密码找回对话框 */
+function openRecoveryDialog(): void {
+  resetRecovery()
+  recoveryVisible.value = true
+}
+
+/** 重置找回流程状态 */
+function resetRecovery(): void {
+  recoveryStep.value = 0
+  recoveryId.value = ''
+  recoveryExpiresIn.value = 0
+  recoveryConfirmToken.value = ''
+  Object.assign(recoveryForm, {
+    channel: 'EMAIL',
+    contact: '',
+    code: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
+}
+
+/**
+ * 推进找回流程：申请 → 校验验证码 → 确认重设
+ */
+async function handleRecoveryNext(): Promise<void> {
+  if (recoveryStep.value === 0) {
+    if (!recoveryForm.contact.trim()) {
+      ElMessage.warning('请输入联系方式')
+      return
+    }
+    recoveryLoading.value = true
+    try {
+      const result = await initiatePasswordRecovery(recoveryForm.channel, recoveryForm.contact.trim())
+      recoveryId.value = result.recoveryId
+      recoveryExpiresIn.value = result.expiresIn
+      recoveryStep.value = 1
+      ElMessage.success('验证码已发送')
+    } catch (error) {
+      showError(error, '提交找回申请失败')
+    } finally {
+      recoveryLoading.value = false
+    }
+    return
+  }
+
+  if (recoveryStep.value === 1) {
+    if (!recoveryForm.code.trim()) {
+      ElMessage.warning('请输入验证码')
+      return
+    }
+    recoveryLoading.value = true
+    try {
+      const result = await verifyPasswordRecovery(recoveryId.value, recoveryForm.code.trim())
+      recoveryConfirmToken.value = result.confirmToken
+      recoveryStep.value = 2
+    } catch (error) {
+      showError(error, '验证码校验失败')
+    } finally {
+      recoveryLoading.value = false
+    }
+    return
+  }
+
+  if (!recoveryForm.newPassword) {
+    ElMessage.warning('请输入新密码')
+    return
+  }
+  if (recoveryForm.newPassword !== recoveryForm.confirmPassword) {
+    ElMessage.warning('两次输入的密码不一致')
+    return
+  }
+  recoveryLoading.value = true
+  try {
+    const result = await confirmPasswordRecovery(
+      recoveryId.value,
+      recoveryConfirmToken.value,
+      recoveryForm.newPassword,
+    )
+    if (result.sessionRevocation === 'PENDING') {
+      ElMessage.warning('密码已重设，但历史会话撤销尚未完成，建议稍后重新登录')
+    } else {
+      ElMessage.success('密码已重设，请使用新密码登录')
+    }
+    recoveryVisible.value = false
+  } catch (error) {
+    showError(error, '重设密码失败')
+  } finally {
+    recoveryLoading.value = false
   }
 }
 

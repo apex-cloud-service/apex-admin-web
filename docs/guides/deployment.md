@@ -32,36 +32,37 @@
 | 变更项 | 迁移前 | 迁移后 |
 |--------|--------|--------|
 | 前端载体 | 后端 `static/admin/` 静态三件套 | 独立工程 `apex-admin-web`，构建产物 `dist/` |
-| 后端短入口 `/admin` | 302 重定向至 `/admin/index.html` | 已移除，访问返回 404 |
-| 前端托管方式 | 内嵌于后端 jar | Nginx / 静态服务器独立托管，或与后端网关同域 |
-| `PUBLIC_PATHS`（公开路径） | 含 `/admin`、`/admin/**` | 已移除（后端不再托管前端静态资源） |
+| 后端短入口 `/admin` | 历史行为需以后端工程/目标环境核验 | 当前前端工程不定义该入口行为 |
+| 前端托管方式 | 历史托管方式需以后端工程核验 | 本工程构建产物 `dist/` 可由 Nginx / 静态服务器托管，也可按目标环境与后端同域部署 |
+| `PUBLIC_PATHS`（公开路径） | 历史配置需以后端工程核验 | 不属于本前端仓库可确认的配置 |
 | API 调用日志页面 | 缺失 | 补齐：`monitor/api-call-log` |
 
-**部署影响**：管理后台已从后端直接提供改为**独立源站部署**。若部署后直接访问后端 `/admin`
-将得到 404（符合预期），请改为访问前端源站地址（如 `https://admin.example.com`）。
+**部署影响**：本工程按独立前端工程交付，生产部署应访问实际配置的前端源站地址（如 `https://admin.example.com`）。后端 `/admin` 是否存在、如何响应以及是否仍托管静态资源，需以后端工程和目标环境配置核验；本仓库不定义这些行为。
 
-> 后端仅提供业务与管理 REST 接口（`/api/v1`、`/admin-api/v1`），不再托管任何前端静态资源。
-> 后端自身的 Java 服务部署见后端工程 `docs/DEPLOYMENT.md`，不在本文档范围。
+> 本文只说明前端 `dist/` 的构建、静态托管和 API 代理配置。后端 REST 接口、静态资源托管策略及 Java 服务部署见后端工程与目标环境配置。
 
 ---
 
 ## 2. 架构与请求路径
 
-```
-用户浏览器
-      │
-      ▼
-┌──────────────────────────┐         ┌──────────────────────────┐
-│  Nginx / 静态服务器        │  /api、/admin-api   ┌──────────────────────────┐
-│  托管 apex-admin-web dist │ ─────────────────► │  Apex Scaffold 后端 :8080  │
-│  静态 + 反向代理           │                     │  （健康检查 /api/v1/health）│
-└──────────────────────────┘                     └──────────────────────────┘
+```mermaid
+flowchart LR
+    U[用户浏览器] -->|GET / 及静态资源| N[Nginx / 静态服务器<br/>托管 dist]
+    U -->|/api/** 业务接口| N
+    U -->|/admin-api/** 管理接口| N
+    U -->|/oauth2/authorize 与 /oauth2/token| N
+    U <.->|WS 升级 /api/v1/messages/ws| N
+    N -->|回退 index.html| U
+    N -->|proxy_pass| B[Apex Scaffold 后端 :8080<br/>健康检查 /api/v1/health]
+    N -->|/assets/ 30d immutable| U
 ```
 
-- **前端页面/静态资源**：由 Nginx（或任意静态服务器）直接返回 `dist/` 内容，走同域相对路径。
-- **前端动态数据**：浏览器请求 `/api/*`（业务）与 `/admin-api/*`（管理）前缀，由 Nginx 反向代理到后端。
+- **前端页面/静态资源**：由 Nginx（或任意静态服务器）直接返回 `dist/` 内容，走同域相对路径；`dist/assets/` 为带 hash 指纹的产物，可按长缓存策略交付。
+- **前端动态数据**：浏览器请求 `/api/*`（业务）、`/admin-api/*`（管理）以及 OAuth2 授权码登录的 `/oauth2/authorize`、`/oauth2/token`，由 Nginx 反向代理到后端。
+- **站内信实时推送**：浏览器与 `/api/v1/messages/ws` 建立 WebSocket，需 Nginx 单独声明 `Upgrade`/`Connection` 转发（见 6.2 与 6.4）。
 - **后端接口**：`/admin-api/v1/menus` 返回菜单树并驱动前端动态路由；权限码控制按钮显隐。
-- **鉴权**：登录成功返回 `accessToken`，前端以 `Authorization: Bearer <token>` 携带，401 自动跳转登录页。
+- **鉴权**：登录成功返回 `accessToken`，前端以 `Authorization: Bearer <token>` 携带；HTTP 401 时请求层先用 `refreshToken` 单飞刷新并单次重放，刷新失败才清理会话并跳转登录页。
+- **租户声明（可选）**：仅当登录响应返回 `tenantId` 时前端记录并附带 `X-Tenant-Id` 请求头；租户作用域由后端从令牌解析。
 
 ---
 
@@ -112,15 +113,28 @@ dist/
 
 | 变量 | 生效环境 | 说明 |
 |------|---------|------|
-| `VITE_API_BASE_URL` | 生产（`.env.production`） | 后端网关地址。**同域部署留空**，走相对路径 `/api`、`/admin-api`、`/oauth2`；跨域/独立网关时填写完整前缀（如 `https://api.example.com`） |
+| `VITE_API_BASE_URL` | 生产（`.env.production`） | 后端网关地址。**同域部署留空**，走相对路径 `/api`、`/admin-api`、`/oauth2`；跨域/独立网关时填写完整前缀（如 `https://api.example.com`）。Docker 构建通过 `--build-arg` 注入 |
 | `VITE_API_PROXY_TARGET` | 开发（`.env.development`） | Vite dev server 代理目标（`/api`、`/admin-api`、`/oauth2`），默认 `http://127.0.0.1:8080` |
+| `VITE_AUTH_TENANT_ENABLED` | 构建期 | 是否在登录页显示租户标识输入（多租户部署设为 `true`，默认关闭）。关闭时登录请求不带 `tenantId` |
+| `VITE_OAUTH2_CLIENT_ID` | 构建期 | OAuth2 授权码登录使用的 `client_id`，必须与后端 OAuth2 注册值一致（默认 `apex-admin-web`）。浏览器端为 PKCE 公共客户端，不携带 `clientSecret` |
+
+以上四项取自 `.env.example`，其中前三项在 `src/env.d.ts` 中有类型声明；`VITE_OAUTH2_CLIENT_ID` 由登录页通过 `import.meta.env` 读取。OAuth2 的 `redirect_uri` 由前端按当前 Origin 拼出，需与后端注册值一致。
+
+运行期变量（`docker run` / `docker-compose.yml` 的 `environment`，不进入构建产物）：
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `API_PROXY_PASS` | `http://apex-scaffold:8080` | 容器启动时由 `docker-entrypoint.sh` 的 `envsubst` 渲染进 Nginx 配置，仅影响反向代理 upstream |
+| `TZ` | `Asia/Shanghai` | 容器时区 |
+| `WEB_PORT` | `80` | Compose 中宿主机端口映射（`${WEB_PORT:-80}:80`） |
+| `TAG` | `latest` | Compose 使用的镜像标签 |
 
 ```bash
 # 例：跨域部署时指定后端网关
 VITE_API_BASE_URL=https://api.example.com npm run build
 ```
 
-> ⚠️ `VITE_*` 为 build 时静态注入，修改后需**重新构建**，不能通过运行时环境覆盖。
+> ⚠️ `VITE_*` 为 build 时静态注入，修改后需**重新构建**，不能通过运行时环境覆盖；`API_PROXY_PASS` 只在容器启动时渲染一次，修改后需重启容器。
 
 ---
 
@@ -151,29 +165,61 @@ server {
     root /var/www/apex-admin;
     index index.html;
 
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+
+    # 带 hash 指纹的静态资源长缓存
+    location /assets/ {
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+    }
+
     # 前端单页应用 History 路由回退
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # 后端业务、管理接口与 OAuth2 端点反向代理
+    # OAuth2 授权与令牌端点
     location ~ ^/oauth2/(authorize|token)$ {
         proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
     }
+
+    # 站内信 WebSocket 握手：必须精确匹配并转发 Upgrade/Connection，
+    # 且声明在 /api/ 之前，否则会被普通 HTTP 反代吞掉导致握手失败
+    location = /api/v1/messages/ws {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection "upgrade";
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    # 后端业务与管理接口
     location /api/ {
         proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
     }
     location /admin-api/ {
         proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
     }
 }
 ```
@@ -182,13 +228,31 @@ server {
 nginx -t && systemctl reload nginx
 ```
 
+> 仓库内 `docker/nginx.conf` 是上述配置的容器模板版（`proxy_pass` 为 `${API_PROXY_PASS}` 占位，由入口脚本渲染），两者应保持等价；改动任一处需同步另一处。
+
 > **为什么需要 `try_files ... /index.html`**：前端使用 Vue Router「history 模式」，直接刷新
 > `/monitor/api-call-log` 等多级路径时需回退到 `index.html` 再让前端路由接管，否则返回 404。
 >
-> **为什么需要代理 `/oauth2/`、`/api/` 与 `/admin-api/`**：前后端分离后前端所有动态数据请求均带这几组前缀
-> （`/oauth2/authorize`、`/oauth2/token` 为授权码登录端点），静态资源与页面由 Nginx 直接返回。
+> **为什么需要代理 OAuth2、`/api/` 与 `/admin-api/`**：前后端分离后前端动态数据请求使用 `/api/`、`/admin-api/`，授权码登录仅使用 `/oauth2/authorize` 与 `/oauth2/token`；静态资源与页面由 Nginx 直接返回。其他 OAuth2 端点（例如 `/oauth2/userinfo`）未在本工程的 Vite/Nginx 配置中声明专用代理。
+>
+> **为什么 WebSocket 要单独配置**：站内信实时推送走 `/api/v1/messages/ws`，普通 `location /api/` 不转发
+> `Upgrade`/`Connection` 头，握手会失败（前端只能退回 60s 轮询未读数）。专用 location 同时把
+> `proxy_read_timeout` 提到 3600s，与服务端连接寿命上限（1h，票据 30s 一次性）对齐，避免被默认 60s 空闲超时切断。
+>
+> **`proxy_http_version 1.1` 的必要性**：Nginx 默认以 HTTP/1.0 反代且不发送 `Connection` 头，WebSocket 升级必须显式声明 1.1。
 
-### 6.3 启用 HTTPS（生产建议）
+### 6.3 后端侧站内信前置条件
+
+前端仓库可确认开发代理和 Nginx 模板为 `/api/v1/messages/ws` 配置了 WebSocket 升级转发；office-service 配置、网关路由和服务拓扑不在本仓库范围内，部署时应按目标后端版本与环境核验：
+
+| 核验项 | 说明 |
+|----|------|
+| WebSocket upstream | 如部署架构分别配置 HTTP 消息服务和 WS 服务，需确认其路由关系及会话/票据兼容性；具体配置以目标后端为准 |
+| Origin 策略 | 核对 office-service 对前端实际 Origin（如 `https://admin.example.com`）的允许策略，以及拒绝时的响应行为 |
+| 网关路由 | 确认实际网关将 `/api/v1/messages/**`（含 WS）路由到正确服务 |
+| 浏览器协议 | 页面为 HTTPS 时前端按当前页面协议构造 `wss://` 地址；代理和后端需支持对应的 WebSocket 转发 |
+
+### 6.4 启用 HTTPS（生产建议）
 
 ```nginx
 server {
@@ -196,7 +260,7 @@ server {
     server_name admin.example.com;
     ssl_certificate     /etc/nginx/ssl/admin.example.com.crt;
     ssl_certificate_key /etc/nginx/ssl/admin.example.com.key;
-    # ... 其余 location 同 6.2
+    # ... 其余 location（含 WS 专用 location）同 6.2
 }
 server {
     listen 80;
@@ -204,6 +268,8 @@ server {
     return 301 https://$host$request_uri;
 }
 ```
+
+> HTTPS 页面下前端按当前页面协议构造 `wss://` 连接 `/api/v1/messages/ws`。后端 TLS 终止位置、内部 upstream 协议及 Origin 校验策略取决于目标部署环境，需分别核验。
 
 ---
 
@@ -226,13 +292,29 @@ apex-admin-web/
 
 ### 7.2 镜像设计
 
+```mermaid
+flowchart LR
+    SRC[源码 + .env.production] --> B1[构建阶段 node:18-alpine<br/>npm install / npm run build]
+    B1 --> DIST[dist]
+    DIST --> R1[运行阶段 nginx:1.27-alpine]
+    TPL[docker/nginx.conf 模板<br/>含 ${API_PROXY_PASS}] --> R1
+    ENV1[运行期环境变量<br/>API_PROXY_PASS / TZ] --> EP[docker-entrypoint.sh<br/>envsubst 渲染]
+    EP --> CONF[/etc/nginx/conf.d/default.conf]
+    R1 --> CONF
+    CONF --> UP[后端 upstream]
+    R1 --> HC[HEALTHCHECK<br/>wget http://127.0.0.1/]
+```
+
 - **构建阶段** `node:18-alpine`：`npm install` → `npm run build`（含 vue-tsc 类型校验），
   产物 `dist/`；`VITE_API_BASE_URL` 通过 `--build-arg` 注入（默认空 = 同域相对路径）。
 - **运行阶段** `nginx:1.27-alpine`：仅含静态产物与 Nginx，镜像小、启动快；
-  内置 `HEALTHCHECK`（`wget http://127.0.0.1/`）供编排探活。
-- **反代地址可配置**：容器启动时由 `docker-entrypoint.sh` 用 `envsubst` 将模板中的
-  `${API_PROXY_PASS}` 渲染为实际后端地址（环境变量 `API_PROXY_PASS`，默认
-  `http://apex-scaffold:8080`，即与后端 compose 同网络直连）。
+  内置 `HEALTHCHECK`（`wget http://127.0.0.1/`）供编排探活。该探活**只证明静态服务可访问**，
+  不代表后端反代或 WebSocket 可用。
+- **反代地址可配置**：容器启动时由 `docker-entrypoint.sh` 用 `envsubst '${API_PROXY_PASS}'`
+  仅展开该占位符（避免误伤 Nginx 的 `$host`、`$uri` 等内置变量），渲染
+  `/etc/nginx/conf.d/default.conf.template` 为 `default.conf` 后以前台模式启动 Nginx。
+- **WebSocket**：模板中已含 `location = /api/v1/messages/ws`（`Upgrade`/`Connection` + 3600s 超时），
+  容器部署无需额外改动 Nginx；仍需满足 6.3 的后端侧前置条件（Origin 白名单与同实例路由）。
 
 ### 7.3 构建镜像
 
@@ -285,8 +367,7 @@ docker compose ps    # 等待 healthy
 
 ### 7.6 接入后端 compose 网络的完整启动命令（端到端）
 
-> 以下命令均已在本工程实际验证通过：前端容器成功挂入 `apex-scaffold_apex-network`，
-> 网络内 DNS 可解析后端 compose 服务名 `apex-scaffold`，Nginx 反代正常转发。
+> 以下命令按仓库内 Dockerfile、Compose、入口脚本和 Nginx 模板整理。容器网络、后端服务名解析和端到端反代仍需在目标部署环境中实际验证，不能仅凭前端仓库构建结果确认。
 
 #### 方式一（推荐）：Compose 一键启动
 
@@ -462,7 +543,10 @@ npm run dev
 - 默认访问 `http://localhost:5173`。
 - Vite dev server 已将 `/api`、`/admin-api` 及 OAuth2 端点（`/oauth2/authorize`、`/oauth2/token`）
   代理到 `http://127.0.0.1:8080`（可通过 `.env.development` 的 `VITE_API_PROXY_TARGET` 调整代理目标）。
-- 登录流程：`GET /api/v1/auth/captcha`（拉取验证码）→ 提交账号密码 + 验证码 → 获取 `accessToken`。
+- `/api` 代理已开启 `ws: true`，开发环境站内信 WebSocket（`/api/v1/messages/ws`）可直接联调。
+- 登录流程：`GET /api/v1/auth/captcha`（拉取验证码）→ 提交账号密码 + 验证码 → 获取 `accessToken`
+  → 并行加载 `/api/v1/user/info`、`/api/v1/auth/roles/my`、`/api/v1/auth/permissions/my`。
+- 多租户联调：`.env.development` 设 `VITE_AUTH_TENANT_ENABLED=true` 后登录页出现租户标识输入。
 
 ---
 
@@ -472,16 +556,26 @@ npm run dev
 
 | # | 校验项 | 通过标准 |
 |---|--------|---------|
-| 1 | 页面资源加载 | `GET /` 返回 `index.html`，静态资源 200 |
-| 2 | 登录 | 输入账号密码 + 验证码能成功登录跳转工作台 |
-| 3 | 系统管理 | 用户 / 角色 / 菜单（树）／部门（树）／字典 / 参数 / 定时任务列表正常 |
-| 4 | 监控中心 | 监控大盘、登录日志、操作审计、在线用户正常 |
-| 5 | **API 调用日志** | 进入「监控中心 → API 调用日志」，列表可按 `serviceName / status / traceId / path` 查询与重置；状态标签（成功/客户端错误/服务端错误/网络异常）渲染正确 |
-| 6 | 个人中心 | 当前用户信息展示正常 |
-| 7 | 动态路由 | 侧边栏菜单与后端菜单树一致，点击各页面可达（刷新多级路径不 404） |
-| 8 | 按钮权限 | 无权限用户按 `v-permission` 隐藏对应操作按钮 |
-| 9 | 接口回路 | 浏览器 Network 中 `/api/*`、`/admin-api/*` 均代理到后端并返回 `Result{code:0}` |
-| 10 | 后端回归 | 后端 `GET /api/v1/health` 返回 UP；`GET /admin` 返回 404（符合前后端分离预期） |
+| 1 | 页面资源加载 | `GET /` 返回 `index.html`，`/assets/*` 返回 200 且响应头含 `Cache-Control: public, max-age=2592000, immutable` |
+| 2 | 安全响应头 | `GET /` 响应含 `X-Content-Type-Options: nosniff` 与 `X-Frame-Options: SAMEORIGIN` |
+| 3 | 登录 | 输入账号密码 + 验证码能成功登录跳转工作台；`POST /api/v1/auth/login` 经反代返回 `code:0` |
+| 4 | 令牌续期 | 令牌过期后普通请求返回 401 时自动刷新并重放成功，页面不跳登录；刷新令牌失效才回登录页 |
+| 5 | 系统管理 | 用户 / 角色 / 菜单（树）／部门（树）／字典 / 参数 / 定时任务列表正常 |
+| 6 | 账号安全 | 「系统管理 → 账号安全」MFA 配置与 IP 白/黑名单可加载（两接口返回裸数组，非 `Result` 包装） |
+| 7 | 租户管理 | 「系统管理 → 租户」列表可分页（`pageNum/pageSize` 必填）；配额清空后提交 `null` 表示不限 |
+| 8 | 监控中心 | 监控大盘、登录日志、操作审计、在线用户正常 |
+| 9 | **API 调用日志** | 进入「监控中心 → API 调用日志」，列表可按 `serviceName / status / traceId / path` 查询与重置；状态标签（成功/客户端错误/服务端错误/网络异常）渲染正确 |
+| 10 | 运维健康 | 「监控中心 → 运维健康」健康报告 / 快照 / 趋势可加载（无 `/api/v2/operations` 根端点，走子路径） |
+| 11 | 数据脱敏 | 「系统管理 → 数据脱敏」规则可读、批量试算返回结果 |
+| 12 | 工作流 | 「工作流监控」实例列表（`pageNum/pageSize` + `records/total`）与待办任务（`PageResponse`，读 `list/total`）可加载；发起流程填 `businessKey` 可创建实例 |
+| 13 | 站内信（HTTP） | 收件箱 / 已发送可加载（接口返回纯数组，`total` 取数组长度）；未读数接口 `GET /api/v1/messages/unread/count` 正常 |
+| 14 | **站内信（WS）** | 浏览器 Network → WS 中 `/api/v1/messages/ws` 状态 `101 Switching Protocols` 且 `ping/pong` 存活；发送新消息后通知角标无需等 60s 轮询即更新 |
+| 15 | 办公平台 | 绑定审批页（`/bindings/page`，真实分页 + status 过滤）与组织同步页可加载 |
+| 16 | 个人中心 | 当前用户信息与「我的权限明细」展示正常 |
+| 17 | 动态路由 | 侧边栏菜单与后端菜单树一致，点击各页面可达（刷新多级路径不 404） |
+| 18 | 按钮权限 | 无权限用户按 `v-permission` 隐藏对应操作按钮；**权限列表为空时前端放行**，故须同时确认后端拒绝越权调用 |
+| 19 | 接口回路 | 浏览器 Network 中 `/api/*`、`/admin-api/*`、`/oauth2/*` 均代理到后端并返回预期结构 |
+| 20 | 后端回归 | 后端 `GET /api/v1/health` 返回 UP；`GET /admin` 返回 404（符合前后端分离预期） |
 
 ---
 
@@ -538,6 +632,21 @@ Nginx 未配置 `try_files $uri $uri/ /index.html;`，history 模式路由刷新
 **Q5：新菜单页面没显示？**
 后端菜单 `component` 需在 `src/router/dynamic.ts` 的 `VIEW_REGISTRY` 注册对应视图路径，
 否则动态路由无法映射到视图。API 调用日志（`monitor/api-call-log/index`）已注册。
+
+**Q6：站内信不实时推送、Network 里 WS 一直 pending 或 400？**
+依次核对：① Nginx 是否有 `location = /api/v1/messages/ws` 且声明在 `/api/` 之前（缺失则 `Upgrade` 头未转发）；
+② 网关是否把 `/api/v1/messages/ws` 路由到 office-service；③ office-service `office.messages.allowed-origins`
+是否包含前端 Origin（缺省拒绝，握手 403）；④ `ROUTE_OFFICE_WS_URI` 是否与 HTTP 消息路由同一实例。
+无 WS 时前端未读数仍靠 60s 轮询兜底，表现为「角标更新延迟」而非完全不可用。
+
+**Q7：登录后立即被踢回登录页、接口反复 401？**
+先确认 `POST /api/v1/auth/refresh` 可达且响应含 `accessToken`。刷新仅由 HTTP 401 触发；若刷新接口不通、
+未返回令牌或路径被误拦截，请求层会清理会话并跳登录页。另需确认反代未剥离 `Authorization` 头。
+
+**Q8：租户管理 / MFA / 运维健康页面 404 或空列表？**
+这几组是新接入的业务域，常见原因是网关未声明对应路由或后端菜单种子未执行：租户走 `/api/v2/platform/tenants`、
+MFA 与 IP 规则走 `/api/mfa/**`、`/api/ip-access-control/**`、运维健康走 `/api/v2/operations/*` 子路径
+（无 `GET /api/v2/operations` 根端点）。页面 404 还需核对后端菜单 `component` 与 `VIEW_REGISTRY` 键一致。
 
 ---
 

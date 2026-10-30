@@ -125,29 +125,7 @@ export interface OfficeMessageRequest {
   content: string
 }
 
-/** 审批单据（从办公平台拉取的待办/已办审批） */
-export interface OfficeApproval {
-  /** 审批实例 ID（平台侧） */
-  approvalId: string
-  /** 平台类型 */
-  platform: OfficePlatform
-  /** 审批单名称 */
-  title: string
-  /** 发起人名称 */
-  initiatorName: string
-  /** 发起人部门 */
-  initiatorDept?: string
-  /** 审批状态：PENDING=待审批 APPROVED=已通过 REJECTED=已驳回 CANCELED=已撤回 */
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED'
-  /** 发起时间 */
-  createTime?: string
-  /** 当前审批节点名称 */
-  currentNodeName?: string
-  /** 审批单链接 */
-  approvalUrl?: string
-}
-
-/** 日历日程事件 */
+/** 日历日程事件（办公平台日程，非本系统日历管理端点） */
 export interface OfficeCalendarEvent {
   /** 事件 ID */
   eventId: string
@@ -205,24 +183,6 @@ export interface OfficeBindingQuery extends PageQuery {
   status?: string
   /** 关键字（用户名/openId） */
   keyword?: string
-}
-
-/** 审批列表查询参数 */
-export interface OfficeApprovalQuery extends PageQuery {
-  /** 平台筛选 */
-  platform?: OfficePlatform
-  /** 审批状态 */
-  status?: string
-}
-
-/** 日历日程查询参数 */
-export interface OfficeCalendarQuery {
-  /** 平台 */
-  platform: OfficePlatform
-  /** 开始时间（ISO8601） */
-  startTime: string
-  /** 结束时间（ISO8601） */
-  endTime: string
 }
 
 /** 文件列表查询参数 */
@@ -407,30 +367,6 @@ export function sendMessage(request: OfficeMessageRequest): Promise<void> {
 }
 
 /**
- * 分页查询审批列表（管理端）。
- * @param params 查询参数
- */
-export function getApprovals(
-  params: OfficeApprovalQuery,
-): Promise<PageResponse<OfficeApproval>> {
-  return get<PageResponse<OfficeApproval>>(
-    '/admin-api/v1/office/approvals',
-    params as unknown as Record<string, unknown>,
-  )
-}
-
-/**
- * 查询日历日程列表（管理端）。
- * @param params 查询参数
- */
-export function getAdminCalendarEvents(params: OfficeCalendarQuery): Promise<OfficeCalendarEvent[]> {
-  return get<OfficeCalendarEvent[]>(
-    '/admin-api/v1/office/calendar/events',
-    params as unknown as Record<string, unknown>,
-  )
-}
-
-/**
  * 查询文件列表（管理端，办公平台云盘）。
  * @param params 查询参数
  */
@@ -578,79 +514,95 @@ export function getSentMessages(query: SentMessagesQuery): Promise<PageResponse<
   return get<PageResponse<MessageRecord>>('/api/office/messages/sent', query as any)
 }
 
-// ==================== 审批对接 API ====================
+// ==================== 审批对接 API（/api/office/approvals） ====================
 
-/** 审批状态 */
-export type ApprovalStatus = 'PENDING' | 'IN_PROGRESS' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'TRANSFERRED'
+/** 审批状态（后端 ApprovalStatus） */
+export type ApprovalStatus = 'PENDING' | 'IN_PROGRESS' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
 
-/** 审批流程详情 */
-export interface ApprovalProcess {
-  /** 流程实例ID */
-  processInstanceId: string
-  /** 平台类型 */
-  platform: OfficePlatform
-  /** 平台审批实例ID */
-  platformInstanceId: string
-  /** 审批定义代码 */
-  approvalCode: string
-  /** 审批标题 */
-  title: string
-  /** 发起人ID */
-  initiatorId: string
-  /** 发起人名称 */
-  initiatorName?: string
-  /** 审批状态 */
-  status: ApprovalStatus
-  /** 审批记录列表 */
-  records: ApprovalRecord[]
-  /** 审批表单数据（JSON字符串） */
-  formData: string
-  /** 发起时间 */
-  initiateTime: string
-  /** 完成时间 */
-  finishTime?: string
-}
-
-/** 审批记录 */
+/** 审批记录（后端 ApprovalRecord） */
 export interface ApprovalRecord {
   /** 审批人ID */
   approverId: string
   /** 审批人名称 */
-  approverName: string
-  /** 审批动作：APPROVE=通过, REJECT=拒绝, TRANSFER=转审, ADD_SIGN=加签 */
-  action: 'APPROVE' | 'REJECT' | 'TRANSFER' | 'ADD_SIGN'
+  approverName?: string
+  /** 审批动作 */
+  action: 'APPROVE' | 'REJECT'
   /** 审批意见 */
   comment?: string
   /** 审批时间 */
-  approveTime: string
+  approveTime?: string
 }
 
-/** 发起审批请求 */
+/** 审批流程（后端 ApprovalProcessResponse） */
+export interface ApprovalProcess {
+  /** 记录 ID */
+  id?: number
+  /** 平台类型 */
+  platform: OfficePlatform
+  /** 流程定义 ID */
+  processDefinitionId?: string
+  /** 流程实例 ID（审批操作的路径参数） */
+  processInstanceId: string
+  /** 平台侧实例 ID */
+  platformInstanceId?: string
+  /** 流程名称 */
+  processName: string
+  /** 发起人 ID */
+  initiatorId?: string
+  /** 发起人名称 */
+  initiatorName?: string
+  /** 审批状态 */
+  status: ApprovalStatus
+  /** 当前节点 */
+  currentNode?: string
+  /** 当前审批人 ID 列表 */
+  currentApproverIds?: string[]
+  /** 表单数据（JSON 字符串） */
+  formData?: string
+  /** 审批记录 */
+  records?: ApprovalRecord[]
+  /** 发起时间 */
+  createdAt?: string
+  /** 完成时间 */
+  completedAt?: string
+  /** 更新时间 */
+  updatedAt?: string
+}
+
+/** 发起审批请求（后端 InitiateApprovalRequest，全部必填） */
 export interface InitiateApprovalRequest {
   /** 平台类型 */
   platform: OfficePlatform
-  /** 审批定义代码 */
-  approvalCode: string
-  /** 审批标题 */
-  title: string
-  /** 发起人ID */
+  /** 应用 ID */
+  appId: number
+  /** 流程定义 ID */
+  processDefinitionId: string
+  /** 发起人 ID */
   initiatorId: string
-  /** 审批表单数据（JSON字符串） */
+  /** 表单数据（JSON 字符串） */
   formData: string
-  /** 审批人ID列表（逗号分隔） */
-  approverIds?: string
 }
 
-/** 执行审批操作请求 */
+/** 执行审批操作请求（后端 ApproveRequest） */
 export interface ApproveProcessRequest {
-  /** 审批人ID */
+  /** 审批人 ID（必填，不能为空串） */
   approverId: string
   /** 审批动作 */
-  action: 'APPROVE' | 'REJECT' | 'TRANSFER' | 'ADD_SIGN'
+  action: 'APPROVE' | 'REJECT'
   /** 审批意见 */
   comment?: string
-  /** 转审目标审批人ID（action=TRANSFER时必填） */
-  targetApproverId?: string
+}
+
+/** 审批列表查询参数（后端 pending/initiated 的查询口径） */
+export interface ApprovalListQuery {
+  /** 平台类型（可选） */
+  platform?: OfficePlatform
+  /** 审批人ID（pending 必填；initiated 不传） */
+  approverId?: string
+  /** 页码 */
+  pageNum: number
+  /** 每页数量 */
+  pageSize: number
 }
 
 /**
@@ -670,9 +622,9 @@ export function getApprovalDetail(processInstanceId: string): Promise<ApprovalPr
 }
 
 /**
- * 执行审批操作（通过/拒绝/转审/加签）。
+ * 执行审批操作（通过/拒绝）。
  * @param processInstanceId 流程实例ID
- * @param request 审批操作请求
+ * @param request 审批操作请求（approverId 必填）
  */
 export function approveProcess(
   processInstanceId: string,
@@ -689,26 +641,24 @@ export function cancelApproval(processInstanceId: string): Promise<void> {
   return del<void>(`/api/office/approvals/${processInstanceId}`)
 }
 
-/** 待审批列表查询参数 */
-export interface PendingApprovalsQuery {
-  /** 平台类型（可选） */
-  platform?: OfficePlatform
-  /** 审批人ID */
-  approverId: string
-  /** 页码 */
-  pageNum: number
-  /** 每页数量 */
-  pageSize: number
+/**
+ * 查询待我审批列表。
+ * @param query 查询参数（approverId 必填）
+ */
+export function getPendingApprovals(
+  query: ApprovalListQuery,
+): Promise<PageResponse<ApprovalProcess>> {
+  return get<PageResponse<ApprovalProcess>>('/api/office/approvals/pending', query as any)
 }
 
 /**
- * 查询待审批列表。
+ * 查询我发起的审批列表。
  * @param query 查询参数
  */
-export function getPendingApprovals(
-  query: PendingApprovalsQuery,
+export function getMyInitiatedApprovals(
+  query: ApprovalListQuery,
 ): Promise<PageResponse<ApprovalProcess>> {
-  return get<PageResponse<ApprovalProcess>>('/api/office/approvals/pending', query as any)
+  return get<PageResponse<ApprovalProcess>>('/api/office/approvals/initiated', query as any)
 }
 
 /** 我发起的审批查询参数 */
@@ -723,16 +673,6 @@ export interface MyInitiatedApprovalsQuery {
   pageNum: number
   /** 每页数量 */
   pageSize: number
-}
-
-/**
- * 查询我发起的审批列表。
- * @param query 查询参数
- */
-export function getMyInitiatedApprovals(
-  query: MyInitiatedApprovalsQuery,
-): Promise<PageResponse<ApprovalProcess>> {
-  return get<PageResponse<ApprovalProcess>>('/api/office/approvals/initiated', query as any)
 }
 
 // ==================== 日历管理 ====================
@@ -1120,7 +1060,6 @@ export const APPROVAL_STATUS_NAMES: Record<ApprovalStatus, string> = {
   APPROVED: '已通过',
   REJECTED: '已拒绝',
   CANCELLED: '已撤销',
-  TRANSFERRED: '已转审',
 }
 
 /** 审批动作中文名映射 */
