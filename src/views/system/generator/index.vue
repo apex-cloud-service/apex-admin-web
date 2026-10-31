@@ -1,12 +1,14 @@
 <!--
   代码生成页面
   ------------------------------------------------------------------
-  功能：数据源管理、表结构扫描、代码生成配置、代码生成与生成历史查询
-  （当前页面未提供代码预览、模板管理和历史回滚入口）
+  功能：数据源管理、表结构扫描、代码生成配置、代码生成与生成历史查询，
+        以及生成向导（模板目录/预检/预览/异步任务/产物下载）
 
   权限：
     - system:generator:view - 查看代码生成
     - system:generator:generate - 生成代码
+    - system:generator:preflight/preview/task:create/task:read/task:cancel - 向导与异步任务
+    - system:generator:artifact:download - 产物下载
 -->
 <template>
   <div class="generator-container">
@@ -102,6 +104,115 @@
             @size-change="loadConfigs"
             @current-change="loadConfigs"
           />
+        </el-tab-pane>
+
+        <el-tab-pane label="生成向导" name="wizard" lazy>
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+            title="向导流程：预检 → 预览（取得预览令牌）→ 提交异步任务 → 轮询进度 → 下载产物"
+            style="margin-bottom: 16px"
+          />
+          <el-form inline>
+            <el-form-item label="生成配置">
+              <el-select
+                v-model="wizardConfigId"
+                placeholder="请选择生成配置"
+                filterable
+                style="width: 320px"
+              >
+                <el-option
+                  v-for="config in configs"
+                  :key="config.id"
+                  :label="`${config.tableName}（${config.functionName || config.className || `#${config.id}`}）`"
+                  :value="config.id!"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item>
+              <el-checkbox v-model="wizardOverwrite" style="margin-right: 12px">覆盖同任务目录已有产物</el-checkbox>
+              <el-button type="primary" :loading="wizardPreflightLoading" @click="handleWizardPreflight" v-permission="'system:generator:preflight'">
+                结构预检
+              </el-button>
+              <el-button type="primary" :loading="wizardPreviewLoading" @click="handleWizardPreview" v-permission="'system:generator:preview'">
+                预览
+              </el-button>
+              <el-button
+                type="success"
+                :loading="wizardSubmitting"
+                :disabled="!wizardPreview?.previewToken"
+                @click="handleWizardSubmit"
+                v-permission="'system:generator:task:create'"
+              >
+                提交异步任务
+              </el-button>
+            </el-form-item>
+          </el-form>
+
+          <el-descriptions v-if="wizardPreflight" :column="3" border size="small" style="margin-bottom: 12px">
+            <el-descriptions-item label="预检结论">
+              <el-tag :type="wizardPreflight.ready ? 'success' : 'danger'">
+                {{ wizardPreflight.ready ? '可执行' : '存在问题' }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="目标表数">{{ wizardPreflight.tableCount }}</el-descriptions-item>
+            <el-descriptions-item label="模板数">{{ wizardPreflight.templateCount }}</el-descriptions-item>
+          </el-descriptions>
+          <el-table v-if="wizardPreflight?.issues?.length" :data="wizardPreflight.issues" border size="small" style="margin-bottom: 12px">
+            <el-table-column prop="level" label="级别" width="90">
+              <template #default="{ row }">
+                <el-tag :type="row.level === 'ERROR' ? 'danger' : 'warning'" size="small">{{ row.level }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="code" label="问题码" width="240" />
+            <el-table-column prop="message" label="说明" min-width="280" show-overflow-tooltip />
+          </el-table>
+
+          <el-collapse v-model="wizardCollapse">
+            <el-collapse-item title="模板目录" name="templates">
+              <el-table :data="templates" border size="small">
+                <el-table-column prop="templateName" label="模板名称" min-width="160" />
+                <el-table-column prop="templateType" label="类型" width="110" />
+                <el-table-column prop="engine" label="引擎" min-width="200" show-overflow-tooltip />
+                <el-table-column label="内置" width="80">
+                  <template #default="{ row }">
+                    <el-tag v-if="row.builtin" type="info" size="small">内置</el-tag>
+                    <span v-else>-</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="只读" width="80">
+                  <template #default="{ row }">
+                    <el-tag v-if="row.readOnly" type="info" size="small">只读</el-tag>
+                    <span v-else>-</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-collapse-item>
+            <el-collapse-item v-if="wizardPreview?.files?.length" title="预览片段" name="preview">
+              <el-table :data="wizardPreview.files" border size="small">
+                <el-table-column prop="tableName" label="表名" width="160" />
+                <el-table-column prop="relativePath" label="相对路径" min-width="200" />
+                <el-table-column prop="contentDigest" label="内容摘要" width="140" />
+                <el-table-column label="截断" width="80">
+                  <template #default="{ row }">
+                    <el-tag v-if="row.truncated" type="warning" size="small">已截断</el-tag>
+                    <span v-else>-</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <div v-for="file in wizardPreview.files" :key="file.relativePath" class="preview-block">
+                <div class="preview-path">{{ file.relativePath }}</div>
+                <el-input
+                  type="textarea"
+                  :model-value="file.contentPreview"
+                  readonly
+                  :rows="6"
+                  class="code-preview"
+                />
+              </div>
+            </el-collapse-item>
+          </el-collapse>
         </el-tab-pane>
       </el-tabs>
     </el-card>
@@ -245,6 +356,67 @@
         @current-change="loadHistory"
       />
     </el-dialog>
+
+    <el-dialog v-model="taskDialogVisible" title="异步生成任务" width="860px" :close-on-click-modal="false">
+      <el-descriptions v-if="taskProgress" :column="3" border size="small">
+        <el-descriptions-item label="任务 ID">{{ taskProgress.id }}</el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag :type="taskStatusTagMap[taskProgress.status] || 'info'">{{ taskProgress.status }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="尝试次数">{{ taskProgress.attempts }}</el-descriptions-item>
+        <el-descriptions-item label="进度" :span="3">
+          <el-progress
+            :percentage="taskProgress.progressPercent"
+            :status="taskProgress.status === 'FAILED' ? 'exception' : taskProgress.status === 'COMPLETED' ? 'success' : undefined"
+          />
+          <span style="margin-left: 8px">
+            已处理 {{ taskProgress.processedCount }} / 总数 {{ taskProgress.totalCount }}，失败 {{ taskProgress.failedCount }}
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="taskProgress.errorMessage" label="错误信息" :span="3">
+          {{ taskProgress.errorMessage }}
+        </el-descriptions-item>
+      </el-descriptions>
+      <div v-if="taskPolling" style="margin-top: 12px">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        <span style="margin-left: 6px">任务执行中，每 2 秒自动刷新进度…</span>
+      </div>
+      <el-table v-if="taskArtifacts.length" :data="taskArtifacts" border size="small" style="margin-top: 12px">
+        <el-table-column prop="fileName" label="文件名" min-width="200" />
+        <el-table-column prop="relativePath" label="相对路径" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="fileSize" label="大小(字节)" width="110" />
+        <el-table-column prop="status" label="状态" width="110">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'PUBLISHED' ? 'success' : 'danger'" size="small">{{ row.status }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              :disabled="row.status !== 'PUBLISHED'"
+              @click="handleDownloadArtifact(row)"
+              v-permission="'system:generator:artifact:download'"
+            >
+              下载
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button
+          v-if="taskProgress && ['PENDING', 'RUNNING'].includes(taskProgress.status)"
+          type="warning"
+          :loading="taskCancelLoading"
+          @click="handleTaskCancel"
+          v-permission="'system:generator:task:cancel'"
+        >
+          取消任务
+        </el-button>
+        <el-button @click="taskDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -256,7 +428,8 @@
  * 2. 表结构扫描 - 自动扫描数据库表结构和字段信息
  * 3. 代码生成配置 - 配置生成参数(模块名、包名、作者等)
  * 4. 代码生成 - 按配置一键生成代码文件
- * 5. 生成历史 - 按配置查看生成历史（当前页面未提供代码预览、模板管理和历史回滚入口）
+ * 5. 生成历史 - 按配置查看生成历史
+ * 6. 生成向导 - 模板目录/结构预检/纯渲染预览/异步任务(提交、进度轮询、取消)/产物下载
  *
  * 权限要求:
  * - system:generator:view - 查看权限(必需)
@@ -264,14 +437,17 @@
  * - system:generator:edit - 编辑配置
  * - system:generator:delete - 删除操作
  * - system:generator:generate - 生成代码
+ * - system:generator:preflight/preview - 向导预检与预览
+ * - system:generator:task:create/read/cancel - 异步任务提交、进度与取消
+ * - system:generator:artifact:download - 产物下载
  *
  * @author system
  * @date 2024
  */
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Loading } from '@element-plus/icons-vue'
 import {
   listDataSources,
   createDataSource,
@@ -286,11 +462,24 @@ import {
   generateCode,
   getTableColumns,
   listGenerateHistory,
+  listGenTemplates,
+  preflightGenerate,
+  previewGenerate,
+  submitGenTask,
+  getGenTaskProgress,
+  cancelGenTask,
+  listGenTaskArtifacts,
+  downloadGenArtifact,
   type DataSource,
   type TableInfo,
   type ColumnInfo,
   type GeneratorConfig,
   type GenerateHistory,
+  type GenTemplateCatalogItem,
+  type GenPreflightResult,
+  type GenPreviewResult,
+  type GenTaskProgress,
+  type GenArtifact,
 } from '@/api/generator'
 import type { PageQuery } from '@/types'
 
@@ -686,6 +875,228 @@ onMounted(() => {
   loadDataSources()
   loadConfigs()
 })
+
+// ------------------------------------------------------------------ 生成向导与异步任务
+
+/** 向导选中的生成配置 */
+const wizardConfigId = ref<number>()
+/** 预检结果 */
+const wizardPreflight = ref<GenPreflightResult | null>(null)
+/** 预检加载中 */
+const wizardPreflightLoading = ref(false)
+/** 预览结果（携带预览令牌） */
+const wizardPreview = ref<GenPreviewResult | null>(null)
+/** 预览加载中 */
+const wizardPreviewLoading = ref(false)
+/** 是否覆盖同任务目录内已有产物 */
+const wizardOverwrite = ref(false)
+/** 提交任务加载中 */
+const wizardSubmitting = ref(false)
+/** 模板目录 */
+const templates = ref<GenTemplateCatalogItem[]>([])
+/** 向导折叠面板展开项 */
+const wizardCollapse = ref<string[]>([])
+
+/** 任务进度对话框可见性 */
+const taskDialogVisible = ref(false)
+/** 当前查看的任务进度 */
+const taskProgress = ref<GenTaskProgress | null>(null)
+/** 是否正在轮询进度 */
+const taskPolling = ref(false)
+/** 取消任务加载中 */
+const taskCancelLoading = ref(false)
+/** 任务产物列表 */
+const taskArtifacts = ref<GenArtifact[]>([])
+/** 进度轮询定时器 */
+let pollTimer: ReturnType<typeof setInterval> | undefined
+
+/** 任务状态 → 标签样式 */
+const taskStatusTagMap: Record<string, string> = {
+  PENDING: 'info',
+  RUNNING: 'primary',
+  COMPLETED: 'success',
+  FAILED: 'danger',
+  CANCELED: 'warning',
+}
+
+// 切到向导页签时按需加载模板目录
+watch(activeTab, (tab) => {
+  if (tab === 'wizard' && templates.value.length === 0) {
+    loadTemplates()
+  }
+})
+
+/**
+ * 加载模板目录（内置模板只读共享）
+ */
+async function loadTemplates() {
+  try {
+    templates.value = await listGenTemplates()
+  } catch (error) {
+    ElMessage.error('加载模板目录失败')
+  }
+}
+
+/**
+ * 执行结构预检：校验配置、数据源、模板与表可达性
+ */
+async function handleWizardPreflight() {
+  if (!wizardConfigId.value) {
+    ElMessage.warning('请先选择生成配置')
+    return
+  }
+  wizardPreflightLoading.value = true
+  try {
+    wizardPreflight.value = await preflightGenerate(wizardConfigId.value)
+  } catch (error) {
+    ElMessage.error('预检失败')
+  } finally {
+    wizardPreflightLoading.value = false
+  }
+}
+
+/**
+ * 执行纯渲染预览：不写盘，返回绑定输入摘要的预览令牌
+ */
+async function handleWizardPreview() {
+  if (!wizardConfigId.value) {
+    ElMessage.warning('请先选择生成配置')
+    return
+  }
+  wizardPreviewLoading.value = true
+  try {
+    wizardPreview.value = await previewGenerate(wizardConfigId.value)
+    if (!wizardCollapse.value.includes('preview')) {
+      wizardCollapse.value.push('preview')
+    }
+  } catch (error) {
+    ElMessage.error('预览失败')
+  } finally {
+    wizardPreviewLoading.value = false
+  }
+}
+
+/**
+ * 提交异步生成任务：须先预览取得令牌，任务受理后打开进度对话框
+ */
+async function handleWizardSubmit() {
+  if (!wizardConfigId.value || !wizardPreview.value?.previewToken) {
+    ElMessage.warning('请先预览取得预览令牌')
+    return
+  }
+  wizardSubmitting.value = true
+  try {
+    const result = await submitGenTask({
+      configId: wizardConfigId.value,
+      previewToken: wizardPreview.value.previewToken,
+      overwrite: wizardOverwrite.value,
+    })
+    ElMessage.success(`任务已受理：${result.taskId}`)
+    openTaskDialog(result.taskId)
+  } catch (error) {
+    ElMessage.error('提交任务失败')
+  } finally {
+    wizardSubmitting.value = false
+  }
+}
+
+/**
+ * 打开任务进度对话框并开始轮询
+ * @param taskId 任务 ID
+ */
+function openTaskDialog(taskId: number) {
+  taskDialogVisible.value = true
+  taskArtifacts.value = []
+  taskProgress.value = null
+  startPolling(taskId)
+}
+
+/**
+ * 每 2 秒轮询一次任务进度，终态停止并加载产物清单
+ * @param taskId 任务 ID
+ */
+function startPolling(taskId: number) {
+  stopPolling()
+  taskPolling.value = true
+  const poll = async () => {
+    try {
+      const progress = await getGenTaskProgress(taskId)
+      taskProgress.value = progress
+      if (!['PENDING', 'RUNNING'].includes(progress.status)) {
+        stopPolling()
+        await loadTaskArtifacts(taskId)
+      }
+    } catch (error) {
+      stopPolling()
+      ElMessage.error('查询任务进度失败')
+    }
+  }
+  void poll()
+  pollTimer = setInterval(poll, 2000)
+}
+
+/**
+ * 停止进度轮询
+ */
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = undefined
+  }
+  taskPolling.value = false
+}
+
+/**
+ * 加载任务产物清单（用于按产物 ID 下载）
+ * @param taskId 任务 ID
+ */
+async function loadTaskArtifacts(taskId: number) {
+  try {
+    taskArtifacts.value = await listGenTaskArtifacts(taskId)
+  } catch (error) {
+    ElMessage.error('加载任务产物失败')
+  }
+}
+
+/**
+ * 取消当前任务（PENDING 直接取消，RUNNING 在下一项推进时停止）
+ */
+async function handleTaskCancel() {
+  if (!taskProgress.value) return
+  await ElMessageBox.confirm('确认取消该任务?', '提示', { type: 'warning' })
+  taskCancelLoading.value = true
+  try {
+    await cancelGenTask(taskProgress.value.id)
+    ElMessage.success('取消请求已提交')
+  } catch (error) {
+    ElMessage.error('取消失败')
+  } finally {
+    taskCancelLoading.value = false
+  }
+}
+
+/**
+ * 下载产物文件（触发浏览器保存）
+ * @param row 目标产物行
+ */
+async function handleDownloadArtifact(row: GenArtifact) {
+  try {
+    const blob = await downloadGenArtifact(row.id)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = row.fileName || `artifact-${row.id}`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    ElMessage.error('下载产物失败')
+  }
+}
+
+// 离开页面前停止轮询，避免定时器泄漏
+onBeforeUnmount(() => {
+  stopPolling()
+})
 </script>
 
 <style scoped lang="scss">
@@ -712,5 +1123,15 @@ onMounted(() => {
   font-size: 13px;
   line-height: 1.5;
   max-height: 600px;
+}
+
+.preview-block {
+  margin-top: 8px;
+}
+
+.preview-path {
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 </style>

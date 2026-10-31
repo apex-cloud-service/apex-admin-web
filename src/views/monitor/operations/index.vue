@@ -219,6 +219,63 @@
           <el-descriptions-item label="错误">{{ exportTask.lastError || '-' }}</el-descriptions-item>
         </el-descriptions>
       </el-tab-pane>
+
+      <!-- 租户摘要 -->
+      <el-tab-pane label="租户摘要" name="tenant" lazy>
+        <div class="tab-toolbar">
+          <el-button type="primary" :loading="tenantSummaryLoading" @click="loadTenantSummary">刷新</el-button>
+        </div>
+        <template v-if="tenantSummary">
+          <el-descriptions :column="4" border>
+            <el-descriptions-item label="当前结论">
+              <el-tag :type="statusMeta(tenantSummary.overallStatus).tag">
+                {{ statusMeta(tenantSummary.overallStatus).label }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="快照时间">{{ tenantSummary.snapshotAt || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="口径">{{ tenantSummary.scope || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="正常/降级/异常/未知">
+              {{
+                tenantSummary.riskCounts
+                  ? `${tenantSummary.riskCounts.healthy}/${tenantSummary.riskCounts.degraded}/${tenantSummary.riskCounts.down}/${tenantSummary.riskCounts.unknown}`
+                  : '-'
+              }}
+            </el-descriptions-item>
+          </el-descriptions>
+          <el-alert
+            v-if="tenantSummary.scopeNotice"
+            :title="tenantSummary.scopeNotice"
+            type="warning"
+            :closable="false"
+            style="margin-top: 12px"
+          />
+          <el-alert
+            v-if="tenantSummary.summary"
+            :title="tenantSummary.summary"
+            type="info"
+            :closable="false"
+            style="margin-top: 12px"
+          />
+          <el-table
+            v-if="tenantSummary.recentTrend?.length"
+            :data="tenantSummary.recentTrend"
+            border
+            stripe
+            max-height="320"
+            style="margin-top: 12px"
+          >
+            <el-table-column prop="generatedAt" label="采样时间" width="200" />
+            <el-table-column label="总体状态" width="120">
+              <template #default="{ row }">
+                <el-tag :type="statusMeta(row.overallStatus).tag" size="small">
+                  {{ statusMeta(row.overallStatus).label }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
+        <el-empty v-else description="点击刷新获取租户健康摘要" :image-size="80" />
+      </el-tab-pane>
     </el-tabs>
   </el-card>
 </template>
@@ -242,11 +299,12 @@ import {
   getHealthExportTask,
   getHealthReport,
   getHealthTrend,
+  getTenantHealthSummary,
   HEALTH_STATUS_META,
   listHealthSnapshots,
   type HealthSnapshotQuery,
 } from '@/api/operations'
-import type { HealthExportTask, HealthReport, HealthSnapshot, HealthTrend } from '@/types'
+import type { HealthExportTask, HealthReport, HealthSnapshot, HealthTrend, TenantHealthSummary } from '@/types'
 
 const activeTab = ref('report')
 
@@ -448,10 +506,27 @@ async function handleDownloadTask(): Promise<void> {
   }
 }
 
+// ==================== 租户摘要 ====================
+const tenantSummary = ref<TenantHealthSummary | null>(null)
+const tenantSummaryLoading = ref(false)
+
+/** 加载租户侧健康摘要（当前结论 + 风险计数 + 近端趋势，不下发逐项证据） */
+async function loadTenantSummary(): Promise<void> {
+  tenantSummaryLoading.value = true
+  try {
+    tenantSummary.value = await getTenantHealthSummary()
+  } catch (error) {
+    showError(error, '加载租户健康摘要失败')
+  } finally {
+    tenantSummaryLoading.value = false
+  }
+}
+
 /** Tab 切换按需加载 */
 function handleTabChange(tab: string | number): void {
   if (tab === 'snapshot' && snapshots.value.length === 0) loadSnapshots()
   if (tab === 'trend' && !trend.value) loadTrend()
+  if (tab === 'tenant' && !tenantSummary.value) loadTenantSummary()
 }
 
 onMounted(loadReport)

@@ -77,9 +77,10 @@
             <el-table-column label="发送时间" width="180">
               <template #default="{ row }">{{ formatTime(row.sendTime) }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="100" fixed="right">
+            <el-table-column label="操作" width="160" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+                <el-button link type="primary" @click="openDeliveries(row)">投递记录</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -138,6 +139,30 @@
         </el-descriptions-item>
       </el-descriptions>
       <div v-if="detailMessage" class="detail-content">{{ detailMessage.content }}</div>
+    </el-drawer>
+
+    <!-- 渠道投递记录抽屉：发送人看全部接收人，接收人仅本人；断线补偿以此与未读数为准 -->
+    <el-drawer v-model="deliveriesVisible" title="渠道投递记录" size="520px">
+      <el-table v-loading="deliveriesLoading" :data="deliveries" border stripe size="small">
+        <el-table-column label="渠道" width="110">
+          <template #default="{ row }">
+            <el-tag size="small" type="info">{{ deliveryChannelName(row.channel) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="recipientId" label="接收人 ID" width="110" />
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="deliveryStatusMeta(row.deliveryStatus).tag" size="small">
+              {{ deliveryStatusMeta(row.deliveryStatus).label }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="送达时间" width="170">
+          <template #default="{ row }">{{ row.deliveredAt ? formatTime(row.deliveredAt) : '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="failureReason" label="失败原因" min-width="140" show-overflow-tooltip />
+      </el-table>
+      <el-empty v-if="!deliveriesLoading && deliveries.length === 0" description="暂无投递记录" :image-size="80" />
     </el-drawer>
 
     <!-- 发送消息对话框 -->
@@ -246,6 +271,7 @@ import {
   deleteMessageTemplate,
   getUnreadCount,
   listInboxMessages,
+  listMessageDeliveries,
   listMessageTemplates,
   listSentMessages,
   markAllMessagesRead,
@@ -255,6 +281,7 @@ import {
   sendMessage,
   MESSAGE_TYPE_NAMES,
   updateMessageTemplate,
+  type MessageDelivery,
 } from '@/api/message'
 import { listOrgEmployees } from '@/api/office-new'
 import { subscribeMessagePush } from '@/utils/message-socket'
@@ -435,6 +462,54 @@ async function openDetail(row: InternalMessage): Promise<void> {
     } catch (error) {
       showError(error, '标记已读失败')
     }
+  }
+}
+
+// ==================== 渠道投递记录 ====================
+/** 投递记录抽屉可见性 */
+const deliveriesVisible = ref(false)
+/** 投递记录加载中 */
+const deliveriesLoading = ref(false)
+/** 当前消息的投递记录 */
+const deliveries = ref<MessageDelivery[]>([])
+
+/** 投递渠道 → 中文名称 */
+const DELIVERY_CHANNEL_NAMES: Record<string, string> = {
+  INBOX: '站内',
+  FEISHU: '飞书',
+  DINGTALK: '钉钉',
+  WECOM: '企微',
+}
+
+/** 投递状态 → 名称与标签样式 */
+const DELIVERY_STATUS_META: Record<string, { label: string; tag: 'success' | 'warning' | 'danger' | 'info' }> = {
+  PENDING: { label: '待投递', tag: 'info' },
+  SUCCESS: { label: '已送达', tag: 'success' },
+  FAILED: { label: '失败', tag: 'danger' },
+  UNKNOWN: { label: '未知', tag: 'warning' },
+}
+
+/** 渠道中文名（未知渠道原样返回） */
+function deliveryChannelName(channel: string): string {
+  return DELIVERY_CHANNEL_NAMES[channel] || channel
+}
+
+/** 投递状态元信息（未知状态回退为 info） */
+function deliveryStatusMeta(status: string): { label: string; tag: 'success' | 'warning' | 'danger' | 'info' } {
+  return DELIVERY_STATUS_META[status] || { label: status || '-', tag: 'info' }
+}
+
+/** 打开指定消息的渠道投递记录抽屉 */
+async function openDeliveries(row: InternalMessage): Promise<void> {
+  deliveriesVisible.value = true
+  deliveriesLoading.value = true
+  deliveries.value = []
+  try {
+    deliveries.value = await listMessageDeliveries(row.id)
+  } catch (error) {
+    showError(error, '加载投递记录失败')
+  } finally {
+    deliveriesLoading.value = false
   }
 }
 

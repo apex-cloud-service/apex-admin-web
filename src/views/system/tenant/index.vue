@@ -12,7 +12,7 @@
     <template #header>
       <div class="card-header">
         <span>租户管理</span>
-        <el-button type="primary" :icon="Plus" @click="openCreateDialog">新建租户</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreateDialog" v-permission="'tenant:create'">新建租户</el-button>
       </div>
     </template>
 
@@ -61,7 +61,7 @@
       <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
           <el-dropdown trigger="click" @command="(action: string) => handleAction(row, action)">
-            <el-button link type="primary">
+            <el-button link type="primary" v-permission="'tenant:lifecycle'">
               生命周期<el-icon class="el-icon--right"><ArrowDown /></el-icon>
             </el-button>
             <template #dropdown>
@@ -77,7 +77,7 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <el-button link type="primary" @click="openQuotaDialog(row)">配额</el-button>
+          <el-button link type="primary" @click="openQuotaDialog(row)" v-permission="'tenant:quota'">配额</el-button>
         </template>
       </el-table-column>
     </el-table>

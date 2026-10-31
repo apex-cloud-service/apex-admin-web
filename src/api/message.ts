@@ -4,8 +4,10 @@
  * 后端接口（站内信，apex-office-service；inbox/sent 返回纯数组而非分页对象）：
  * - POST /api/v1/messages                - 发送站内信（recipientIds 为系统用户 ID 列表）
  * - GET  /api/v1/messages/inbox          - 收件箱（pageNum/pageSize，返回 MessageDTO 数组）
+ * - GET  /api/v1/messages/inbox/cursor   - 游标增量收件箱（afterId/limit，返回数组；游标为收件记录 ID）
  * - GET  /api/v1/messages/sent           - 已发送（pageNum/pageSize，返回 MessageDTO 数组）
  * - GET  /api/v1/messages/{id}           - 消息详情
+ * - GET  /api/v1/messages/{id}/deliveries - 消息渠道投递记录（发送人看全量、接收人仅本人）
  * - PUT  /api/v1/messages/{id}/read      - 标记已读
  * - PUT  /api/v1/messages/read-all       - 全部已读
  * - GET  /api/v1/messages/unread/count   - 未读数
@@ -108,6 +110,54 @@ export function getUnreadCount(): Promise<number> {
  */
 export function issueMessageSocketTicket(): Promise<{ ticket: string; expiresIn: number }> {
   return post<{ ticket: string; expiresIn: number }>('/api/v1/messages/ws-ticket')
+}
+
+/** 游标增量收件箱条目（后端 InboxCursorItemDTO，游标键为收件记录 ID） */
+export interface InboxCursorItem {
+  /** 收件记录 ID，作为下一轮 afterId 游标 */
+  recipientRecordId: number
+  messageId: number
+  messageCode?: string
+  subject: string
+  content?: string
+  messageType?: string
+  priority?: string
+  senderId?: number
+  senderName?: string
+  sendTime?: string
+  readStatus?: boolean
+  readTime?: string
+}
+
+/**
+ * 游标式增量查询收件箱（按收件记录 ID 单调递增，适合轮询拉取新消息）
+ * @param afterId 游标（上一轮最后一条的 recipientRecordId，首页传 0）
+ * @param limit 单次条数（后端钳制 [1,100]，默认 20）
+ */
+export function listInboxCursor(afterId = 0, limit = 20): Promise<InboxCursorItem[]> {
+  return get<InboxCursorItem[]>('/api/v1/messages/inbox/cursor', { afterId, limit })
+}
+
+/** 消息渠道投递记录（后端 MessageDeliveryDTO；送达/失败与收件箱已读互不覆盖） */
+export interface MessageDelivery {
+  id: number
+  messageId: number
+  recipientId: number
+  /** 投递渠道：INBOX / FEISHU / DINGTALK / WECOM */
+  channel: string
+  /** 投递状态：PENDING / SUCCESS / FAILED / UNKNOWN */
+  deliveryStatus: string
+  platformMessageId?: string
+  failureReason?: string
+  deliveredAt?: string
+}
+
+/**
+ * 查询消息的渠道投递记录（发送人可见全部接收人，接收人仅可见本人；无权限返回空数组）
+ * @param messageId 消息 ID
+ */
+export function listMessageDeliveries(messageId: number): Promise<MessageDelivery[]> {
+  return get<MessageDelivery[]>(`/api/v1/messages/${messageId}/deliveries`)
 }
 
 /**

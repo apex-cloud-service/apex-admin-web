@@ -34,6 +34,22 @@ export const staticRoutes: RouteRecordRaw[] = [
     meta: { title: '办公平台授权回调', public: true, hidden: true },
   },
   {
+    // 自助密码找回独立页（匿名）：三段式申请/校验/重设，
+    // 与登录页内的找回弹窗共用 /auth/v2/password-recovery 契约。
+    path: '/password-recovery',
+    name: 'PasswordRecovery',
+    component: () => import('@/views/public/password-recovery.vue'),
+    meta: { title: '密码找回', public: true },
+  },
+  {
+    // 文件分享匿名兑换页（匿名）：凭分享令牌兑换元信息并下载，
+    // 令牌即凭证，可经 /share?token=xxx 直达。
+    path: '/share',
+    name: 'ShareExchange',
+    component: () => import('@/views/public/share-exchange.vue'),
+    meta: { title: '文件分享兑换', public: true, hidden: true },
+  },
+  {
     path: '/',
     name: 'Root',
     component: AdminLayout,

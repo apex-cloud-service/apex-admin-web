@@ -23,6 +23,8 @@ import {
   markAllMessagesRead,
   getUnreadCount,
   issueMessageSocketTicket,
+  listInboxCursor,
+  listMessageDeliveries,
   listMessageTemplates,
   createMessageTemplate,
   updateMessageTemplate,
@@ -61,6 +63,18 @@ describe('站内信 API', () => {
   it('ws-ticket 走 POST 且无请求体', () => {
     issueMessageSocketTicket()
     expect(request.post).toHaveBeenCalledWith('/api/v1/messages/ws-ticket')
+  })
+
+  it('游标收件箱默认与自定义参数均走 afterId/limit', () => {
+    listInboxCursor()
+    listInboxCursor(123, 50)
+    expect(request.get).toHaveBeenCalledWith('/api/v1/messages/inbox/cursor', { afterId: 0, limit: 20 })
+    expect(request.get).toHaveBeenCalledWith('/api/v1/messages/inbox/cursor', { afterId: 123, limit: 50 })
+  })
+
+  it('投递记录按消息 ID 查询', () => {
+    listMessageDeliveries(42)
+    expect(request.get).toHaveBeenCalledWith('/api/v1/messages/42/deliveries')
   })
 })
 
