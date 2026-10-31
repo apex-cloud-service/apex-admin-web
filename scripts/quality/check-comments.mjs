@@ -8,13 +8,13 @@
  *   2. 导出函数/类/接口/枚举/常量缺少文档注释
  * 退出码：0 = 通过，1 = 存在违规。
  *
- * 用法：npm run check:comments（或 node scripts/check-comments.mjs）
+ * 用法：npm run check:comments（或 node scripts/quality/check-comments.mjs）
  */
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const SRC = path.join(ROOT, 'src')
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage'])
 

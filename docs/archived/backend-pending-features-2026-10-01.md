@@ -26,7 +26,7 @@
 
 - **API 文件**：`src/api/generator.ts`
 - **页面文件**：`src/views/system/generator/index.vue`
-- **菜单 SQL**：`sql/V999__Add_Generator_Auth_Office_Menus.sql`
+- **菜单 SQL**：`scripts/database/archive/V999__Add_Generator_Auth_Office_Menus.sql`
 
 ### 1.3 需要实现的后端接口
 

@@ -4,12 +4,18 @@
 
 ## 📂 归档文档列表
 
-### 实施报告与功能总结
+### 历史分析与实施记录
 
 | 文档 | 说明 | 归档时间 |
 |------|------|---------|
-| [document-chart-backend-summary.md](document-chart-backend-summary.md) | 文档图表后端实施总结 | 2026-09-12 |
-| [document-chart-feature-summary.md](document-chart-feature-summary.md) | 文档和图表功能总结 | 2026-09-12 |
+| [document-chart-backend-summary-2026-09-12.md](document-chart-backend-summary-2026-09-12.md) | 文档图表后端实施总结 | 2026-09-12 |
+| [document-chart-feature-summary-2026-09-12.md](document-chart-feature-summary-2026-09-12.md) | 文档和图表功能总结 | 2026-09-12 |
+| [auth-integration-2026-09-08.md](auth-integration-2026-09-08.md) | 认证与权限集成历史分析（2026-09-08 快照） | 2026-10-31 |
+| [file-upload-analysis-2026-09-08.md](file-upload-analysis-2026-09-08.md) | 文件上传功能历史分析（2026-09-08 快照） | 2026-10-31 |
+| [file-upload-implementation-2026-09-08.md](file-upload-implementation-2026-09-08.md) | 基础文件上传 MVP 实施记录（2026-09-08 快照） | 2026-10-31 |
+| [file-upload-enhanced-implementation-2026-09-08.md](file-upload-enhanced-implementation-2026-09-08.md) | 增强文件上传实施记录（2026-09-08 快照） | 2026-10-31 |
+| [document-chart-backend-status-2026-09-12.md](document-chart-backend-status-2026-09-12.md) | 文档图表后端集成状态快照（2026-09-12） | 2026-10-31 |
+| [monitor-dashboard-enhancement-2026-10-25.md](monitor-dashboard-enhancement-2026-10-25.md) | 监控大盘历史增强方案，原始方案日期不详；TraceQuery 已于 2026-10-25 移除，正文保留当时口径 | 2026-10-31 |
 
 ### 前后端优化与后端交付
 
@@ -23,7 +29,7 @@
 
 | 文档 | 说明 | 归档时间 |
 |------|------|---------|
-| [project-reports/](project-reports/) | 项目报告与更新记录（AGENTS 更新、办公平台交付等） | 2026-09-13 ~ 2026-09-14 |
+| [project-reports/](project-reports/) | 项目报告与更新记录（AGENTS 更新、办公平台交付、开发日报等） | 2026-09-13 ~ 2026-10-26 |
 
 ## 📝 归档原因
 
@@ -42,10 +48,10 @@
 
 ## ⚠️ 注意事项
 
-- 归档文档**不再维护更新**
+- 归档文档**正文内容不再维护更新**，保留撰写当时口径
 - 归档文档中的信息**可能已过时**
+- 归档文档的**路径与链接仍纳入仓库链接维护**，随仓库整理同步修复
 - 需要当前有效信息请查看 [文档中心](../README.md)
-- 归档文档中的链接可能失效
 
 ## 🔙 返回
 
@@ -55,5 +61,5 @@
 
 ---
 
-**归档时间**：2026-10-04  
+**归档时间**：2026-10-31  
 **维护状态**：不再维护

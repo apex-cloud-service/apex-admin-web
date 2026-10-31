@@ -442,7 +442,7 @@ http://localhost:5173/demo/file-upload-enhanced
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| 基础版实施总结 | [docs/implementation/file-upload-implementation.md](file-upload-implementation.md) | MVP 实施记录 |
+| 基础版实施总结 | [docs/archived/file-upload-implementation-2026-09-08.md](file-upload-implementation-2026-09-08.md) | MVP 实施记录 |
 | 增强版实施总结 | 本文档 | 增强功能实施记录 |
 
 ---

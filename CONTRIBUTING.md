@@ -13,7 +13,7 @@ npm run dev        # http://localhost:5173，代理 /api /admin-api /oauth2 → 
 
 - 分支：`main` 为默认分支；功能开发建议 `feat/{module}-{topic}`、修复 `fix/{topic}`；
 - 提交信息：Conventional Commits（`feat:` `fix:` `docs:` `chore:` `refactor:` `build:`），中英文皆可，正文说明"为什么"；
-- 提交前自查清单见 [AGENTS.md](AGENTS.md) §7。
+- 提交前自查清单见 [AGENTS.md](AGENTS.md) §10。
 
 ## 3. 质量门（提交前必须全过）
 
@@ -40,7 +40,7 @@ npm run test       # Vitest 单元测试
 |------|---------|
 | 新增/修改接口 | [docs/api/README.md](docs/api/README.md)、AGENTS.md 模块清单 |
 | 新增页面/路由 | AGENTS.md（VIEW_REGISTRY、目录树）、[docs/architecture/auth-and-routing.md](docs/architecture/auth-and-routing.md) |
-| 认证/请求层行为变更 | [docs/architecture/auth-and-routing.md](docs/architecture/auth-and-routing.md)、AGENTS.md §3.1 |
+| 认证/请求层行为变更 | [docs/architecture/auth-and-routing.md](docs/architecture/auth-and-routing.md)、AGENTS.md §4/§5 |
 | 新增 store/composable/工具 | [docs/reference/toolkit.md](docs/reference/toolkit.md) |
 | 测试基础设施变更 | [docs/reference/testing.md](docs/reference/testing.md) |
 | 发版 | [CHANGELOG.md](CHANGELOG.md) |
@@ -59,4 +59,4 @@ npm run test       # Vitest 单元测试
 
 - 不提交：`dist/`、`node_modules/`、`reports/`、本地环境文件（`.env.local`）、`*.bak` 备份文件；
 - 依赖变更需同时提交 `package.json` + `package-lock.json`；
-- 涉及密钥/密码的配置一律不进仓库（平台密钥采用引用方式存储，见 AGENTS.md §3.12）。
+- 涉及密钥/密码的配置一律不进仓库（`VITE_*` 变量会进入前端产物，见 AGENTS.md §1）。

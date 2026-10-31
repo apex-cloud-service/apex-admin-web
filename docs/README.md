@@ -36,22 +36,11 @@
 - [基础文件上传](features/file-upload-basic.md) - 基础文件上传组件
 - [增强文件上传](features/file-upload-enhanced.md) - 增强版文件上传组件
 
-### 实现文档
-
-- [文档图表后端状态](implementation/document-chart-backend-status.md) - 文档图表功能后端集成状态
-- [文件上传实现](implementation/file-upload-implementation.md) - 基础文件上传实现细节
-- [增强文件上传实现](implementation/file-upload-enhanced-implementation.md) - 增强版文件上传实现细节
-- [监控大盘增强](implementation/monitor-dashboard-enhancement.md) - 监控大盘前端优化完整实现方案
-
 ### 参考文档
 
 - [测试指南](reference/testing.md) - Vitest 配置、现有用例、编写规范与覆盖率
 - [工具库与组合式函数参考](reference/toolkit.md) - utils/composables/stores 全量导出与选型建议
-
-### 分析文档
-
-- [认证集成分析](analysis/auth-integration.md) - 用户认证和权限集成分析
-- [文件上传分析](analysis/file-upload-analysis.md) - 文件上传功能分析
+- [注释规范](reference/comment-style.md) - 注释语言、文件头模板与禁止的坏注释
 
 ### 归档文档
 
@@ -64,6 +53,14 @@
 - [前后端优化实施方案](archived/frontend-backend-optimization-plan-2026-10-01.md) - 前后端功能匹配评审与分级优化方案
 - [后端待实现功能清单](archived/backend-pending-features-2026-10-01.md) - 后端待实现功能清单与接口契约
 - [后端代码生成器实现](archived/backend-code-generator-implementation-2026-10-01.md) - 代码生成器模块后端完整实现代码
+- [认证集成分析](archived/auth-integration-2026-09-08.md) - 认证与权限集成历史分析（2026-09-08 快照）
+- [文件上传分析](archived/file-upload-analysis-2026-09-08.md) - 文件上传功能历史分析（2026-09-08 快照）
+- [文件上传实现](archived/file-upload-implementation-2026-09-08.md) - 基础文件上传 MVP 实施记录（2026-09-08 快照）
+- [增强文件上传实现](archived/file-upload-enhanced-implementation-2026-09-08.md) - 增强文件上传实施记录（2026-09-08 快照）
+- [文档图表后端状态](archived/document-chart-backend-status-2026-09-12.md) - 文档图表后端集成状态快照（2026-09-12）
+- [文档图表后端实施总结](archived/document-chart-backend-summary-2026-09-12.md) - 文档图表后端实施总结（2026-09-12）
+- [文档图表功能总结](archived/document-chart-feature-summary-2026-09-12.md) - 文档和图表功能总结（2026-09-12）
+- [监控大盘增强](archived/monitor-dashboard-enhancement-2026-10-25.md) - 监控大盘历史增强方案（TraceQuery 已于 2026-10-25 移除，正文保留当时口径）
 - [历史文档](archived/) - 已归档的历史文档
 
 ## 📁 项目结构
@@ -76,19 +73,18 @@ apex-admin-web/
 │   ├── README.md               # 本文档
 │   ├── guides/                 # 开发指南
 │   ├── features/               # 功能文档
-│   ├── implementation/         # 实现文档
-│   ├── analysis/               # 分析文档
 │   ├── archived/               # 归档文档
 │   │   ├── project-reports/    # 项目报告
 │   │   └── *.md                # 历史预归档文档（含日期后缀）
 │   ├── architecture/           # 架构文档（总体架构、认证与路由）
 │   ├── api/                    # API 接口目录（与 src/api/ 对齐）
-│   └── reference/              # 参考文档（测试指南、工具库参考）
+│   └── reference/              # 参考文档（测试指南、工具库参考、注释规范）
 ├── scripts/                     # 脚本目录
 │   ├── build/                  # 构建脚本
-│   ├── database/               # 数据库脚本
+│   ├── database/               # 数据库脚本（archive/ 存历史增量菜单 SQL）
 │   ├── performance/            # 性能测试脚本
-│   └── security-scan.sh        # 安全扫描脚本
+│   ├── quality/                # 质量检查脚本（注释规范检查）
+│   └── security/               # 安全扫描脚本
 └── src/                        # 源代码
 ```
 
@@ -109,7 +105,7 @@ apex-admin-web/
 - 写测试 → [测试指南](reference/testing.md)
 
 ### 问题排查
-- 认证问题 → [认证集成分析](analysis/auth-integration.md)
+- 认证问题 → [认证与路由架构](architecture/auth-and-routing.md)
 - 部署问题 → [部署指南](guides/deployment.md)
 - 后端联调 → [前后端集成](guides/frontend-backend-integration.md)
 
@@ -119,8 +115,6 @@ apex-admin-web/
 
 - **guides/** - 面向开发者的操作指南,包含部署、集成、配置等实践指导
 - **features/** - 功能特性说明,从用户角度描述功能和使用方法
-- **implementation/** - 技术实现细节,面向开发者的代码实现说明
-- **analysis/** - 技术分析文档,包含架构分析、技术选型等
 - **architecture/** - 系统架构设计文档（含 Mermaid 架构图/流程图/时序图）
 - **api/** - API 接口目录（按前端 API 封装、类型、页面调用和代理配置核对）
 - **reference/** - 参考文档（测试指南、工具库与组合式函数参考）
@@ -159,5 +153,5 @@ apex-admin-web/
 
 ---
 
-**最后更新**: 2026-10-30  
+**最后更新**: 2026-10-31  
 **维护者**: Apex Admin Web Team

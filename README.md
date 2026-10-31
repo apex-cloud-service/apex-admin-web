@@ -132,8 +132,7 @@ apex-admin-web/
 │   ├── test/           # 测试全局准备（setup.ts）
 │   └── views/          # 页面（登录/工作台/系统管理/监控/数据/办公/工作流/个人中心）
 ├── docker/             # Nginx 模板与入口脚本（生产反代 /assets、/oauth2、/api、/admin-api，含站内信 WS）
-├── scripts/            # 构建（build/build-image.sh）/ 数据库（database/menu-init.sql）/ 性能 / 安全扫描 / 注释检查
-├── sql/                # 增量菜单注册 SQL（SSO、代码生成器、办公平台）
+├── scripts/            # 构建（build/）/ 数据库（database/ 与 database/archive/）/ 性能 / 质量（quality/）/ 安全（security/）
 ├── docs/               # 文档中心（架构/API/指南/功能/参考，见 docs/README.md）
 ├── vite.config.ts      # 构建与开发代理配置
 ├── vitest.config.ts    # 单元测试配置

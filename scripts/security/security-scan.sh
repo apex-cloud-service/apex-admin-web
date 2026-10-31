@@ -2,6 +2,9 @@
 
 set -e
 
+# 无论从何处调用，统一以仓库根为工作目录（报告输出 ./reports/）
+cd "$(dirname "$0")/../.."
+
 echo "运行 npm 安全审计..."
 npm audit --production
 

@@ -14,7 +14,7 @@
 - 办公平台集成（飞书/钉钉/企微）：消息/审批/日历/文档/配置/绑定/控制台/组织同步页面与 `office.ts`、`office-new.ts` 双 API 层
 - 令牌无感刷新（`src/utils/request.ts`）：401 单次重放、并发共享刷新、`x-new-access-token` 头支持
 - 请求层契约单测（`src/utils/__tests__/`：request/oauth2/auth-config/validate）
-- 工程化脚本：性能审计（`scripts/performance/`）、依赖安全扫描（`scripts/security-scan.sh`）、OpenAPI 生成（`npm run generate:api`）
+- 工程化脚本：性能审计（`scripts/performance/`）、依赖安全扫描（`scripts/security/security-scan.sh`）、OpenAPI 生成（`npm run generate:api`）
 - 文档体系补齐：架构文档（`docs/architecture/`）、API 接口目录（`docs/api/`）、测试指南与工具库参考（`docs/reference/`）
 
 ### Fixed

@@ -2,6 +2,9 @@
 
 set -e
 
+# 无论从何处调用，统一以仓库根为工作目录（报告输出 ./reports/lighthouse）
+cd "$(dirname "$0")/../.."
+
 URL="${1:-http://localhost:5173}"
 OUTPUT_DIR="./reports/lighthouse"
 

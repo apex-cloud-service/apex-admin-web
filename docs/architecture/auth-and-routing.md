@@ -252,7 +252,7 @@ flowchart TD
 ## 10. 关联文档
 
 - [总体架构](overview.md) · [API 接口目录](../api/README.md)
-- [认证集成分析](../analysis/auth-integration.md)（历史分析，含后端权限模型对照）
+- [认证集成分析](../archived/auth-integration-2026-09-08.md)（历史分析快照，含后端权限模型对照；当前认证实现以本文为准）
 
 ---
 

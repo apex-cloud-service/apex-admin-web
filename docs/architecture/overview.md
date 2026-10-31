@@ -200,7 +200,7 @@ flowchart LR
 | 单元测试 | `npm run test`（Vitest + happy-dom） | 用例分布于 `src/utils/__tests__/`（工具/契约）与 `src/api/`（业务 API 契约），详见 [测试指南](../reference/testing.md) |
 | 产物分析 | `npm run analyze` | rollup-plugin-visualizer |
 | 性能审计 | `scripts/performance/lighthouse-test.sh` | Lighthouse desktop preset，报告输出 `./reports/lighthouse` |
-| 依赖安全 | `scripts/security-scan.sh`、`npm run audit` | npm audit（JSON + HTML 报告输出 `./reports/audit.html`），脚本内的 npm-check-updates / snyk 为可选步骤 |
+| 依赖安全 | `scripts/security/security-scan.sh`、`npm run audit` | npm audit（JSON + HTML 报告输出 `./reports/audit.html`），脚本内的 npm-check-updates / snyk 为可选步骤 |
 | API 契约 | `npm run generate:api` | openapi-generator-cli（typescript-axios）；当前 `src/api/*.ts` 为手写封装，生成目录不参与运行时 |
 
 > 仓库当前**未配置** ESLint/Prettier/Husky/CI 流水线；代码风格靠 [AGENTS.md](../../AGENTS.md) 约定与 `.editorconfig` 约束。
