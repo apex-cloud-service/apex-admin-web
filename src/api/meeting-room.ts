@@ -69,6 +69,7 @@ export interface MeetingRoomBooking {
   location?: string
 }
 
+/** 会议室分页查询参数 */
 export interface MeetingRoomQuery {
   pageNum: number
   pageSize: number
@@ -91,26 +92,32 @@ export function listAvailableMeetingRooms(startTime: string, endTime: string): P
   return get<MeetingRoom[]>('/api/v2/office/meeting-rooms/available', { startTime, endTime })
 }
 
+/** 查询会议室详情 */
 export function getMeetingRoom(id: number): Promise<MeetingRoom> {
   return get<MeetingRoom>(`/api/v2/office/meeting-rooms/${id}`)
 }
 
+/** 创建会议室 */
 export function createMeetingRoom(payload: CreateMeetingRoomPayload): Promise<MeetingRoom> {
   return post<MeetingRoom>('/api/v2/office/meeting-rooms', payload)
 }
 
+/** 局部更新会议室 */
 export function updateMeetingRoom(id: number, payload: UpdateMeetingRoomPayload): Promise<MeetingRoom> {
   return put<MeetingRoom>(`/api/v2/office/meeting-rooms/${id}`, payload)
 }
 
+/** 删除会议室 */
 export function deleteMeetingRoom(id: number): Promise<boolean> {
   return del<boolean>(`/api/v2/office/meeting-rooms/${id}`)
 }
 
+/** 预订会议室 */
 export function bookMeetingRoom(id: number, payload: BookMeetingRoomPayload): Promise<MeetingRoomBooking> {
   return post<MeetingRoomBooking>(`/api/v2/office/meeting-rooms/${id}/bookings`, payload)
 }
 
+/** 取消会议室预订 */
 export function cancelMeetingRoomBooking(roomId: number, eventId: number): Promise<MeetingRoomBooking> {
   return del<MeetingRoomBooking>(`/api/v2/office/meeting-rooms/${roomId}/bookings/${eventId}`)
 }

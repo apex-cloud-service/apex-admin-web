@@ -20,26 +20,32 @@ export interface SyncPreviewResult {
   newCount: number
 }
 
+/** 同步预检：返回是否就绪与缺失项 */
 export function preflightOrgSync(platform: string): Promise<SyncPreflightResult> {
   return post<SyncPreflightResult>('/api/v2/office/sync/preflight', { platform })
 }
 
+/** 同步预览：返回抽样数量与映射/新增统计 */
 export function previewOrgSync(platform: string, syncType: 'DEPARTMENT' | 'MEMBER'): Promise<SyncPreviewResult> {
   return post<SyncPreviewResult>('/api/v2/office/sync/preview', { platform, syncType })
 }
 
+/** 执行组织同步（创建同步任务） */
 export function executeOrgSync(payload: OrgSyncRequest): Promise<OrgSyncResult> {
   return post<OrgSyncResult>('/api/v2/office/sync/tasks', payload)
 }
 
+/** 分页查询同步任务列表（page/size，返回数组） */
 export function listWizardSyncTasks(params: { platform?: string; page: number; size: number }): Promise<OrgSyncTask[]> {
   return get<OrgSyncTask[]>('/api/v2/office/sync/tasks', params)
 }
 
+/** 查询同步任务详情 */
 export function getWizardSyncTask(taskId: number): Promise<OrgSyncTask> {
   return get<OrgSyncTask>(`/api/v2/office/sync/tasks/${taskId}`)
 }
 
+/** 重试同步任务 */
 export function retryWizardSyncTask(taskId: number): Promise<OrgSyncResult> {
   return post<OrgSyncResult>(`/api/v2/office/sync/tasks/${taskId}/retry`)
 }

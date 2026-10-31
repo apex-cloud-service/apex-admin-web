@@ -162,7 +162,7 @@ async function handleTrial(): Promise<void> {
   }
 }
 
-/** Tab 切换按需加载 */
+/** 切换到试算 Tab 时默认选中第一个已授权版本 */
 function handleTabChange(tab: string | number): void {
   if (tab === 'trial' && !trialVersion.value && versions.value.length > 0) {
     trialVersion.value = versions.value[0]

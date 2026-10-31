@@ -4,7 +4,7 @@
   消费 /api/v2/operations（apex-system OperationsRouter）：
   - 健康报告：实时聚合的健康状态与分组条目（含建议）
   - 快照：现场采集、按时间/状态分页查询（⚠️ page/size 口径）
-  - 趋势：取样点与分布，SVG 折线示意改善方向
+  - 趋势：取样点统计、起止状态与是否改善展示
   - 导出：同步导出 CSV 或提交异步导出任务并按 ID 查询/下载
   注意：后端不存在 GET /api/v2/operations 根端点，也无导出任务列表端点。
 -->
@@ -226,8 +226,8 @@
 <script setup lang="ts">
 /**
  * 运维健康脚本
- * - 报告/快照/趋势/导出四块，均为只读或导出操作
- * - 快照分页使用后端 page/size 口径（与本项目 PageQuery 不同）
+ * - 报告/快照/趋势/导出四块；除现场采集快照为写操作外，其余为查询或导出
+ * - 快照分页使用后端 page/size 口径
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
