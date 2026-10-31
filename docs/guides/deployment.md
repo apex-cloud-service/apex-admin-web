@@ -351,9 +351,10 @@ curl -s http://localhost/api/v1/health     # 反代后端健康检查
 
 ### 7.5 Compose 编排（推荐）
 
-本工程的 `docker-compose.yml` 已声明 **外部网络** `apex-network`
-（`name: apex-scaffold_apex-network`，即后端 compose 项目创建的网络），
-`API_PROXY_PASS` 默认 `http://apex-scaffold:8080`（后端 compose 服务名）。
+本工程的 `docker-compose.yml` 声明了**外部网络** `apex-network`
+（`name: apex-scaffold_apex-network`）与默认 `API_PROXY_PASS=http://apex-scaffold:8080`。
+这两者都只是前端侧的编排声明：网络是否已由后端 compose 创建、`apex-scaffold` 服务名能否在容器内解析，
+需在目标部署环境用 `docker network ls` / `docker inspect` / `getent hosts` 核验，不能仅凭前端仓库确认。
 
 ```bash
 # 前置：确保后端 compose 已先启动（其网络 apex-scaffold_apex-network 必须存在）
@@ -371,9 +372,9 @@ docker compose ps    # 等待 healthy
 
 #### 方式一（推荐）：Compose 一键启动
 
-前端 `docker-compose.yml` 已内置外部网络声明（`external: true` + `name: apex-scaffold_apex-network`），
-唯一前置条件是**后端 compose 网络已创建**（后端 `.env` 中 `COMPOSE_PROJECT_NAME=apex-scaffold` 时网络名为
-`apex-scaffold_apex-network`）。
+前端 `docker-compose.yml` 已声明外部网络（`external: true` + `name: apex-scaffold_apex-network`）。
+该声明只表达「本服务要加入这个已存在的网络」，**网络是否已创建、后端服务名能否解析，必须在目标环境确认**
+（后端 `.env` 中 `COMPOSE_PROJECT_NAME=apex-scaffold` 时，网络名通常为 `apex-scaffold_apex-network`）。
 
 **步骤 ①  启动后端 compose（先建网）**
 
@@ -423,7 +424,7 @@ docker exec apex-admin-web grep proxy_pass /etc/nginx/conf.d/default.conf
 
 #### 方式二：docker run 直接挂网络（免 compose）
 
-后端 compose 已运行、前端镜像已构建时使用：
+后端 compose 已运行、前端镜像已构建，且目标环境已确认网络存在、服务名可解析时使用：
 
 ```bash
 cd /path/to/apex-admin-web
@@ -441,8 +442,9 @@ curl -s http://localhost/api/v1/health
 
 #### 方式三：合并进后端 compose（同网络，无需 external）
 
-> 后端 `apex-scaffold/docker-compose.yml` 的 `services` 下**已实际加入** `apex-admin-web` 服务
-> （挂在既有 `apex-network`，与 `apex-scaffold` 天然互通，无需声明 `external` 网络）。
+> 以下为**参考片段**：若后端 `apex-scaffold/docker-compose.yml` 的 `services` 中加入 `apex-admin-web`
+> （挂在既有 `apex-network`，同网络内可直接按服务名访问，无需声明 `external`）。后端仓库是否已合入该服务，
+> 需以后端工程实际内容核验。
 
 ```bash
 # ① 先构建前端镜像（后端 compose 无法引用前端仓库的 build context，故需预构建）
@@ -461,7 +463,7 @@ curl -s -o /dev/null -w 'HTTP %{http_code}\n' http://localhost/   # 200
 docker exec apex-admin-web getent hosts apex-scaffold             # 应解析出后端 IP
 ```
 
-后端 `apex-scaffold/docker-compose.yml` 中对应的 `services` 片段（已合并）：
+后端 `apex-scaffold/docker-compose.yml` 中对应的 `services` 片段（参考片段，后端仓库是否已合入需核验）：
 
 ```yaml
   # ---------------- Apex Admin Web（前端管理后台，可选） ----------------
@@ -482,7 +484,8 @@ docker exec apex-admin-web getent hosts apex-scaffold             # 应解析出
 ```
 
 > **依赖说明**：本片段未给 `apex-scaffold` 添加 `healthcheck`（避免改动后端既有行为），
-> 故前端 `depends_on` 用 `service_started`（服务已启动即认为可达），Nginx 就绪后反代自然可用。
+> 故前端 `depends_on` 用 `service_started`——只保证容器已启动，不保证后端应用已就绪，
+> 反代能否正常返回需在目标环境实测。
 > `compose up -d apex-admin-web` 因 `depends_on` 会连带拉起后端 `apex-scaffold`；
 > 只想单独启前端则加 `--no-deps`。
 
@@ -491,14 +494,15 @@ docker exec apex-admin-web getent hosts apex-scaffold             # 应解析出
 | 现象 | 原因 | 处理 |
 |------|------|------|
 | compose up 报 `network ... not found` | 后端网络尚未创建，或项目名不符 | 先 `docker compose up -d` 后端；`docker network ls` 核对网络名，同步调整 `name:` |
-| 无法解析 `apex-scaffold` | 前端容器未加入改网络，或不在同网络 | `docker inspect apex-admin-web` 查看 `Networks`；确认挂的是 `apex-scaffold_apex-network` |
+| 无法解析 `apex-scaffold` | 前端容器未加入该网络，或不在同网络 | `docker inspect apex-admin-web` 查看 `Networks`；确认挂的是 `apex-scaffold_apex-network` |
 | 反代 502/504 | 后端应用未启动或端口不一致 | 确认后端 `APP_PORT`（默认 8080）与 `API_PROXY_PASS` 端口一致；`curl` 后端健康端点 |
 | 端口 80 被占用 | 宿主机 80 已被占用 | 启动时改映射 `docker compose run --rm -p 8088:80` 或 `.env` 设 `WEB_PORT=8088` |
 
-> **网络名与 DNS 说明**：后端 compose 项目名 `apex-scaffold` + 网络名 `apex-network` →
-> 实际网络 `apex-scaffold_apex-network`。容器间按 **compose 服务名** `apex-scaffold` DNS 解析
-> （后端 `container_name` 未固定，由 compose 自动命名）。若用 `docker-compose -p <项目>` 改了项目名，
-> 请把两处 `apex-scaffold_apex-network` 替换为 `<项目>_apex-network`。
+> **网络名与 DNS 说明**：按 compose 默认命名约定，项目名 `apex-scaffold` + 网络名 `apex-network`
+> 通常生成 `apex-scaffold_apex-network`，容器间按 **compose 服务名** `apex-scaffold` 做 DNS 解析。
+> 这是命名约定而非本仓库可确认的事实，请以目标环境 `docker network ls` 与
+> `docker exec <前端容器> getent hosts apex-scaffold` 的实际结果为准；若用 `docker-compose -p <项目>`
+> 改了项目名，需把两处 `apex-scaffold_apex-network` 替换为 `<项目>_apex-network`。
 
 ### 7.7 Docker 部署验证
 
@@ -523,9 +527,9 @@ curl -s http://localhost/admin-api/v1/api-call-logs?pageNum=1      # 带登录�
 
 - 前端 `dist/` 交给由后端统一网关代理的静态目录（例如后端 Nginx/网关的 `/` 根目录）。
 - Nginx 依据 URI 前缀分流：`/api/`、`/admin-api/` 反向代理到后端 8080，其余静态返回 `dist/`。
-- 该方式在浏览器地址栏访问的是前端入口（非后端 `/admin`），登录后动态路由照常由菜单驱动。
+- 该方式在浏览器地址栏直接访问前端入口（如 `https://admin.example.com/`）；后端是否仍保留 `/admin` 短入口需以后端工程与目标环境核验。登录后动态路由照常由菜单驱动。
 
-> 迁移后注意：**不要再**把 `dist/` 塞回后端 `static/admin/`（该目录与后端 `/admin` 重定向已删除）。
+> 迁移后注意：**不要再**把 `dist/` 塞回后端 `static/admin/`。后端是否仍保留 `static/admin/` 与 `/admin` 重定向，需以后端工程与目标环境核验；前端工程与其构建产物不再依赖该目录。
 
 ---
 
@@ -565,7 +569,7 @@ npm run dev
 | 7 | 租户管理 | 「系统管理 → 租户」列表可分页（`pageNum/pageSize` 必填）；配额清空后提交 `null` 表示不限 |
 | 8 | 监控中心 | 监控大盘、登录日志、操作审计、在线用户正常 |
 | 9 | **API 调用日志** | 进入「监控中心 → API 调用日志」，列表可按 `serviceName / status / traceId / path` 查询与重置；状态标签（成功/客户端错误/服务端错误/网络异常）渲染正确 |
-| 10 | 运维健康 | 「监控中心 → 运维健康」健康报告 / 快照 / 趋势可加载（无 `/api/v2/operations` 根端点，走子路径） |
+| 10 | 运维健康 | 「监控中心 → 运维健康」健康报告 / 快照 / 趋势可加载（前端仅调用 health-report、snapshots、trend 等子路径；根路径是否存在以目标后端契约为准） |
 | 11 | 数据脱敏 | 「系统管理 → 数据脱敏」规则可读、批量试算返回结果 |
 | 12 | 工作流 | 「工作流监控」实例列表（`pageNum/pageSize` + `records/total`）与待办任务（`PageResponse`，读 `list/total`）可加载；发起流程填 `businessKey` 可创建实例 |
 | 13 | 站内信（HTTP） | 收件箱 / 已发送可加载（接口返回纯数组，`total` 取数组长度）；未读数接口 `GET /api/v1/messages/unread/count` 正常 |
@@ -575,7 +579,7 @@ npm run dev
 | 17 | 动态路由 | 侧边栏菜单与后端菜单树一致，点击各页面可达（刷新多级路径不 404） |
 | 18 | 按钮权限 | 无权限用户按 `v-permission` 隐藏对应操作按钮；**权限列表为空时前端放行**，故须同时确认后端拒绝越权调用 |
 | 19 | 接口回路 | 浏览器 Network 中 `/api/*`、`/admin-api/*`、`/oauth2/*` 均代理到后端并返回预期结构 |
-| 20 | 后端回归 | 后端 `GET /api/v1/health` 返回 UP；`GET /admin` 返回 404（符合前后端分离预期） |
+| 20 | 后端回归 | 后端 `GET /api/v1/health` 返回 UP；`GET /admin` 的行为（是否 404）需以后端工程与目标环境核验 |
 
 ---
 
@@ -617,7 +621,7 @@ cp -r /var/www/apex-admin.bak.<TIMESTAMP> /var/www/apex-admin
 ## 12. 常见问题 FAQ
 
 **Q1：访问后端 `/admin` 返回 404？**
-正常。迁移后后端不再重定向 `/admin`，管理后台应访问前端源站（Nginx 托管地址）。
+本前端工程不定义 `/admin` 入口行为；管理后台应访问实际配置的前端源站（Nginx 托管地址）。后端 `/admin` 是否保留重定向需按后端工程核验。
 
 **Q2：登录后页面接口全部 401？**
 通常是后端未就绪或反代 `Authorization` 头被剥离。确认 `/api/v1/health` 可达、Nginx 透传了
@@ -645,8 +649,7 @@ Nginx 未配置 `try_files $uri $uri/ /index.html;`，history 模式路由刷新
 
 **Q8：租户管理 / MFA / 运维健康页面 404 或空列表？**
 这几组是新接入的业务域，常见原因是网关未声明对应路由或后端菜单种子未执行：租户走 `/api/v2/platform/tenants`、
-MFA 与 IP 规则走 `/api/mfa/**`、`/api/ip-access-control/**`、运维健康走 `/api/v2/operations/*` 子路径
-（无 `GET /api/v2/operations` 根端点）。页面 404 还需核对后端菜单 `component` 与 `VIEW_REGISTRY` 键一致。
+MFA 与 IP 规则走 `/api/mfa/**`、`/api/ip-access-control/**`；运维健康前端仅调用 `/api/v2/operations/*` 子路径，根路径是否存在以目标后端契约为准。页面 404 还需核对后端菜单 `component` 与 `VIEW_REGISTRY` 键一致。
 
 ---
 

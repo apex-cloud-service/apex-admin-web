@@ -1,6 +1,6 @@
 # 认证与路由架构
 
-> 本文描述登录认证、令牌无感刷新、OAuth2 授权、菜单驱动动态路由四大机制的实现，全部依据 [src/utils/request.ts](../../src/utils/request.ts)、[src/router/index.ts](../../src/router/index.ts)、[src/router/dynamic.ts](../../src/router/dynamic.ts)、[src/stores/user.ts](../../src/stores/user.ts) 当前代码核对。
+> 本文描述登录认证、令牌无感刷新、OAuth2 授权、菜单驱动动态路由及办公平台接口能力的实现，依据 [src/utils/request.ts](../../src/utils/request.ts)、[src/router/index.ts](../../src/router/index.ts)、[src/router/dynamic.ts](../../src/router/dynamic.ts)、[src/stores/user.ts](../../src/stores/user.ts) 当前代码核对。当前登录页的社交入口使用标准 OAuth2；办公平台登录 API 与 `/office/callback` 是独立能力，不应视为该登录入口的实际调用链。
 
 ## 1. 会话数据存储
 
@@ -150,31 +150,33 @@ sequenceDiagram
 - 授权码一次性，后端校验；PKCE（S256）防授权码拦截。
 - Token 只入 localStorage，不出现在 URL。
 
-## 6. 办公平台登录（飞书/钉钉/企微）
+## 6. 办公平台接口与独立授权回调（飞书/钉钉/企微）
 
-入口 [src/views/login/index.vue](../../src/views/login/index.vue) → [src/api/office-new.ts](../../src/api/office-new.ts)（登录相关）。
+当前登录页的社交入口实际调用 [src/api/oauth2.ts](../../src/api/oauth2.ts) 并进入 `/oauth2/callback`，不调用办公平台状态或登录接口。办公平台能力由 [src/api/office-new.ts](../../src/api/office-new.ts) 提供，`/office/callback` 是独立的公开回调入口；是否由外部系统或其他页面触发，需结合目标部署和调用方核验。
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant U as 用户
-    participant L as 登录页
+    participant LP as 登录页
+    participant OA as 标准 OAuth2
+    participant OC as /oauth2/callback
+    participant OI as 办公平台接口能力
     participant B as 后端
     participant P as 平台(飞书/钉钉/企微)
 
-    L->>B: GET /api/v1/office/status（查询已启用平台）
-    B-->>L: OfficePlatform[]（登录页按此渲染入口）
-    U->>L: 点击平台按钮
-    L->>B: GET /api/v1/office/login?platform=（获取授权跳转地址）
-    B-->>L: 平台 OAuth2 授权 URL
-    L->>P: 跳转平台授权页
-    P-->>L: 回调 /office/callback?code=...&state=...
-    L->>B: GET /api/v1/office/callback?platform=&code=&state=
-    B-->>L: 换取会话令牌（新用户则生成绑定申请）
-    L->>L: 保存会话并进入工作台
+    U->>LP: 点击社交登录
+    LP->>OA: 构建授权 URL（state + PKCE）
+    OA->>P: 跳转标准 OAuth2 授权页
+    P-->>OC: 回调 code + state
+    OC->>B: POST /oauth2/token
+    B-->>OC: 会话令牌
+    OC->>LP: 保存会话并进入工作台
+    Note over OI,B: /api/v1/office/status、/api/v1/office/login<br/>及 /api/v1/office/callback 为独立办公平台接口能力
+    Note over OI,B: /office/callback 由独立公开回调页承接，<br/>不属于当前登录页社交入口链路
 ```
 
-绑定审批流转（管理员侧）：绑定申请 `PENDING → APPROVED / REJECTED`，见 [office-new.ts](../../src/api/office-new.ts) `reviewBinding()` 与 [绑定管理页](../../src/views/office/bindings/index.vue)。
+绑定审批流转（管理员侧）仍是办公平台管理流程：绑定申请 `PENDING → APPROVED / REJECTED`，见 [office-new.ts](../../src/api/office-new.ts) `reviewBinding()` 与 [绑定管理页](../../src/views/office/bindings/index.vue)。
 
 ## 7. 菜单驱动动态路由
 

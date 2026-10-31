@@ -26,10 +26,10 @@ npm run test       # Vitest 单元测试
 
 ## 4. 代码规范
 
-- 注释规范（文件头/JSDoc/区块/常量收敛）：AGENTS.md §4，属强制约定；
+- 注释按需编写：遵循 AGENTS.md 的克制原则，仅为不自明逻辑、隐式契约和重要约束补充说明；
 - 请求必须复用 `src/utils/request.ts` 的 `get/post/put/del`，禁止裸写 axios；
 - 新增菜单页面必须在 `src/router/dynamic.ts` 的 `VIEW_REGISTRY` 登记；
-- 非工作流模块分页统一 `PageQuery{page, size}` / `PageResponse`；
+- 分页请求字段和响应结构按具体 API 类型、页面调用及后端契约核对，不能将普通列表、工作流列表和裸数组响应全局统一；
 - 仓库无 ESLint/Prettier，风格以既有代码与 `.editorconfig` 为准（2 空格、LF、UTF-8）。
 
 ## 5. 文档同步义务

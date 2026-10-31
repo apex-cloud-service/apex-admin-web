@@ -120,25 +120,32 @@ sequenceDiagram
     Api->>Req: get/post/put/del(url, params)
     Req->>Req: 请求拦截：注入 Authorization: Bearer <token>
     Req->>BE: 发起 HTTP 请求（超时 30s）
-    BE-->>Req: Result{code, msg, data, traceId}
+    BE-->>Req: HTTP 响应（包装响应、裸数组或文件数据）
 
-    alt code === 0（业务成功）
-        Req-->>Api: 解包返回 data
-        Api-->>View: Promise<T> 业务数据
-    else code !== 0（业务失败）
-        Req--xView: 抛出 ApiError(message, code, traceId)
-        Note over View: showError() 展示 msg + traceId
-    else HTTP 401 且存在 refreshToken
-        Note over Req: 见《认证与路由架构》Token 无感刷新时序
-    else 网络/超时错误
-        Req--xView: 抛出 ApiError(msg, status)
+    alt HTTP 401 且满足自动刷新条件
+        Req->>BE: 共享刷新请求；成功后原请求最多重放一次
+        BE-->>Req: 刷新结果
+        Req-->>Api: 返回重放结果或抛出对应 ApiError
+    else HTTP / 网络 / 超时错误
+        Req--xApi: 转换并抛出 ApiError
+    else 响应含数字 code
+        alt code === 0
+            Req-->>Api: 解包返回 data
+            Api-->>View: Promise<T> 业务数据
+        else code !== 0
+            Req--xApi: 抛出 ApiError(message, code, traceId)
+        end
+    else 响应不含数字 code
+        Req-->>Api: 原样返回 response.data
+        Api-->>View: 裸数组、Blob 或其他原始响应
     end
 ```
 
 补充规则（见 request.ts 实现）：
 
 - 响应头携带 `x-new-access-token` 时自动更新本地访问令牌。
-- 非 `Result` 标准结构（如文件流 Blob）原样返回。
+- 只有 HTTP 401 按认证端点排除、重试标记及 refreshToken 条件进入刷新；业务响应中的非零 `code` 不触发刷新。
+- 响应含数字 `code` 时按 `code === 0` 解包 `data`，非零时抛出 `ApiError`；不含数字 `code` 的响应（包括裸数组、Blob 和文件流）原样返回。
 - `baseURL` 取自 `VITE_API_BASE_URL`（生产同域部署留空）。
 
 ## 5. 构建与产物

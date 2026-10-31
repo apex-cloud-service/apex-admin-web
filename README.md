@@ -230,18 +230,12 @@ flowchart LR
 
 ## 部署方式
 
-> 本工程已与后端 Apex Scaffold 完成**前后端分离**：后端不再托管 `static/admin/` 静态前端，
-> 也不再提供 `/admin` 短入口重定向。完整构建与部署说明见 **[`docs/guides/deployment.md`](docs/guides/deployment.md)**。
+> 本仓库是独立前端工程，生产构建产物为 `dist/`，应访问实际配置的前端源站。后端是否仍托管 `static/admin/`、是否提供 `/admin` 短入口重定向，需以后端工程和目标环境核验。完整构建与部署说明见 **[`docs/guides/deployment.md`](docs/guides/deployment.md)**。
 
 - **独立部署（推荐生产）**：`npm run build` 后将 `dist/` 交给 Nginx/静态服务器，反向代理 `/oauth2`、`/api`、`/admin-api` 到后端，并为 `/api/v1/messages/ws` 单独配置 WebSocket 转发（详见 [`docs/guides/deployment.md`](docs/guides/deployment.md) §6）。
-- **Docker 容器部署**：`docker compose up -d --build`（外部网络 `apex-scaffold_apex-network`，`API_PROXY_PASS` 默认 `http://apex-scaffold:8080`），详见 deployment.md §7。
+- **Docker 容器部署**：`docker compose up -d --build`（配置使用外部网络 `apex-scaffold_apex-network`，`API_PROXY_PASS` 默认 `http://apex-scaffold:8080`；网络是否已创建、`apex-scaffold` 服务名是否可解析，需在目标 Docker 环境核验），详见 deployment.md §7。
 - **与后端网关同域**：前端走相对路径（`VITE_API_BASE_URL` 留空），由 Nginx 按 `/oauth2/`、`/api/`、`/admin-api/` 前缀分流到后端（详见 deployment.md §8）。
 
-## 标准前端注释规范
+## 代码注释
 
-本工程源码遵循统一注释规范：
-
-- **文件头注释**：每个 `.ts/.vue` 文件顶部以 `/**` 块说明文件职责与关联接口。
-- **JSDoc**：函数/方法均以 `/** ... */` 说明用途、参数（`@param`）与返回值。
-- **区块注释**：模板与脚本内用 `<!-- ... -->` / `/** ... */` 划分功能区块。
-- **常量说明**：魔法字符串收敛到 `src/settings.ts` 并附注释。
+除用户明确要求外，不新增代码注释。复杂逻辑确有必要时可添加简短说明；不为未修改代码补充文件头或 JSDoc，也不以注释要求驱动无关重构。

@@ -6,11 +6,11 @@
 
 ### 1.1 统一响应与解包
 
-所有接口返回后端统一结构 `Result{code, msg, data, traceId}`，由 [src/utils/request.ts](../../src/utils/request.ts) 统一解包：
+请求层会识别含数字 `code` 的响应，并由 [src/utils/request.ts](../../src/utils/request.ts) 统一解包；不含该字段的响应按原始数据处理：
 
 - `code === 0`：返回 `data`；
 - `code !== 0`：抛出 `ApiError(message, code, traceId)`；
-- 非 `Result` 结构（如文件流）原样返回；
+- 不含数字 `code` 的响应（如裸数组、文件流）原样返回；
 - 超时 30s；`baseURL` 取 `VITE_API_BASE_URL`（生产同域部署留空）。
 
 ### 1.2 接口前缀对照
@@ -299,7 +299,7 @@
 
 > 多模块按职责拆分：`office-new.ts` 覆盖平台状态、登录、应用配置、绑定管理与组织同步，`office-sync-wizard.ts` 覆盖同步向导（预检/预览/执行/重试），`message.ts` 覆盖站内信与模板，`office.ts` 覆盖审批/日历/文档业务操作。当前仓库可确认这些 API 封装、页面调用和开发代理配置；生产网关是否完整转发对应路径需在部署环境核验。新增办公页面时优先查看页面实际 import 的模块，不要凭前缀猜测。
 
-### 2.16.1 文件分享 [src/api/file-share.ts](../../src/api/file-share.ts)（前缀 `/api/v2/file-shares`）
+### 2.16.1 文件分享 [src/api/file-share.ts](../../src/api/file-share.ts)（使用 `/api/v2/files/{fileId}/shares` 与 `/api/v2/file-shares/**`）
 
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
@@ -433,7 +433,7 @@ try {
 1. 在对应业务域文件（或新建 `src/api/{domain}.ts`）中封装**类型化函数**，禁止页面直接调用 axios；
 2. 复用 `get/post/put/del`，泛型标注返回类型（禁止 `Promise<any>`）；
 3. 分页接口必须按对应 API 类型、页面调用和后端契约定义参数及响应结构；不能将 `page/size`、`pageNum/pageSize` 或数组响应全局互换；
-4. 写 JSDoc（含 `@param`/`@returns`），文件头注释列出后端接口；
+4. 对新增或确需说明的复杂接口补充与实现一致的 JSDoc；文件头只写稳定的职责概述，易漂移的接口清单以函数实现和本文为准；
 5. 同步更新本文与 [AGENTS.md](../../AGENTS.md) 的模块清单。
 
 ---
