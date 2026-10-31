@@ -1,8 +1,8 @@
 # 前端文件上传功能实现分析
 
-> **时效性说明**：本文为 2026-09-08 的差距分析快照，所列缺失功能（上传组件、API 封装、演示页面等）大部分已落地，
-> 现状请以 [docs/features/file-upload-basic.md](../features/file-upload-basic.md) 与
-> [docs/features/file-upload-enhanced.md](../features/file-upload-enhanced.md) 为准。
+> **时效性说明**：本文为 2026-09-08 的差距分析快照，正文按当时状态撰写（包括“前端尚未实现”的结论与旧接口路径 `/api/v1/files/*`），所列缺失功能（上传组件、API 封装、演示页面等）大部分已落地，历史内容予以保留。
+> 当前实现请以 [src/api/file.ts](../../src/api/file.ts)、[docs/features/file-upload-basic.md](../features/file-upload-basic.md) 与
+> [docs/features/file-upload-enhanced.md](../features/file-upload-enhanced.md) 为准：上传为 POST `/api/v1/files/generic`，删除/URL/存在检查/内容接口为 `/api/v1/file/*`。
 
 ## 1. 执行总结
 
@@ -52,6 +52,8 @@
 | 读取文件内容 | GET | `/api/v1/files/content` | 流式读取文件 | ✅ 可用 |
 | 删除文件 | DELETE | `/api/v1/files` | 删除对象存储文件 | ✅ 可用 |
 | 检查文件存在 | GET | `/api/v1/files/exists` | 验证文件是否存在 | ✅ 可用 |
+
+> 注：本表及下文对后端能力（存储策略、魔数校验、内容审核、FGCLIP 等）的描述来自编写时对 apex-scaffold 仓库的分析，本前端仓库无法证实，现状需在后端工程/目标环境核验。
 
 ### 2.3 上传接口详细说明
 

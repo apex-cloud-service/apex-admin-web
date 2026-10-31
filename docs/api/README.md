@@ -1,6 +1,6 @@
 # API 接口目录
 
-> 本文依据当前前端源码、类型定义、页面调用和代理配置核对（2026-10-30）。它记录前端已封装的接口及已确认的页面接入状态；后端实现、生产网关和第三方服务行为仍需在对应环境中外部核验。新增/修改接口后必须同步更新本文，否则视为文档缺陷。
+> 本文依据当前前端源码、类型定义、页面调用和代理配置核对（2026-10-31）。它记录前端已封装的接口及已确认的页面接入状态；后端实现、生产网关和第三方服务行为仍需在对应环境中外部核验。新增/修改接口后必须同步更新本文，否则视为文档缺陷。
 
 ## 1. 通用约定
 
@@ -17,7 +17,7 @@
 
 | 前缀 | 用途 | 代理（开发/生产） |
 |------|------|-------------------|
-| `/api/v1/**` | 业务接口：认证、当前用户、文件、OAuth2、办公平台登录/回调、站内信、MFA、审计日志 | Vite proxy `/api`、Nginx `/api/` |
+| `/api/v1/**` | 业务接口：认证、当前用户、文件、办公平台接入、站内信、工作流任务等 | Vite proxy `/api`、Nginx `/api/` |
 | `/api/v2/**` | 第二代接口：租户管理、工作流定义、运维健康、文件分享、办公会议室/同步向导 | 同 `/api` |
 | `/admin-api/v1/**` | 管理后台接口：系统管理、监控、日志、SSO、生成器、认证配置等 | Vite proxy `/admin-api`、Nginx `/admin-api/` |
 | `/api/workflow/**` | 工作流高级操作（回退/转办/委派/挂起/恢复） | 同 `/api` |
@@ -30,13 +30,13 @@
 | 口径 | 请求 | 响应 | 使用范围 |
 |------|------|------|---------|
 | **常规分页** | 以具体 API 类型和页面调用为准，常见为 `page/size` | 以具体 API 类型为准，常见为 `list/total` | 系统、监控、数据等部分列表；不存在所有非工作流模块统一使用同一分页 DTO 的规则 |
-| **工作流口径** | `{pageNum, pageSize}` | `{records, total}`（待办 `/api/v1/workflows/tasks/pending` 返回通用 PageResponse） | 仅 [src/api/workflow.ts](../../src/api/workflow.ts) |
+| **工作流口径** | `{pageNum, pageSize}` | `{records, total}`（待办 `/api/v1/workflows/tasks/pending` 返回通用 PageResponse） | 响应 `records/total` 仅 [src/api/workflow.ts](../../src/api/workflow.ts) 实例列表；`pageNum/pageSize` 请求参数另见 database（数据源）、message（收件箱/已发送）、office-new（组织部门/员工）、meeting-room（会议室）等模块 |
 | **数组响应（无分页包装）** | 各接口自行携带分页参数 | 纯数组（total 以数组长度近似） | 站内信 inbox/sent（pageNum/pageSize）、组织同步任务（page/size）、办公绑定列表（page/size）、消息模板列表（无分页参数） |
 
 ### 1.4 认证
 
 - 请求拦截自动注入 `Authorization: Bearer <accessToken>`；
-- 401 时自动触发**令牌无感刷新并重放一次**（详见 [认证与路由架构](../architecture/auth-and-routing.md)）；
+- HTTP 401 且满足刷新条件（有请求 config、未标记 `authRetried`、会话持有 refreshToken）时自动触发**令牌无感刷新并重放一次**；`/api/v1/auth/login`、`/api/v1/auth/refresh`、`/oauth2/token` 三个端点不参与刷新（详见 [认证与路由架构](../architecture/auth-and-routing.md)）；
 - 响应头 `x-new-access-token` 自动更新本地令牌。
 
 ## 2. 接口清单（按业务域）
@@ -106,12 +106,12 @@
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
 | POST | `/api/v1/files/generic` | `uploadFile(file, sex)` | 通用上传（FormData；sex: 0=男/AM 1=女/AF） |
-| GET | `/api/v1/files/url` | `getFileUrl(bucket, fileName)` | 获取访问 URL |
-| DELETE | `/api/v1/files` | `deleteFile(bucket, fileName)` | 删除文件 |
-| GET | `/api/v1/files/exists` | `checkFileExists(bucket, fileName)` | 存在性检查 |
-| GET | `/api/v1/files/content` | `getFileContent(fileName)` | 读取内容（返回预签名 URL，非异步） |
+| GET | `/api/v1/file/url` | `getFileUrl(bucketName, fileName)` | 获取文件访问 URL |
+| DELETE | `/api/v1/file/delete` | `deleteFile(bucketName, fileName)` | 删除文件 |
+| GET | `/api/v1/file/exists` | `checkFileExists(bucketName, fileName)` | 检查文件是否存在 |
+| GET | `/api/v1/file/content` | `getFileContent(fileName)` | 构造文件内容访问路径；具体响应语义由后端确认 |
 
-> 上传结果字段是 `objectName`（不是 `fileName`）；删除需同时传 `bucketName` + `objectName`。
+> 上传结果字段是 `objectName`（不是 `fileName`）。删除函数实际传递 `bucketName` + `fileName`；`objectName` 与删除参数 `fileName` 的后端映射关系需在目标服务中外部确认。
 
 ### 2.6 监控 [src/api/monitor.ts](../../src/api/monitor.ts)
 
@@ -170,7 +170,7 @@
 
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
-| GET | `/admin-api/v1/search` | `search(params)` | Meilisearch 检索（keyword + types + page + size） |
+| GET | `/admin-api/v1/search` | `search(params)` | Meilisearch 检索（keyword + types + page + size），返回 PageResponse（list/total） |
 | POST | `/admin-api/v1/search/rebuild` | `rebuildIndex(type?)` | 重建索引 |
 
 ### 2.12 OAuth2 [src/api/oauth2.ts](../../src/api/oauth2.ts)
@@ -287,12 +287,13 @@
 
 | 子域 | 前缀 | 代表函数 |
 |------|------|---------|
+| 平台状态/登录（旧版函数） | GET `/api/v1/office/status`、POST `/api/v1/office/login/{platform}`、POST `/api/v1/office/callback/{platform}` | `getPlatformStatus` / `startOfficeLogin` / `officeCallback`（旧版 POST 路径参数式封装，页面实际使用 `office-new.ts` 的 GET 版本） |
 | 平台配置/连通性 | `/admin-api/v1/office/config/{platform}`、`/test` | `getPlatformConfig` / `savePlatformConfig` / `testConnectivity`（旧版前端封装，当前页面改用 `office-new.ts` 的应用配置；端点可用性需外部核验） |
 | 绑定（旧版函数） | `/admin-api/v1/office/bindings/**` | `getBindings` / `approveBinding` / `rejectBinding` / `unbindBinding`（旧版前端封装，页面实际使用 `office-new.ts` 版本） |
 | 组织同步（旧版函数） | `/admin-api/v1/office/sync/{platform}/**` | `getSyncStatus` / `triggerSync`（旧版前端封装，当前由 `office-sync-wizard.ts` 与 `office-new.ts` 承担相关页面能力） |
 | 消息（管理） | POST `/admin-api/v1/office/messages/send` | `sendMessage`（旧版前端封装，当前站内信页面使用 `message.ts`） |
 | 管理端文件查询 | `/admin-api/v1/office/files` | `getFiles`（旧版前端封装，当前页面接入状态和端点可用性需外部核验） |
-| 消息（业务） | `/api/office/messages/**`（text/image/file/card/sent/{id}） | `sendTextMessage` 等 |
+| 消息（业务） | `/api/office/messages/**`（text/image/file/card、/{messageId}、/sent） | `sendTextMessage` 等 |
 | 审批（业务） | `/api/office/approvals`（发起/详情/同意/撤销/pending/initiated） | `initiateApproval` / `getApprovalDetail` / `approveProcess` / `cancelApproval` / `getPendingApprovals` / `getMyInitiatedApprovals`（⚠️ 列表元素字段为 processName/currentNode/createdAt，路径参数为 processInstanceId；approverId 必填） |
 | 日历（业务） | `/api/office/calendar/events/**`（CRUD/查询/my） | `createCalendarEvent` 等 |
 | 文档（业务） | `/api/office/documents/**`（CRUD/copy/move/share/my） | `createDocument` 等 |
@@ -311,7 +312,7 @@
 
 > 页面 `data/file-share/` 提供「我的分享」按文件 ID 查询与撤销；明文 token 仅创建响应返回一次。
 
-**分片上传契约（`/api/v1/file/chunk/**`，已加固）**：init 校验分片大小 ≤64MB（`file.upload.max-chunk-bytes`）、分片总数上限（`file.upload.max-total-chunks`）与 `chunkSize*totalChunks ≥ fileSize`；upload 校验单片不超过初始化 chunkSize 与剩余字节数，并计算/校验分片 MD5（32 位 hex）；merge 消费 `fileName/contentType/md5`，在上传流中计算最终 MD5，不匹配时删除最终对象并释放会话；`(file_id, chunk_index, deleted)` 唯一约束（file-service V7）+ 仓储 `saveIfAbsent` 保证并发幂等，败者删除临时对象后返回已保存分片；非法数字查询参数统一返回 400；Sentinel 限流规则已对齐实际 `/api/v1/file/chunk/**` 前缀。
+**分片上传契约（`/api/v1/file/chunk/**`，后端已加固；前端 src/ 无任何分片上传封装，以下为后端 file-service 契约描述）**：init 校验分片大小 ≤64MB（`file.upload.max-chunk-bytes`）、分片总数上限（`file.upload.max-total-chunks`）与 `chunkSize*totalChunks ≥ fileSize`；upload 校验单片不超过初始化 chunkSize 与剩余字节数，并计算/校验分片 MD5（32 位 hex）；merge 消费 `fileName/contentType/md5`，在上传流中计算最终 MD5，不匹配时删除最终对象并释放会话；`(file_id, chunk_index, deleted)` 唯一约束（file-service V7）+ 仓储 `saveIfAbsent` 保证并发幂等，败者删除临时对象后返回已保存分片；非法数字查询参数统一返回 400；Sentinel 限流规则已对齐实际 `/api/v1/file/chunk/**` 前缀。
 
 ### 2.16.2 会议室 [src/api/meeting-room.ts](../../src/api/meeting-room.ts)（前缀 `/api/v2/office/meeting-rooms`）
 
@@ -352,8 +353,8 @@
 | GET | `/api/v2/platform/tenants` | `listTenants(query)` | 租户分页（⚠️ pageNum/pageSize 必填；tenantCode/tenantName 模糊，status 精确） |
 | GET | `/api/v2/platform/tenants/{id}` | `getTenant(id)` | 租户详情 |
 | POST | `/api/v2/platform/tenants` | `createTenant(payload)` | 创建租户；编码唯一性和后续可变更性需以后端契约核验 |
-| POST | `/api/v2/platform/tenants/{id}/actions` | `changeTenantStatus(id, {action, expectedVersion})` | 生命周期（disable/enable/freeze/unfreeze/deactivate/archive，小写） |
-| PUT | `/api/v2/platform/tenants/{id}/quota` | `updateTenantQuota(id, {maxUsers, maxStorageMb, expectedVersion})` | 配额调整（null=不限） |
+| POST | `/api/v2/platform/tenants/{id}/actions` | `changeTenantStatus(id, {action, expectedVersion?})` | 生命周期（disable/enable/freeze/unfreeze/deactivate/archive，小写）；`expectedVersion` 可选，用于乐观锁校验 |
+| PUT | `/api/v2/platform/tenants/{id}/quota` | `updateTenantQuota(id, {maxUsers?, maxStorageMb?, expectedVersion?})` | 配额调整；`maxUsers`/`maxStorageMb` 可省略或传 `null`，`null` 表示不限；`expectedVersion` 可选，用于乐观锁校验 |
 
 > 权限码：`tenant:read` / `tenant:create` / `tenant:lifecycle` / `tenant:quota`。页面 `views/system/tenant/`。
 
@@ -400,7 +401,7 @@
 | GET | `/health-snapshots` | `listHealthSnapshots(query)` | 快照分页（⚠️ page/size 口径） |
 | GET | `/health-trend` | `getHealthTrend(query)` | 趋势（from 缺省回看 7 天，limit ≤500） |
 | GET | `/tenant-health-summary` | `getTenantHealthSummary()` | 租户健康汇总 |
-| POST | `/health-snapshots/export-tasks` | `createHealthExportTask(query)` | 提交异步导出任务 |
+| POST | `/health-snapshots/export-tasks` | `createHealthExportTask(query)` | 提交异步导出任务（⚠️ 参数走 query string，非请求体） |
 | GET | `/health-snapshots/export-tasks/{id}` | `getHealthExportTask(id)` | 查询任务（⚠️ 无列表端点） |
 | GET | `/health-snapshots/export-tasks/{id}/download` | `downloadHealthExportTask(id)` | 下载结果（CSV 流） |
 | GET | `/health-snapshots/export` | `exportHealthSnapshots(query)` | 同步导出（CSV 流，上限 5000 行） |
@@ -438,4 +439,4 @@ try {
 
 ---
 
-**最后更新**：2026-10-30（依据前端源码、类型定义、页面调用和代理配置核对；后端及生产部署状态需外部核验）
+**最后更新**：2026-10-31（依据前端源码、类型定义、页面调用和代理配置核对；后端及生产部署状态需外部核验）

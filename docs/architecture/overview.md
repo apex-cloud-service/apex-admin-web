@@ -79,7 +79,7 @@ flowchart TB
     end
 
     subgraph Compose["组合式函数 src/composables"]
-        C1["useCrud · useTableConfig<br/>useFormDraft · useBreakpoint"]
+        C1["useCrud · useTableConfig<br/>useFormDraft · useBreakpoint<br/>（均已实现，当前无页面调用点）"]
     end
 
     subgraph Api["接口层 src/api"]
@@ -155,11 +155,11 @@ sequenceDiagram
 | 配置项 | 值 | 出处 |
 |--------|-----|------|
 | 产物目录 | `dist/`，按 js/css/images/fonts/media 分目录 | vite.config.ts |
-| 分包策略 | manualChunks：vue/pinia、element-plus、@element-plus/icons-vue、echarts、axios、@vueuse、其余 vendor | vite.config.ts:59-88 |
-| 压缩 | terser，生产移除 `console`/`debugger` | vite.config.ts:119-125 |
-| Chunk 警告阈值 | 1000 KB | vite.config.ts:117 |
+| 分包策略 | manualChunks：vue/pinia、element-plus、@element-plus/icons-vue（独立 `element-icons` chunk）、echarts、axios、@vueuse、其余 vendor | vite.config.ts:60 |
+| 压缩 | terser，生产移除 `console`/`debugger` | vite.config.ts:120-127 |
+| Chunk 警告阈值 | 1000 KB | vite.config.ts:118 |
 | 产物分析 | rollup-plugin-visualizer → `dist/stats.html`（`npm run analyze` 打开） | vite.config.ts:20-27 |
-| 路径别名 | `@` → `src/` | vite.config.ts:32 |
+| 路径别名 | `@` → `src/` | vite.config.ts:31 |
 
 ## 6. 部署架构
 
@@ -181,7 +181,7 @@ flowchart LR
 
     subgraph Docker["Docker 部署"]
         DC["docker-compose.yml"] --> IMG["apex-admin-web 镜像<br/>两阶段: node:18 构建产物 → nginx:1.27 运行"]
-        IMG --> NET["外部网络 apex-scaffold_apex_network<br/>按服务名访问后端"]
+        IMG --> NET["外部网络 apex-scaffold_apex-network<br/>按服务名访问后端"]
     end
 ```
 
@@ -190,7 +190,7 @@ flowchart LR
 - **同域部署**：`VITE_API_BASE_URL` 留空走相对路径，Nginx 按前缀反代后端，无 CORS 问题。
 - **Nginx 长缓存**：`/assets/` 30 天 immutable；`location /` try_files 回退 index.html 支撑 history 路由。
 - **构建参数注入**：`scripts/build/build-image.sh --api-base-url <url>` 可在镜像构建时覆盖 `.env.production` 的 `VITE_API_BASE_URL`；运行时 `API_PROXY_PASS` 通过 envsubst 注入 nginx.conf 模板。
-- **健康检查**：容器内 HEALTHCHECK wget `/`。
+- **健康检查**：容器内 HEALTHCHECK 使用 `wget` 访问 `/`，只验证 Nginx/前端静态首页可访问，不代表 API 反代、后端服务或 WebSocket 已可用。
 
 ## 7. 质量保障体系
 

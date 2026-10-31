@@ -1,5 +1,7 @@
 # 后端认证授权功能对应前端页面分析
 
+> **历史快照说明**：本文为历史分析文档，结论按撰写时点状态记录；当前认证实现以 [src/utils/request.ts](../../src/utils/request.ts)、[src/stores/user.ts](../../src/stores/user.ts) 与 [docs/architecture/auth-and-routing.md](../architecture/auth-and-routing.md) 为准。
+
 ## 1. 执行总结
 
 ### 1.1 分析结论
@@ -157,8 +159,8 @@ src/
 
 [src/router/index.ts]
     - beforeEach 守卫拦截未登录请求
-    - 401 响应自动跳转登录页
-    - 动态路由按用户权限过滤
+    - 401 处理由 request.ts 拦截器统一承担（刷新失败才清理会话并跳转登录页，见下）
+    - 动态路由依据后端菜单树注册（permissions 参数未参与过滤）
 
 [src/utils/request.ts]
     - 请求拦截器自动携带 Authorization: Bearer <token>

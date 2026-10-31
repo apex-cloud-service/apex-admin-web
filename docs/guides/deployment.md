@@ -57,7 +57,7 @@ flowchart LR
     N -->|/assets/ 30d immutable| U
 ```
 
-- **前端页面/静态资源**：由 Nginx（或任意静态服务器）直接返回 `dist/` 内容，走同域相对路径；`dist/assets/` 为带 hash 指纹的产物，可按长缓存策略交付。
+- **前端页面/静态资源**：由静态服务器直接返回 `dist/` 内容，走同域相对路径。本仓库的 Nginx 配置为 `/assets/` 设置 30 天 `immutable` 缓存（该 location 不覆盖 `js/`、`css/` 等分目录的哈希资源）；其他静态服务器的缓存策略需单独配置。
 - **前端动态数据**：浏览器请求 `/api/*`（业务）、`/admin-api/*`（管理）以及 OAuth2 授权码登录的 `/oauth2/authorize`、`/oauth2/token`，由 Nginx 反向代理到后端。
 - **站内信实时推送**：浏览器与 `/api/v1/messages/ws` 建立 WebSocket，需 Nginx 单独声明 `Upgrade`/`Connection` 转发（见 6.2 与 6.4）。
 - **后端接口**：`/admin-api/v1/menus` 返回菜单树并驱动前端动态路由；权限码控制按钮显隐。
@@ -70,8 +70,8 @@ flowchart LR
 
 | 组件 | 版本要求 | 说明 |
 |------|---------|------|
-| Node.js | ≥ 18 | 前端构建（`devDependencies` 声明 `engines.node >= 18`） |
-| npm | ≥ 9 | 依赖安装与脚本执行 |
+| Node.js | ≥ 18（构建）；开发/测试实际需 ≥ 22.12 | package.json 顶层 `engines.node >= 18`；已安装依赖（如 Vitest 5）实际要求 Node `^22.12.0 || >=24`，Node 18 仅能支撑 `npm run build` |
+| npm | ≥ 9（推荐） | 依赖安装与脚本执行（推荐值，仓库未声明 npm engines） |
 | Nginx | 任意主流版本 | 推荐生产独立部署用；也可使用任意静态服务器 |
 
 > 后端（Apex Scaffold，JDK 17 + MySQL + Redis）需已就绪可用；其部署与健康检查见后端 `docs/DEPLOYMENT.md`。
@@ -88,7 +88,7 @@ npm install
 npm run build
 ```
 
-产物输出到工程根目录 `dist/`，典型内容：
+产物输出到工程根目录 `dist/`，下面是典型的简化示意；实际构建按 `js/`、`css/`、`images/`、`fonts/`、`media/` 分目录输出哈希资源（`assets/` 仅承接其余资源），并包含 `stats.html`：
 
 ```
 dist/
@@ -104,6 +104,7 @@ dist/
 > - `minify: 'terser'` 且 `drop_console` / `drop_debugger`：生产产物移除 `console` 与调试语句。
 > - `manualChunks` 按 vue/pinia、element-plus、element-icons、echarts、vueuse、axios、其他 vendor 拆分 chunk。
 > - `rollup-plugin-visualizer` 构建后输出 `dist/stats.html`，可手动打开分析产物体积。
+> - 注意：Nginx 的 30d `immutable` 仅配置在 `location /assets/`，哈希 js/css 位于 `js/`、`css/` 等分目录，不在该 location 覆盖范围内。
 
 ---
 
@@ -349,6 +350,8 @@ curl -s http://localhost/ | head -5        # 页面
 curl -s http://localhost/api/v1/health     # 反代后端健康检查
 ```
 
+> `172.17.0.1` 是否可达取决于 Docker Desktop 或 Linux 的网络模式、宿主机监听地址、防火墙和目标后端配置；不能视为跨平台固定地址。
+
 ### 7.5 Compose 编排（推荐）
 
 本工程的 `docker-compose.yml` 声明了**外部网络** `apex-network`
@@ -560,7 +563,7 @@ npm run dev
 
 | # | 校验项 | 通过标准 |
 |---|--------|---------|
-| 1 | 页面资源加载 | `GET /` 返回 `index.html`，`/assets/*` 返回 200 且响应头含 `Cache-Control: public, max-age=2592000, immutable` |
+| 1 | 页面资源加载 | `GET /` 返回 `index.html`，`/assets/*` 返回 200 且响应头含 `Cache-Control: public, max-age=2592000, immutable`（该缓存仅覆盖 `/assets/`；哈希 js/css 位于 `js/`、`css/` 等目录，不在该 location 内） |
 | 2 | 安全响应头 | `GET /` 响应含 `X-Content-Type-Options: nosniff` 与 `X-Frame-Options: SAMEORIGIN` |
 | 3 | 登录 | 输入账号密码 + 验证码能成功登录跳转工作台；`POST /api/v1/auth/login` 经反代返回 `code:0` |
 | 4 | 令牌续期 | 令牌过期后普通请求返回 401 时自动刷新并重放成功，页面不跳登录；刷新令牌失效才回登录页 |

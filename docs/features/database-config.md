@@ -25,6 +25,8 @@
 
 **安全边界**：密码参数仅用于一次性测试和配置生成，不会被前端保存。
 
+> 2026-10-31 补充：`src/api/database.ts` 现已扩展数据源台账管理能力——`listDataSources`（分页，url/username 已脱敏）、`createDataSource`、`updateDataSource`、`deleteDataSource`、`getDataSourceMetrics`（连接池指标）。上文「三个核心接口」为早期实现描述，仍准确但已不完整。
+
 ### 3. 页面组件 (`src/views/system/database/index.vue`)
 
 **核心功能**：

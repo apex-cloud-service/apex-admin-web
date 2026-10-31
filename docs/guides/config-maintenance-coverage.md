@@ -33,7 +33,7 @@
 | 监控大盘（系统/中间件/治理/业务） | 监控大盘页 | `/admin-api/v1/monitor/*` |
 | 全文搜索与索引重建 | 顶栏搜索 | `/admin-api/v1/search[/rebuild]` |
 | 代码生成器（数据源/表扫描/配置/生成/历史） | 代码生成器页 | 前端已封装并由页面调用 `/admin-api/v1/generator/*` 相关接口 |
-| 文件上传/查询/删除 | 上传组件 | `/api/v1/file/*`、`/api/v1/files/*` |
+| 文件上传/URL/删除/存在检查 | 基础与增强上传组件（演示路由 `/demo/file-upload`、`/demo/file-upload-enhanced`） | POST `/api/v1/files/generic`、GET `/api/v1/file/url`、DELETE `/api/v1/file/delete`、GET `/api/v1/file/exists`；`getFileContent` 仅构造 `/api/v1/file/content` 访问路径；无独立文件管理页，组件 remove 事件不触发后端删除 |
 
 ## 3. 当前未接入或需要外部核验的能力
 

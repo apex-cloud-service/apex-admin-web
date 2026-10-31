@@ -33,7 +33,7 @@
 | 数据脱敏 | `api/masking.ts`、`views/system/masking/` | 规则只读（启动配置）、批量试算；本仓库可确认前端路径与开发代理，目标网关路由需外部核验 |
 | 租户管理 | `api/tenant.ts`、`views/system/tenant/` | `/api/v2/platform/tenants`、pageNum/pageSize 必填、生命周期动作小写枚举、配额 null=不限、version 乐观锁 |
 | 账号安全 | `api/mfa.ts`、`api/ip-access-control.ts`、`views/system/security/` | MFA configs 与 IP 规则列表均为裸数组；IP 写操作走 query 参数（非 body） |
-| 运维健康 | `api/operations.ts`、`views/monitor/operations/` | 前端封装 health-report、snapshots、trend 和导出相关子路径；快照分页为 page/size；未封装根路径与导出任务列表，端点是否存在需以目标后端契约为准 |
+| 运维健康 | `api/operations.ts`、`views/monitor/operations/` | 前端封装 health-report、snapshots、trend、租户摘要和导出相关子路径；快照分页为 page/size；页面含报告/快照/趋势/导出/租户摘要五个页签；未封装根路径与导出任务列表，端点是否存在需以目标后端契约为准 |
 | 办公平台 | `api/office.ts`、`api/office-new.ts`、`views/office/` | 业务接口与配置绑定接口分离、version、组织同步与部门 CRUD；绑定列表双接口并存（数组口径 / `/bindings/page` 真实分页） |
 | 文件上传 | `api/file.ts`、两个上传组件 | Element Plus/XHR 路径不经过 Axios 拦截器 |
 | 部署 | `vite.config.ts`、`Dockerfile`、`docker/nginx.conf` | 构建期变量与运行期反代变量 |
@@ -46,7 +46,7 @@ src/
 ├── settings.ts / env.d.ts  公共常量与环境变量类型
 ├── router/                静态路由、守卫、菜单转换和组件注册表
 ├── layouts/               AdminLayout：菜单、顶栏、面包屑、主视图
-├── views/                 login、oauth2、dashboard、profile、error、demo
+├── views/                 login、oauth2、public（匿名分享/找回页）、dashboard、profile、error、demo
 │                          system、monitor、data、office、workflow
 ├── components/            Pagination、GlobalSearch、EmptyState、上传组件
 ├── composables/           useCrud、useTableConfig、useFormDraft、useBreakpoint
@@ -66,14 +66,14 @@ src/
 | 认证与用户 | `auth.ts`、`user.ts`、`oauth2.ts` | 验证码、密码登录（可选租户声明）、我的角色/权限、系统角色与权限 CRUD、当前用户、用户导出、标准 OAuth2 |
 | 系统管理 | `system.ts`、`database.ts` | 用户/角色/菜单/部门/字典/参数/定时任务、数据库配置与数据源管理 |
 | 认证管理与 SSO | `auth-config.ts`、`sso.ts` | 管理端配置页面；与浏览器登录回调区分 |
-| 代码生成器 | `generator.ts` | 数据源、已保存数据源连接测试、表扫描、生成配置、生成与按配置历史；当前没有预览、模板管理和历史回滚的前端入口 |
+| 代码生成器 | `generator.ts` | 数据源、已保存数据源连接测试、表扫描、生成配置、生成与按配置历史；向导页签提供模板目录、预检、预览与异步任务（提交/进度轮询/取消/产物清单/下载）；历史回滚无前端入口 |
 | 监控与日志 | `monitor.ts`、`log.ts` | 登录/审计/API 日志、在线用户、大盘、运行和业务日志 |
-| 数据管理 | `document.ts`、`chart.ts`、`file-share.ts` | 文档与图表 CRUD、状态操作、数据查询；文件分享含创建、列表（按文件 ID、仅所有者）、撤销、兑换和下载 |
+| 数据管理 | `document.ts`、`chart.ts`、`file-share.ts` | 文档与图表 CRUD、状态操作、数据查询；文件分享含创建、列表（按文件 ID、仅所有者）、撤销、兑换和下载；匿名兑换独立页 `/share`（public 路由，token 即凭证） |
 | 工作流 | `workflow.ts` | 发起实例、实例、统计、待办任务办理、高级操作与流程定义管理（`/api/v2/workflow-definitions`） |
 | 租户管理 | `tenant.ts` | `/api/v2/platform/tenants` 分页/详情/创建/生命周期/配额（权限码 tenant:*） |
 | 账号安全 | `mfa.ts`、`ip-access-control.ts` | MFA 配置与 IP 白/黑名单（`/api/mfa`、`/api/ip-access-control`） |
-| 运维健康 | `operations.ts` | `/api/v2/operations/*` 报告/快照/趋势/导出 |
-| 站内信 | `message.ts` | 收件箱/已发送/发送/未读数、WebSocket 推送与消息模板管理（`/api/v1/messages`、`/admin-api/v1/message-templates`） |
+| 运维健康 | `operations.ts` | `/api/v2/operations/*` 报告/快照/趋势/租户摘要/导出 |
+| 站内信 | `message.ts` | 收件箱/已发送/发送/未读数、WebSocket 推送与消息模板管理（`/api/v1/messages`、`/admin-api/v1/message-templates`）；游标增量收件箱（`/inbox/cursor`）与渠道投递记录（`/{id}/deliveries`，已发送页抽屉） |
 | 办公平台 | `office.ts`、`office-new.ts`、`office-sync-wizard.ts`、`meeting-room.ts` | 业务接口与配置绑定接口分离、version、组织同步（部门 CRUD/员工/同步历史/触发同步/映射）、同步向导（预检/预览/执行/重试）、会议室；绑定查询有 `/bindings`（数组）与 `/bindings/page`（真实分页 + status 过滤）两套 |
 | 数据脱敏 | `masking.ts` | 规则只读查询与批量脱敏试算（`/api/v1/masking`） |
 | 文件与搜索 | `file.ts`、`search.ts` | 文件接口、上传组件、顶栏全文搜索与索引重建 |

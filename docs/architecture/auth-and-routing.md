@@ -57,7 +57,7 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     A[路由跳转触发 beforeEach] --> B{to.meta.public?}
-    B -- 是 --> Z[放行<br/>login / oauth2/callback / office/callback]
+    B -- 是 --> Z[放行<br/>公开页含 login / oauth2/callback /<br/>office/callback / password-recovery / share]
     B -- 否 --> C{已有 Token?}
     C -- 否 --> D[重定向 /login<br/>携带 redirect=to.fullPath]
     C -- 是 --> E{身份已初始化?<br/>user store initialized}
@@ -116,11 +116,11 @@ sequenceDiagram
     end
 ```
 
-补充：后端也可通过响应头 `x-new-access-token` 主动下发新令牌，拦截器收到后直接 `setToken`（request.ts:64-65）。
+补充：后端也可通过响应头 `x-new-access-token` 主动下发新令牌，拦截器收到后直接 `setToken`（request.ts:71）。
 
 ## 5. OAuth2 授权码登录
 
-接口封装 [src/api/oauth2.ts](../../src/api/oauth2.ts)，回调页 `/oauth2/callback` 为静态路由（`public: true`）。客户端 ID 来自 `VITE_OAUTH2_CLIENT_ID`（开发 `apex-admin-web-dev` / 生产 `apex-admin-web-prod`）。
+接口封装 [src/api/oauth2.ts](../../src/api/oauth2.ts)，回调页 `/oauth2/callback` 为静态路由（`public: true`）。客户端 ID 来自 `VITE_OAUTH2_CLIENT_ID`（默认 `apex-admin-web`；`apex-admin-web-dev` / `apex-admin-web-prod` 仅为 .env.example 注释中的建议值，以各环境实配为准）。
 
 ```mermaid
 sequenceDiagram
@@ -202,15 +202,15 @@ flowchart TD
 | `status` | 0=停用 / 1=正常 | **不受影响** | **不受影响** | 历史种子数据取值与后端枚举不一致，路由生成刻意不按 status 过滤，避免全量菜单丢失 |
 | `visible` | 0=隐藏 / 1=显示 | 仍注册、可直接访问 | 仅 `visible=1` 显示 | 隐藏只写 `meta.hidden` |
 
-### VIEW_REGISTRY 全量清单（与 dynamic.ts:21-59 一致）
+### VIEW_REGISTRY 全量清单（与 dynamic.ts:21-61 一致）
 
 系统管理：`system/user/index`、`system/role/index`、`system/menu/index`、`system/dept/index`、`system/dict/index`、`system/config/index`、`system/database/index`、`system/job/index`、`system/job/query`、`system/generator/index`、`system/auth/index`、`system/sso/index`、`system/masking/index`、`system/tenant/index`、`system/security/index`
 
 监控：`monitor/loginlog/index`、`monitor/audit/index`、`monitor/api-call-log/index`、`monitor/online/index`、`monitor/dashboard/index`、`monitor/runtime-log/index`、`monitor/operations/index`、`monitor/business-log/index`
 
-数据管理：`data/document/index`、`data/chart/index`
+数据管理：`data/document/index`、`data/chart/index`、`data/file-share/index`
 
-办公平台：`office/message/index`、`office/approval/index`、`office/config/index`、`office/bindings/index`、`office/console/index`、`office/organization/index`、`office/calendar/index`、`office/document/index`
+办公平台：`office/message/index`、`office/approval/index`、`office/config/index`、`office/bindings/index`、`office/console/index`、`office/organization/index`、`office/calendar/index`、`office/document/index`、`office/meeting-room/index`
 
 工作流：`workflow/monitor/index`、`workflow/definition/index`
 
@@ -226,6 +226,8 @@ flowchart TD
 | `/oauth2/callback` | oauth2/callback.vue | `public: true, hidden: true` | OAuth2 回调 |
 | `/office/callback` | office/callback.vue | `public: true, hidden: true` | 办公平台（飞书/钉钉/企微）授权回调：用 code/state 调 `GET /api/v1/office/callback` 换会话，未绑定账号时提示等待管理员审批 |
 | `/dashboard` | dashboard/index.vue | `title: 工作台` | 工作台 |
+| `/password-recovery` | public/password-recovery.vue | `title: 密码找回, public: true` | 密码找回页（`/auth/v2/password-recovery/**` 契约，与登录页找回弹窗共用） |
+| `/share` | public/share-exchange.vue | `title: 文件分享兑换, public: true, hidden: true` | 文件分享匿名兑换页：凭分享令牌兑换元信息并下载 |
 | `/workflow/monitor/dashboard` | — | redirect → `/workflow/monitor` | 旧路径兼容 |
 | `/workflow/monitor` | workflow/monitor/index.vue | `hidden: true` | 工作流监控 |
 | `/workflow/instances/:id` | workflow/monitor/InstanceDetail.vue | `hidden: true, activeMenu: /workflow/monitor` | 流程详情 |
@@ -254,4 +256,4 @@ flowchart TD
 
 ---
 
-**最后更新**：2026-10-30（依据 src/ 当前实现核对：路由守卫失败分支、VIEW_REGISTRY 全量清单含脱敏/租户/账号安全/运维健康/工作流定义）
+**最后更新**：2026-10-31（依据 src/ 当前实现核对：路由守卫失败分支、VIEW_REGISTRY 全量清单含脱敏/租户/账号安全/运维健康/工作流定义、静态路由补 password-recovery 与 share、OAuth2 client_id 建议值标注）

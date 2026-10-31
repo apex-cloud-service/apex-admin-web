@@ -1,6 +1,6 @@
 # 工具库与组合式函数参考
 
-> 依据 [src/utils/](../../src/utils/) 与 [src/composables/](../../src/composables/) 当前实现核对（2026-09-27）。核心工具（request/auth/validate）在 [AGENTS.md](../../AGENTS.md) 已有专章，本文覆盖其余模块。
+> 依据 [src/utils/](../../src/utils/) 与 [src/composables/](../../src/composables/) 当前实现核对（2026-10-31 复核）。核心工具（request/auth/validate）在 [AGENTS.md](../../AGENTS.md) 已有专章，本文覆盖其余模块。
 
 ## 1. utils 总览
 
@@ -11,11 +11,12 @@
 | [validate.ts](../../src/utils/validate.ts) | Element Plus 校验器风格规则（validator 回调式） | `validatePhone` `validateEmail` `validateUsername` `validateChineseName` `validateIDCard` `validatePassword` `validateURL` `validateIP` `validatePort` `validateInteger` `validatePositiveInteger` `validateRequired` `validateLength` `validateRange` |
 | [validate-rules.ts](../../src/utils/validate-rules.ts) | 校验规则**工厂**（函数返回 FormItemRule，可组合） | `required` `email` `phone` `username` `password` `strongPassword` `url` `number` `integer` `positiveInteger` `length` `minLength` `maxLength` `range` `idCard` `ip` `port` `pattern` `validator` `confirmation` `combine`、聚合对象 `rules` |
 | [storage.ts](../../src/utils/storage.ts) | localStorage 安全读写（JSON 序列化、异常吞掉返回 null/false） | `readRaw` `writeRaw` `readJSON` `writeJSON` `removeItem` `hasItem` |
-| [error-handler.ts](../../src/utils/error-handler.ts) | 分类错误体系与统一处理 | `ErrorType` 枚举、`ApiError` `NetworkError` `TimeoutError` `ValidationError` `AuthorizationError`、`handleError`、`withErrorHandling`（装饰异步函数）、`createErrorBoundary` |
-| [mask.ts](../../src/utils/mask.ts) | 敏感信息脱敏 | `maskPhone` `maskEmail` `maskIdCard` `maskBankCard` `maskName` `maskAddress` `maskIp` `maskPassport` `maskPlateNumber` `maskGeneral` `maskBatch`（按字段批量脱敏）、`maskRules` |
-| [xss-protection.ts](../../src/utils/xss-protection.ts) | XSS 防护与输入净化 | `escapeHtml` `unescapeHtml` `stripHtmlTags` `sanitizeUrl` `sanitizeHtml` `sanitizeJson` `sanitizeInput` `generateCSPNonce` `detectXSS` |
-| [request-cache.ts](../../src/utils/request-cache.ts) | 请求结果缓存（TTL/去重） | `clearCache(key)` `clearAllCache()` `getCacheStats()`、`CACHE_KEYS` 常量 |
-| [echarts-theme.ts](../../src/utils/echarts-theme.ts) | ECharts 明暗主题 | `lightTheme` `darkTheme` `setTheme` `getTheme` `getBaseChartOption` `mergeChartOption`、`presetCharts` 预设 |
+| [error-handler.ts](../../src/utils/error-handler.ts) | 分类错误体系与统一处理（当前仓库无页面调用点） | `ErrorType` 枚举、`ApiError` `NetworkError` `TimeoutError` `ValidationError` `AuthorizationError`、`handleError`、`withErrorHandling`（装饰异步函数）、`createErrorBoundary` |
+| [mask.ts](../../src/utils/mask.ts) | 敏感信息脱敏（当前仓库无页面调用点） | `maskPhone` `maskEmail` `maskIdCard` `maskBankCard` `maskName` `maskAddress` `maskIp` `maskPassport` `maskPlateNumber` `maskGeneral` `maskBatch`（按字段批量脱敏）、`maskRules` |
+| [xss-protection.ts](../../src/utils/xss-protection.ts) | XSS 防护与输入净化（当前仓库无页面调用点） | `escapeHtml` `unescapeHtml` `stripHtmlTags` `sanitizeUrl` `sanitizeHtml` `sanitizeJson` `sanitizeInput` `generateCSPNonce` `detectXSS` |
+| [request-cache.ts](../../src/utils/request-cache.ts) | 请求结果缓存（TTL/去重）；当前仓库无调用点 | `cachedRequest` `prefetchRequest` `clearCache(key)` `clearAllCache()` `getCacheStats()`、`CACHE_KEYS` 常量 |
+| [echarts-theme.ts](../../src/utils/echarts-theme.ts) | ECharts 明暗主题（当前仓库无页面调用点） | `lightTheme` `darkTheme` `setTheme` `getTheme` `getBaseChartOption` `mergeChartOption`、`presetCharts` 预设 |
+| [message-socket.ts](../../src/utils/message-socket.ts) | 站内信 WebSocket 管理器：票据握手、20s ping/pong、1h 寿命、断线重连（5s→30s 退避）；已接入 AdminLayout 与站内信页 | `subscribeMessagePush` `subscribeMessageSocketState`、类型 `MessageSocketState` |
 
 ## 2. 两套校验工具如何选
 
@@ -35,7 +36,7 @@
 | [useFormDraft.ts](../../src/composables/useFormDraft.ts) | `useFormDraft<T>(draftKey, options?)` | 表单草稿自动暂存与恢复（键前缀 `draft_`，时间戳后缀 `_timestamp` 用于 TTL 过期清理） |
 | [useBreakpoint.ts](../../src/composables/useBreakpoint.ts) | `useBreakpoint(customBreakpoints?)` | 响应式断点侦测（返回当前断点与各区间布尔值），用于布局自适应 |
 
-统一从 [src/composables/index.ts](../../src/composables/index.ts) 桶导出。
+统一从 [src/composables/index.ts](../../src/composables/index.ts) 桶导出。当前四个 composable 均未发现页面调用点，属已实现未接入能力。
 
 > 选型参考（AGENTS.md §3.4）：单页内状态用 ref/reactive；跨页复用的列表 CRUD 行为优先用 `useCrud`；只有跨页面共享且需持久化/全局通知的状态才进 Pinia store。
 
@@ -67,4 +68,4 @@
 
 ---
 
-**最后更新**：2026-09-27
+**最后更新**：2026-10-31

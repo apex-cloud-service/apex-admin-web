@@ -28,18 +28,19 @@ npx vitest run src/utils/__tests__/request.spec.ts   # 指定文件
 
 ## 3. 现有用例清单
 
-共 8 个测试文件、37 个用例（实测 `npx vitest run` 全绿），分布于 `src/utils/__tests__/`（工具与 API 契约）与 `src/api/`（业务 API 契约）：
+共 9 个测试文件、44 个用例（实测 `npx vitest run` 全绿），分布于 `src/utils/__tests__/`（工具与 API 契约）与 `src/api/`（业务 API 契约）：
 
 | 用例文件 | 用例数 | 覆盖内容 |
 |----------|-------|---------|
-| `src/utils/__tests__/request.spec.ts` | 5 | 401 刷新后单次重放；非 401 状态码在重放中如实保留；并发多个 401 共享同一次刷新（refreshPromise 单飞） |
+| `src/utils/__tests__/request.spec.ts` | 8 | 401 刷新后单次重放；认证端点排除；非 401 状态码在重放中如实保留；并发多个 401 共享同一次刷新（refreshPromise 单飞）；会话租户记录与 `X-Tenant-Id` 头 |
 | `src/utils/__tests__/oauth2.spec.ts` | 4 | S256 PKCE 授权 URL 生成；表单编码换取令牌与字段映射；授权上下文一次性消费（state 防重放） |
 | `src/utils/__tests__/auth-config.spec.ts` | 6 | 认证配置 API 契约：权限筛选/分页参数、写接口路径、掩码密钥不回写、PKCE 不可关闭 |
 | `src/utils/__tests__/auth.spec.ts` | 4 | 会话存取：token/refreshToken/identity 读写与 `clearSession` 清理 |
 | `src/utils/__tests__/validate.spec.ts` | 4 | `validateEmail` / `validatePhone` 校验行为与中文错误信息 |
 | `src/api/office-new.test.ts` | 4 | 办公平台 API 契约：应用更新乐观锁 version 随 body 回传；解绑 version 走 query；绑定分页 platform/status/分页参数 |
-| `src/api/message.test.ts` | 6 | 站内信接口契约：收件箱/已发送返回纯数组、分页参数、标记已读路径 |
+| `src/api/message.test.ts` | 8 | 站内信接口契约：收件箱/已发送返回纯数组、分页参数、标记已读路径；消息模板管理（创建/更新/删除路径） |
 | `src/api/workflow.test.ts` | 1 | 工作流实例详情路由契约（`/admin-api/v1/workflows/instances/{id}`） |
+| `src/api/generator.test.ts` | 5 | 生成器 API 契约：基础端点调用、同步向导模板/预检/预览、异步任务契约 |
 
 ## 4. 编写规范
 

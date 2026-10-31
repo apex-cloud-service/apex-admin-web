@@ -97,7 +97,7 @@ npm run build
 
 | 变量名 | 说明 | 默认值 | 必填 |
 |--------|------|--------|------|
-| `VITE_API_PROXY_TARGET` | 开发环境后端代理目标地址（代理 `/api`、`/admin-api`、`/oauth2`，`/api` 已开启 WS） | `http://127.0.0.1:8080` | 开发环境必填 |
+| `VITE_API_PROXY_TARGET` | 开发环境后端代理目标地址（代理 `/api`、`/admin-api`、`/oauth2`，`/api` 已开启 WS） | `http://127.0.0.1:8080` | 可选（缺省 127.0.0.1:8080） |
 | `VITE_API_BASE_URL` | 生产环境后端网关地址，同域部署留空 | `''` | 生产环境可选 |
 | `VITE_OAUTH2_CLIENT_ID` | OAuth2 客户端 ID，须与后端注册值一致（浏览器端 PKCE，不含 clientSecret） | `apex-admin-web` | 可选 |
 | `VITE_AUTH_TENANT_ENABLED` | 是否在登录页显示租户标识输入（多租户部署设为 `true`） | 空（关闭） | 可选 |

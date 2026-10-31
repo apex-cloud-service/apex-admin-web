@@ -15,7 +15,7 @@
 
 | 事项 | 结论 | 依据 |
 | --- | --- | --- |
-| 租户管理页（CRUD/列表/配额） | **已实施**（2026-10-30 更新） | 后端已装配 `PlatformTenantRouter`（`/api/v2/platform/tenants`：分页/详情/创建/生命周期/配额，权限码 `tenant:read|create|lifecycle|quota`）。前端页面 `views/system/tenant/`，契约要点：分页参数为 pageNum/pageSize 且必填；生命周期动作仅接受小写 `disable/enable/freeze/unfreeze/deactivate/archive`；配额以 null 表示不限；写操作携带 `expectedVersion` 乐观锁 |
+| 租户管理页（CRUD/列表/配额） | **已实施**（2026-10-30 更新） | 后端已装配 `PlatformTenantRouter`（`/api/v2/platform/tenants`：分页/详情/创建/生命周期/配额，权限码 `tenant:read|create|lifecycle|quota`）。前端页面 `views/system/tenant/`，契约要点：分页参数为 pageNum/pageSize 且必填；生命周期动作仅接受小写 `disable/enable/freeze/unfreeze/deactivate/archive`；配额以 null 表示不限；写操作支持通过可选 `expectedVersion` 进行乐观锁校验 |
 | 租户切换器（选租户再登录） | **不做** | 平台租户端点面向平台运维账号，不供普通登录用户枚举；业务令牌仍绑定唯一租户 |
 | 强制携带 `X-Tenant-Id` 请求头 | **不做** | 网关（`JwtSignatureFilter`）先剥离再从 JWT 重建该头，浏览器携带与否不影响下游；携带错误值反而触发 403 |
 | 权限码模型 / `stores/permission` / `v-permission` | **无需改动** | 权限码格式仍为 `模块:资源:操作`；`/api/v1/auth/permissions/my` 返回结构不变；`ResourcePermission` 是后端切面级校验，前端无感知 |
