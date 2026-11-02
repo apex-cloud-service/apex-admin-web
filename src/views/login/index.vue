@@ -8,7 +8,35 @@
   <div class="login-page">
     <el-card class="login-card">
       <h2 class="login-title">Apex Scaffold 管理后台</h2>
-      <el-form ref="formRef" :model="form" :rules="rules" size="large" @keyup.enter="handleLogin">
+      <!-- MFA 二步验证：密码校验通过但已启用 MFA 时切换到此分支 -->
+      <el-form v-if="mfaChallenge" :model="mfaForm" size="large" @keyup.enter="handleVerifyMfa">
+        <el-alert
+          type="info"
+          :closable="false"
+          show-icon
+          title="该账号已启用多因素认证"
+          description="请输入认证器中的 6 位动态验证码完成登录"
+          style="margin-bottom: 18px"
+        />
+        <el-form-item>
+          <el-input
+            v-model="mfaForm.code"
+            placeholder="6 位动态验证码"
+            :prefix-icon="Key"
+            maxlength="6"
+            autofocus
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" class="login-btn" :loading="mfaLoading" @click="handleVerifyMfa">
+            验 证
+          </el-button>
+        </el-form-item>
+        <el-form-item>
+          <el-button link @click="cancelMfa">返回重新登录</el-button>
+        </el-form-item>
+      </el-form>
+      <el-form v-else ref="formRef" :model="form" :rules="rules" size="large" @keyup.enter="handleLogin">
         <!-- 账号 -->
         <el-form-item prop="username">
           <el-input v-model="form.username" placeholder="请输入账号" :prefix-icon="User" clearable />
@@ -172,6 +200,13 @@ const captchaImage = ref('')
 /** 当前验证码 ID（提交登录时回传） */
 const captchaId = ref('')
 
+/** MFA 挑战凭据（非空表示处于二步验证分支） */
+const mfaChallenge = ref('')
+/** MFA 验证请求进行中标记 */
+const mfaLoading = ref(false)
+/** MFA 验证码表单 */
+const mfaForm = reactive({ code: '' })
+
 /** 是否启用登录租户标识输入（多租户部署，VITE_AUTH_TENANT_ENABLED=true 时生效） */
 const tenantEnabled = import.meta.env.VITE_AUTH_TENANT_ENABLED === 'true'
 
@@ -228,24 +263,91 @@ async function handleLogin(): Promise<void> {
   }
   loading.value = true
   try {
-    await userStore.login({
+    const result = await userStore.login({
       username: form.username,
       password: form.password,
       captchaId: captchaId.value,
       captchaCode: form.captchaCode,
       tenantId: tenantEnabled && form.tenantId ? form.tenantId : undefined,
     })
-    ElMessage.success('登录成功')
-    // 携带 redirect 参数则跳转原目标，否则进入工作台
-    const redirect = (route.query.redirect as string) || '/'
-    router.push(redirect)
+    // MFA 挑战模式：不签发令牌，切换到二步验证分支
+    if (result.mfaRequired && result.challengeToken) {
+      mfaChallenge.value = result.challengeToken
+      mfaForm.code = ''
+      ElMessage.info('请输入动态验证码完成验证')
+      return
+    }
+    completeLogin()
   } catch (error) {
-    showError(error)
+    showLoginError(error)
     // 登录失败后刷新验证码（验证码一次性消费）
     loadCaptcha()
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * 登录错误提示：租户门禁失败（A6）给出针对性指引，其余沿用统一提示。
+ * 后端拒绝文案：租户不存在 / 租户已过期 / 租户不可用（状态: xxx）/ 租户状态暂不可用。
+ * @param error 捕获的异常
+ */
+function showLoginError(error: unknown): void {
+  const message = error instanceof Error ? error.message : ''
+  if (message.includes('租户不存在')) {
+    ElMessage.error('租户不存在，请核对租户标识')
+    return
+  }
+  if (message.includes('租户已过期')) {
+    ElMessage.error('租户已过期，请联系平台管理员续期')
+    return
+  }
+  if (message.includes('租户不可用')) {
+    ElMessage.error(`租户当前不可用：${message}。请联系平台管理员处理`)
+    return
+  }
+  if (message.includes('租户状态')) {
+    ElMessage.error('租户状态校验暂不可用，请稍后重试')
+    return
+  }
+  showError(error, '登录失败')
+}
+
+/**
+ * MFA 二步验证：以挑战凭据 + 动态码交换正式令牌。
+ */
+async function handleVerifyMfa(): Promise<void> {
+  if (!mfaChallenge.value) return
+  const code = mfaForm.code.trim()
+  if (!/^\d{6}$/.test(code)) {
+    ElMessage.warning('请输入 6 位数字动态验证码')
+    return
+  }
+  mfaLoading.value = true
+  try {
+    await userStore.verifyMfaChallenge(mfaChallenge.value, code)
+    mfaChallenge.value = ''
+    completeLogin()
+  } catch (error) {
+    showError(error, '验证失败')
+    mfaForm.code = ''
+  } finally {
+    mfaLoading.value = false
+  }
+}
+
+/** 取消 MFA 二步验证，返回密码登录并刷新验证码 */
+function cancelMfa(): void {
+  mfaChallenge.value = ''
+  mfaForm.code = ''
+  loadCaptcha()
+}
+
+/** 登录完成：提示并按 redirect 跳转（默认工作台） */
+function completeLogin(): void {
+  ElMessage.success('登录成功')
+  const redirect = (route.query.redirect as string) || '/'
+  router.push(redirect)
 }
 
 /**

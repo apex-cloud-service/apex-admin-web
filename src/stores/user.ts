@@ -6,7 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getToken, setToken, setRefreshToken, clearSession, setIdentity, getIdentity, setTenantId, getTenantId, removeTenantId } from '@/utils/auth'
-import { login as loginApi, logout as logoutApi, getMyPermissions, getMyRoles } from '@/api/auth'
+import { login as loginApi, logout as logoutApi, getMyPermissions, getMyRoles, verifyMfaChallenge as verifyMfaChallengeApi } from '@/api/auth'
 import { getCurrentUserInfo } from '@/api/user'
 import type { LoginResult, UserIdentity } from '@/types'
 
@@ -37,6 +37,7 @@ export const useUserStore = defineStore('user', () => {
   /**
    * 账号密码登录（管理后台入口）。
    * @param params 登录参数（含图形验证码）
+   * @returns 登录结果；`mfaRequired=true` 时未签发正式令牌，须调用 verifyMfaChallenge 完成二步验证
    */
   async function login(params: LoginParams): Promise<LoginResult> {
     const result = await loginApi({
@@ -48,6 +49,28 @@ export const useUserStore = defineStore('user', () => {
       platform: 'web',
       tenantId: params.tenantId,
     })
+    // MFA 挑战模式：后端仅返回短 TTL challengeToken，不签发正式令牌，也不写会话
+    if (result.mfaRequired) return result
+    await applyLoginResult(result)
+    return result
+  }
+
+  /**
+   * MFA 二步验证：以挑战凭据 + TOTP 验证码交换正式令牌。
+   * @param challengeToken 登录响应返回的挑战凭据
+   * @param code 6 位 TOTP 验证码
+   */
+  async function verifyMfaChallenge(challengeToken: string, code: string): Promise<LoginResult> {
+    const result = await verifyMfaChallengeApi(challengeToken, code)
+    await applyLoginResult(result)
+    return result
+  }
+
+  /**
+   * 写入会话令牌并加载身份（登录与 MFA 二步共用）。
+   * @param result 含正式令牌的登录响应
+   */
+  async function applyLoginResult(result: LoginResult): Promise<void> {
     token.value = result.accessToken
     setToken(result.accessToken)
     if (result.refreshToken) setRefreshToken(result.refreshToken)
@@ -56,7 +79,6 @@ export const useUserStore = defineStore('user', () => {
     if (result.tenantId) setTenantId(result.tenantId)
     // 登录成功后拉取身份与权限
     await loadIdentity()
-    return result
   }
 
   /**
@@ -117,6 +139,7 @@ export const useUserStore = defineStore('user', () => {
     permissions,
     initialized,
     login,
+    verifyMfaChallenge,
     loadIdentity,
     logout,
     clearLocal,

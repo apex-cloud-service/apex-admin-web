@@ -50,6 +50,13 @@ export interface LoginResult {
   expiresIn?: number
   /** 当前租户 ID（认证中心登录链路返回；单体登录暂不返回） */
   tenantId?: string
+  /** 用户 ID（MFA 挑战响应返回） */
+  userId?: number
+  username?: string
+  /** MFA 挑战模式标记：true 表示未签发正式令牌，须携 challengeToken 完成二步验证 */
+  mfaRequired?: boolean
+  /** MFA 挑战凭据（短 TTL，仅 mfaRequired=true 时返回） */
+  challengeToken?: string
   openId?: string
   unionId?: string
   isNewUser?: boolean
@@ -960,6 +967,10 @@ export interface TenantCreatePayload {
   /** 租户名称（≤128） */
   tenantName: string
   adminUserId?: string
+  /** 租户管理员登录名（B4 开通引导：与 adminPassword 同时提供时创建租户管理员账号） */
+  adminUsername?: string
+  /** 租户管理员初始密码（仅上行，不落本地） */
+  adminPassword?: string
   packageCode?: string
   maxUsers?: number
   maxStorageMb?: number
@@ -1160,4 +1171,385 @@ export interface HealthExportTask {
   rowCount?: number
   completedAt?: string
   createTime?: string
+}
+
+/* ==================== 租户套餐（/api/v2/tenant-packages，平台 ADMIN） ==================== */
+
+/** 租户套餐（后端 TenantPackageEntity） */
+export interface TenantPackage {
+  id: number
+  /** 套餐编码（租户内唯一，创建后不可变更） */
+  packageCode: string
+  packageName: string
+  /** 可用菜单 ID 集合（空集合语义 = 全量放行） */
+  menuIds?: number[]
+  /** 可用权限码集合（空集合语义 = 全量放行） */
+  permissionCodes?: string[]
+  /** 能力订阅编码集合（对应能力目录 code，空集合 = 全量订阅） */
+  features?: string[]
+  /** 0=停用 1=正常 */
+  status?: number
+  remark?: string
+  createTime?: string
+  updateTime?: string
+  /** 乐观锁版本 */
+  version?: number
+}
+
+/** 套餐创建/更新请求（后端 TenantPackageRequest） */
+export interface TenantPackagePayload {
+  packageCode: string
+  packageName: string
+  menuIds?: number[]
+  permissionCodes?: string[]
+  features?: string[]
+  status?: number
+  remark?: string
+}
+
+/* ==================== 能力目录与计量（/api/v2/capabilities、/api/v2/capability-usage） ==================== */
+
+/** 能力目录条目（后端 CapabilityCatalog.Capability） */
+export interface CapabilityInfo {
+  code: string
+  name: string
+  /** 所属能力中心 */
+  center: string
+  /** 承载组件 */
+  component: string
+  /** 对外开放 scope 清单 */
+  openScopes: string[]
+  description?: string
+}
+
+/** 能力用量（后端 CapabilityUsageDTO，按租户 × 能力聚合） */
+export interface CapabilityUsage {
+  tenantId: string
+  capability: string
+  callCount: number
+}
+
+/* ==================== 开放平台应用（/api/v1/open-apps，D2） ==================== */
+
+/** 开放应用（后端 OpenAppResponse） */
+export interface OpenApp {
+  clientId: string
+  appName: string
+  description?: string
+  redirectUris?: string[]
+  scopes?: string[]
+  /** 限流档 */
+  rateLimitTier?: string
+  contact?: string
+  /** ENABLED / DISABLED */
+  status?: string
+  createdAt?: string
+  /** 客户端密钥明文，仅创建/重置响应返回一次 */
+  clientSecret?: string
+}
+
+/** 开放应用创建/更新请求（后端 OpenAppRequest） */
+export interface OpenAppPayload {
+  clientId?: string
+  clientSecret?: string
+  appName?: string
+  description?: string
+  redirectUris?: string[]
+  scopes?: string[]
+  rateLimitTier?: string
+  contact?: string
+  status?: string
+}
+
+/** 开放 scope 目录条目（后端 /api/v1/open-apps/scopes，与创建校验同源注册表） */
+export interface OpenAppScope {
+  scope: string
+  /** 该 scope 映射的后端权限码 */
+  permission: string
+}
+
+/* ==================== 集成中心：连接器与凭据（/integration/v1） ==================== */
+
+/** 连接器配置（后端 ConnectorConfigResponse） */
+export interface ConnectorConfig {
+  id: number
+  tenantId?: string
+  /** 连接器类型：HTTP / WEBHOOK / WECHAT / CHUANGLAN 或 SPI 注册类型 */
+  connectorType: string
+  configKey: string
+  /** 配置 JSON 文本 */
+  configValue: string
+  status?: number
+  remark?: string
+  version?: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 连接器创建请求（后端 ConnectorConfigCreateRequest） */
+export interface ConnectorConfigCreatePayload {
+  connectorType: string
+  configKey: string
+  configValue: string
+  remark?: string
+}
+
+/** 连接器更新请求（后端 ConnectorConfigUpdateRequest，字段均可选） */
+export interface ConnectorConfigUpdatePayload {
+  connectorType?: string
+  configKey?: string
+  configValue?: string
+  status?: number
+  remark?: string
+}
+
+/** 租户级外部凭据元数据（后端 CredentialResponse，不含密文） */
+export interface IntegrationCredential {
+  id: number
+  tenantId?: string
+  credentialKey: string
+  credentialType?: string
+  /** 凭据版本号（轮换后递增） */
+  versionNo?: number
+  rotatedAt?: string
+  createTime?: string
+  updateTime?: string
+}
+
+/** 凭据注册请求（后端 CredentialRegisterRequest，secret 仅上行） */
+export interface CredentialRegisterPayload {
+  credentialKey: string
+  credentialType?: string
+  secret: string
+}
+
+/* ==================== 物联网设备与规则（/integration/v1/iot） ==================== */
+
+/** 物联网设备（后端 DeviceResponse，不含凭据） */
+export interface IotDevice {
+  id: number
+  tenantId?: string
+  deviceKey: string
+  certFingerprint?: string
+  /** ONLINE / OFFLINE */
+  status?: string
+  firmwareVersion?: string
+  labels?: Record<string, string>
+  lastActiveAt?: string
+  createTime?: string
+  updateTime?: string
+}
+
+/** 设备注册请求（后端 DeviceRegisterRequest） */
+export interface DeviceRegisterPayload {
+  deviceKey: string
+  certFingerprint?: string
+  firmwareVersion?: string
+  labels?: Record<string, string>
+}
+
+/** 设备注册响应（后端 DeviceRegisterResponse，secret 仅本次返回） */
+export interface DeviceRegisterResult {
+  id: number
+  tenantId?: string
+  deviceKey: string
+  certFingerprint?: string
+  status?: string
+  firmwareVersion?: string
+  /** 一次性设备凭据明文 */
+  secret?: string
+}
+
+/** 设备遥测记录（后端 TelemetryResponse） */
+export interface DeviceTelemetry {
+  id: number
+  deviceKey: string
+  /** 遥测指标 JSON 文本 */
+  metric: string
+  recordedAt?: string
+}
+
+/** 物联网规则（后端 RuleResponse） */
+export interface IotRule {
+  id: number
+  tenantId?: string
+  ruleName: string
+  /** 结构化条件 JSON（字段/操作符/阈值） */
+  conditionJson: string
+  /** 动作类型：NOTIFY / WEBHOOK / EVENT */
+  actionType: string
+  actionConfig?: string
+  enabled: boolean
+}
+
+/** 规则创建请求（后端 RuleCreateRequest） */
+export interface IotRuleCreatePayload {
+  ruleName: string
+  conditionJson: string
+  actionType: string
+  actionConfig?: string
+  enabled?: boolean
+}
+
+/* ==================== 统一通知门面（/api/v2/office/notify，D1） ==================== */
+
+/** 通知模板（后端 NotifyTemplateResponse） */
+export interface NotifyTemplate {
+  id: number
+  tenantId?: string
+  /** 模板编码（租户内唯一） */
+  templateCode: string
+  /** 默认通道：INBOX/FEISHU/DINGTALK/WECOM/SMS/EMAIL */
+  channel: string
+  title?: string
+  /** 正文模板（含 ${key} 占位符） */
+  body: string
+  /** 参数契约 JSON 文本 */
+  paramsSchema?: string
+  /** ENABLED / DISABLED */
+  status?: string
+  createTime?: string
+  updateTime?: string
+}
+
+/** 通知模板创建请求（后端 CreateNotifyTemplateRequest） */
+export interface NotifyTemplateCreatePayload {
+  templateCode: string
+  channel: string
+  title?: string
+  body: string
+  paramsSchema?: string
+  status?: string
+}
+
+/** 通知模板更新请求（后端 UpdateNotifyTemplateRequest，字段均可选） */
+export interface NotifyTemplateUpdatePayload {
+  templateCode?: string
+  channel?: string
+  title?: string
+  body?: string
+  paramsSchema?: string
+  status?: string
+}
+
+/** 通知投递留痕（后端 NotifyRequestRecordResponse） */
+export interface NotifyRequestRecord {
+  id: number
+  tenantId?: string
+  channel: string
+  templateCode: string
+  /** 接收目标 JSON 数组文本 */
+  recipient: string
+  /** 渲染参数 JSON 对象文本 */
+  params?: string
+  /** PENDING / SUCCESS / FAILED */
+  status: string
+  errorMessage?: string
+  outboxEventId?: number
+  createTime?: string
+  updateTime?: string
+}
+
+/* ==================== 会话管理（/auth/v1/sessions，认证中心 A4） ==================== */
+
+/** 用户会话（后端 SessionDTO） */
+export interface AuthSession {
+  id: number
+  tenantId?: string
+  userId: number
+  /** 会话唯一标识（终止会话时使用） */
+  sessionId: string
+  deviceId?: string
+  deviceType?: string
+  clientIp?: string
+  userAgent?: string
+  lastActiveAt?: string
+  expiresAt?: string
+  /** ACTIVE / EXPIRED / TERMINATED / KICKED_OUT */
+  status?: string
+  createdAt?: string
+}
+
+/** 在线用户条目（后端 SessionEntity） */
+export interface OnlineSession {
+  id: number
+  tenantId?: string
+  sessionId?: string
+  userId?: number
+  tokenId?: number
+  deviceType?: string
+  deviceId?: string
+  deviceName?: string
+  ipAddress?: string
+  userAgent?: string
+  location?: string
+  status?: string
+  createdAt?: string
+  lastActiveAt?: string
+  expiresAt?: string
+}
+
+/** 在线用户统计（后端 OnlineStatistics） */
+export interface OnlineStatistics {
+  totalOnlineUsers: number
+  timestamp?: string
+}
+
+/* ==================== 跨域只读聚合概览（/internal/v1/overview，D5） ==================== */
+
+/** 聚合数据源结果（UP=可用 DEGRADED=降级） */
+export interface OverviewSourceResult {
+  status: 'UP' | 'DEGRADED'
+  data?: Record<string, unknown> | null
+  error?: string
+}
+
+/** 跨域只读概览（后端 OverviewResponse，内部端点不经网关） */
+export interface CrossDomainOverview {
+  tenantId: string
+  generatedAt?: string
+  /** 任一数据源降级时为 true */
+  degraded: boolean
+  sources: Record<string, OverviewSourceResult>
+}
+
+/** 设备影子（后端 DeviceShadowResponse，desired/reported 为 JSON 节点） */
+export interface DeviceShadow {
+  id: number
+  tenantId?: string
+  deviceKey: string
+  /** 期望状态（解析后的 JSON） */
+  desired?: Record<string, unknown> | null
+  /** 上报状态（解析后的 JSON） */
+  reported?: Record<string, unknown> | null
+  /** 原始 JSON 文本（排障用） */
+  desiredRaw?: string
+  reportedRaw?: string
+  /** 影子版本（乐观锁） */
+  version?: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 设备命令（后端 CommandResponse，payload 为 JSON 文本） */
+export interface DeviceCommand {
+  commandId: string
+  deviceKey: string
+  /** PENDING / SENT / ACK / TIMEOUT */
+  status: string
+  payload?: string
+  sentAt?: string
+  ackedAt?: string
+  timeoutAt?: string
+  /** true 表示 commandId 已存在，本次为幂等重放 */
+  duplicate?: boolean
+}
+
+/** 命令下发请求（后端 CommandDispatchRequest，payload 为对象） */
+export interface CommandDispatchPayload {
+  /** 业务命令 ID（租户内唯一，幂等键） */
+  commandId: string
+  payload: Record<string, unknown>
+  /** 超时秒数（缺省 60，上限 3600） */
+  timeoutSeconds?: number
 }

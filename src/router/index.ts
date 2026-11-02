@@ -26,6 +26,16 @@ export const staticRoutes: RouteRecordRaw[] = [
     meta: { title: 'OAuth2 授权回调', public: true, hidden: true },
   },
   {
+    // 授权同意页（OAuth2 consent）：方案 §12.3 要求「匿名可访问」的独立页。
+    // 页面自身不依赖登录态即可渲染（展示 client_id 与 scope）；未登录时提交前
+    // 先跳登录并携带本页完整地址回跳，登录后再完成同意——同意记录必须绑定
+    // 已认证主体（后端 /oauth2/consent 亦要求认证），因此本页 public 但提交受登录保护。
+    path: '/oauth2/consent',
+    name: 'OAuth2Consent',
+    component: () => import('@/views/oauth2/consent.vue'),
+    meta: { title: '授权确认', public: true, hidden: true },
+  },
+  {
     // 办公平台（飞书/钉钉/企微）授权回调页：平台重定向回来时用户尚未登录，
     // 必须 public 放行；页面自行用 code/state 调 /api/v1/office/callback 换取会话。
     path: '/office/callback',

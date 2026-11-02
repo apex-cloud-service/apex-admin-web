@@ -33,11 +33,15 @@ const VIEW_REGISTRY: Record<string, () => Promise<unknown>> = {
   'system/sso/index': () => import('@/views/system/sso/index.vue'),
   'system/masking/index': () => import('@/views/system/masking/index.vue'),
   'system/tenant/index': () => import('@/views/system/tenant/index.vue'),
+  'system/tenant-package/index': () => import('@/views/system/tenant-package/index.vue'),
+  'system/open-app/index': () => import('@/views/system/open-app/index.vue'),
+  'system/capability/index': () => import('@/views/system/capability/index.vue'),
   'system/security/index': () => import('@/views/system/security/index.vue'),
   'monitor/loginlog/index': () => import('@/views/monitor/loginlog/index.vue'),
   'monitor/audit/index': () => import('@/views/monitor/audit/index.vue'),
   'monitor/api-call-log/index': () => import('@/views/monitor/api-call-log/index.vue'),
   'monitor/online/index': () => import('@/views/monitor/online/index.vue'),
+  'monitor/session/index': () => import('@/views/monitor/session.vue'),
   'monitor/dashboard/index': () => import('@/views/monitor/dashboard/index.vue'),
   'monitor/runtime-log/index': () => import('@/views/monitor/runtime-log/index.vue'),
   'monitor/operations/index': () => import('@/views/monitor/operations/index.vue'),
@@ -58,6 +62,10 @@ const VIEW_REGISTRY: Record<string, () => Promise<unknown>> = {
   'office/calendar/index': () => import('@/views/office/calendar/index.vue'),
   'office/document/index': () => import('@/views/office/document/index.vue'),
   'office/meeting-room/index': () => import('@/views/office/meeting-room/index.vue'),
+  'office/notify/index': () => import('@/views/office/notify/index.vue'),
+  'integration/connector/index': () => import('@/views/integration/connector.vue'),
+  'iot/device/index': () => import('@/views/iot/device.vue'),
+  'iot/device-rule/index': () => import('@/views/iot/device-rule.vue'),
 }
 
 /**

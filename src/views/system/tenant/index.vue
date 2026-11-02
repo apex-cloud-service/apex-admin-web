@@ -86,18 +86,49 @@
     <!-- 新建租户 -->
     <el-dialog v-model="createVisible" title="新建租户" width="560px">
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="110px">
+        <el-divider content-position="left">基本信息</el-divider>
         <el-form-item label="租户编码" prop="tenantCode">
           <el-input v-model="createForm.tenantCode" placeholder="1-64 位字母、数字、下划线或短横线，创建后不可变更" />
         </el-form-item>
         <el-form-item label="租户名称" prop="tenantName">
           <el-input v-model="createForm.tenantName" placeholder="租户显示名称" />
         </el-form-item>
-        <el-form-item label="管理员用户ID" prop="adminUserId">
-          <el-input v-model="createForm.adminUserId" placeholder="选填" />
-        </el-form-item>
         <el-form-item label="套餐标识" prop="packageCode">
-          <el-input v-model="createForm.packageCode" placeholder="选填，如 standard" />
+          <el-select
+            v-model="createForm.packageCode"
+            placeholder="选择套餐（留空不裁剪）"
+            clearable
+            filterable
+            allow-create
+            default-first-option
+            style="width: 100%"
+          >
+            <el-option
+              v-for="pkg in packageOptions"
+              :key="pkg.packageCode"
+              :label="`${pkg.packageName}（${pkg.packageCode}）`"
+              :value="pkg.packageCode"
+            />
+          </el-select>
         </el-form-item>
+
+        <el-divider content-position="left">租户管理员</el-divider>
+        <el-form-item label="管理员用户ID" prop="adminUserId">
+          <el-input v-model="createForm.adminUserId" placeholder="选填：已有用户 ID" />
+        </el-form-item>
+        <el-form-item label="管理员账号" prop="adminUsername">
+          <el-input v-model="createForm.adminUsername" placeholder="选填：同时填写账号与密码将创建租户管理员" />
+        </el-form-item>
+        <el-form-item label="初始密码" prop="adminPassword">
+          <el-input
+            v-model="createForm.adminPassword"
+            type="password"
+            show-password
+            placeholder="选填：8-64 位，创建后需由管理员首登修改"
+          />
+        </el-form-item>
+
+        <el-divider content-position="left">配额与备注</el-divider>
         <el-form-item label="最大用户数" prop="maxUsers">
           <el-input-number v-model="createForm.maxUsers" :min="1" :controls="false" placeholder="留空表示不限制" style="width: 100%" />
         </el-form-item>
@@ -157,12 +188,15 @@ import {
   updateTenantQuota,
   type TenantQuery,
 } from '@/api/tenant'
-import type { TenantAction, TenantCreatePayload, TenantInfo, TenantQuotaPayload } from '@/types'
+import type { TenantAction, TenantCreatePayload, TenantInfo, TenantPackage, TenantQuotaPayload } from '@/types'
+import { listTenantPackages } from '@/api/tenant-package'
 
 const loading = ref(false)
 const saving = ref(false)
 const list = ref<TenantInfo[]>([])
 const total = ref(0)
+/** 套餐候选（开通向导下拉） */
+const packageOptions = ref<TenantPackage[]>([])
 
 /** 查询条件（pageNum/pageSize 为后端必填） */
 const query = reactive<TenantQuery>({ pageNum: 1, pageSize: 10 })
@@ -174,6 +208,8 @@ const createForm = reactive<TenantCreatePayload>({
   tenantCode: '',
   tenantName: '',
   adminUserId: undefined,
+  adminUsername: undefined,
+  adminPassword: undefined,
   packageCode: undefined,
   maxUsers: undefined,
   maxStorageMb: undefined,
@@ -189,6 +225,35 @@ const createRules: FormRules = {
   tenantName: [
     { required: true, message: '请输入租户名称', trigger: 'blur' },
     { max: 128, message: '最长 128 位', trigger: 'blur' },
+  ],
+  // 管理员账号与密码需成对提供，长度按后端用户体系约束
+  adminUsername: [
+    {
+      validator: (_rule, value: string, callback) => {
+        if (value && !createForm.adminPassword) {
+          callback(new Error('填写管理员账号时须同时填写初始密码'))
+          return
+        }
+        callback()
+      },
+      trigger: 'blur',
+    },
+  ],
+  adminPassword: [
+    {
+      validator: (_rule, value: string, callback) => {
+        if (value && !createForm.adminUsername) {
+          callback(new Error('填写初始密码时须同时填写管理员账号'))
+          return
+        }
+        if (value && (value.length < 8 || value.length > 64)) {
+          callback(new Error('初始密码长度 8-64 位'))
+          return
+        }
+        callback()
+      },
+      trigger: 'blur',
+    },
   ],
 }
 
@@ -247,24 +312,39 @@ function onPageChange(page: number, size: number): void {
   fetchList()
 }
 
-/** 打开新建租户对话框 */
+/** 打开新建租户对话框（同时刷新套餐候选） */
 function openCreateDialog(): void {
   Object.assign(createForm, {
     tenantCode: '',
     tenantName: '',
     adminUserId: undefined,
+    adminUsername: undefined,
+    adminPassword: undefined,
     packageCode: undefined,
     maxUsers: undefined,
     maxStorageMb: undefined,
     remark: undefined,
   })
   createVisible.value = true
+  if (packageOptions.value.length === 0) {
+    listTenantPackages()
+      .then((packages) => {
+        packageOptions.value = packages || []
+      })
+      .catch(() => {
+        // 套餐列表失败不阻塞开通（编码仍可手输）
+      })
+  }
 }
 
 /** 提交创建 */
 async function submitCreate(): Promise<void> {
   if (!createFormRef.value) return
-  await createFormRef.value.validate()
+  try {
+    await createFormRef.value.validate()
+  } catch {
+    return
+  }
   saving.value = true
   try {
     await createTenant({ ...createForm })

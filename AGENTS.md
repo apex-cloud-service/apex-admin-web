@@ -31,8 +31,18 @@
 | 工作流 | `api/workflow.ts`、`types/workflow.ts`、`views/workflow/` | 特殊分页、静态入口、发起流程（workflowCode 调用方提供）、待办办理语义、组件接入范围 |
 | 站内信 | `api/message.ts`、`utils/message-socket.ts`、`views/office/message/`、`layouts/AdminLayout.vue` | 收件箱/模板契约、WebSocket 推送（ticket/pong/1h 重连）、数组响应口径；AdminLayout 未读角标 = 60s 轮询 + WS 推送触发刷新 |
 | 数据脱敏 | `api/masking.ts`、`views/system/masking/` | 规则只读（启动配置）、批量试算；本仓库可确认前端路径与开发代理，目标网关路由需外部核验 |
-| 租户管理 | `api/tenant.ts`、`views/system/tenant/` | `/api/v2/platform/tenants`、pageNum/pageSize 必填、生命周期动作小写枚举、配额 null=不限、version 乐观锁 |
+| 租户管理 | `api/tenant.ts`、`views/system/tenant/` | `/api/v2/platform/tenants`、pageNum/pageSize 必填、生命周期动作小写枚举、配额 null=不限、version 乐观锁；开通向导可同时提交 `adminUsername`/`adminPassword`（后端成对使用） |
+| 租户套餐 | `api/tenant-package.ts`、`views/system/tenant-package/` | `/api/v2/tenant-packages`；列表为裸数组、更新走无路径参数的 `PUT`（后端按请求体 `packageCode` 定位）；`menuIds`/`permissionCodes`/`features` **空集合 = 全量放行**；提交前补全菜单父链 |
+| 能力运营 | `api/capability.ts`、`views/system/capability/` | `/api/v2/capabilities`（权限码 `tenant:read`）、`/capabilities/subscribed`、`/api/v2/capability-usage`（`capability` 必填、区间 ≤92 天、只读不计费） |
+| 开放平台 | `api/open-app.ts`、`views/system/open-app/` | 管理面与 scope 目录同源 `/api/v1/open-apps/**`（`GET /scopes` 与创建校验共用 OpenPlatformScopeRegistry）；`page` 从 0 开始、返回数组无 total；明文 `clientSecret` 仅创建/重置响应返回一次 |
+| 集成中心 | `api/integration.ts`、`views/integration/connector.vue` | `/integration/v1/connectors`（pageNum/pageSize）与 `/credentials`（**裸数组**）；凭据 `secret` 仅上行，轮换后旧版本立即失效 |
+| 物联网 | `api/iot.ts`、`views/iot/` | `/integration/v1/iot/devices`（pageNum/pageSize）、`/devices/{id}/telemetry|shadow|commands`（影子只读、命令下发 commandId 幂等）、`/rules`（分页）；启停 `enabled` 为字符串；MQTT 认证钩子为 `/internal/v1/iot/**` 内部端点，管理端不调用 |
+| 统一通知 | `api/notify.ts`、`views/office/notify/` | `/api/v2/office/notify/templates`（pageNum/pageSize）与 `/requests` 留痕；按模板投递走内部端点 `POST /internal/v1/notify`，管理端无发送入口 |
+| 数据总览 | `api/overview.ts`、`views/dashboard/index.vue` | D5 聚合 `GET /api/v2/overview`（租户取可信上下文、权限码 `system:monitor:view`）；单源降级返回 `sources.{file,workflow,integration}.status=DEGRADED`；内部端点 `/internal/v1/overview` 网关 403，浏览器不可直连 |
+| 在线会话 | `api/session.ts`、`views/monitor/session.vue` | `/auth/v1/sessions/**`：`online` 为**裸数组不分页**；单会话终止按 `sessionId`（会话唯一标识），详情按数字主键；全部端点要求管理员角色 |
 | 账号安全 | `api/mfa.ts`、`api/ip-access-control.ts`、`views/system/security/` | MFA configs 与 IP 规则列表均为裸数组；IP 写操作走 query 参数（非 body） |
+| 登录 MFA | `views/login/index.vue`、`stores/user.ts`、`api/auth.ts` | 登录响应 `mfaRequired=true` 时不签发令牌，须用 `challengeToken` 调 `POST /auth/v1/mfa/verify` 换取正式令牌（挑战一次性消费） |
+| 授权同意 | `views/oauth2/consent.vue`、`api/oauth2.ts` | `POST /oauth2/consent`（form-urlencoded：client_id/scope/decision）；按方案 §12.3 登记 **public 匿名页**——页面可匿名打开，同意提交须登录（后端要求认证主体），未登录先登录后回跳 |
 | 运维健康 | `api/operations.ts`、`views/monitor/operations/` | 前端封装 health-report、snapshots、trend、租户摘要和导出相关子路径；快照分页为 page/size；页面含报告/快照/趋势/导出/租户摘要五个页签；未封装根路径与导出任务列表，端点是否存在需以目标后端契约为准 |
 | 办公平台 | `api/office.ts`、`api/office-new.ts`、`views/office/` | 业务接口与配置绑定接口分离、version、组织同步与部门 CRUD；绑定列表双接口并存（数组口径 / `/bindings/page` 真实分页） |
 | 文件上传 | `api/file.ts`、两个上传组件 | Element Plus/XHR 路径不经过 Axios 拦截器 |
@@ -70,7 +80,13 @@ src/
 | 监控与日志 | `monitor.ts`、`log.ts` | 登录/审计/API 日志、在线用户、大盘、运行和业务日志 |
 | 数据管理 | `document.ts`、`chart.ts`、`file-share.ts` | 文档与图表 CRUD、状态操作、数据查询；文件分享含创建、列表（按文件 ID、仅所有者）、撤销、兑换和下载；匿名兑换独立页 `/share`（public 路由，token 即凭证） |
 | 工作流 | `workflow.ts` | 发起实例、实例、统计、待办任务办理、高级操作与流程定义管理（`/api/v2/workflow-definitions`） |
-| 租户管理 | `tenant.ts` | `/api/v2/platform/tenants` 分页/详情/创建/生命周期/配额（权限码 tenant:*） |
+| 租户管理 | `tenant.ts`、`tenant-package.ts` | `/api/v2/platform/tenants` 分页/详情/创建/生命周期/配额（权限码 tenant:*）；`/api/v2/tenant-packages` 套餐 CRUD |
+| 能力运营 | `capability.ts` | 能力目录、当前租户订阅、按租户×能力的调用用量（只读） |
+| 开放平台 | `open-app.ts` | 开放应用注册/更新/重置密钥（一次性明文 secret）与 scope 目录 |
+| 集成中心 | `integration.ts` | 连接器配置 CRUD 与租户级凭据注册/轮换/删除（`/integration/v1`） |
+| 物联网 | `iot.ts` | 设备分页/注册/注销/遥测历史、规则创建/详情/启停（`/integration/v1/iot`） |
+| 统一通知 | `notify.ts` | 通知模板 CRUD 与投递留痕（`/api/v2/office/notify`） |
+| 在线会话 | `session.ts` | 在线列表/统计、用户会话查询与批量下线、单会话终止（`/auth/v1/sessions`） |
 | 账号安全 | `mfa.ts`、`ip-access-control.ts` | MFA 配置与 IP 白/黑名单（`/api/mfa`、`/api/ip-access-control`） |
 | 运维健康 | `operations.ts` | `/api/v2/operations/*` 报告/快照/趋势/租户摘要/导出 |
 | 站内信 | `message.ts` | 收件箱/已发送/发送/未读数、WebSocket 推送与消息模板管理（`/api/v1/messages`、`/admin-api/v1/message-templates`）；游标增量收件箱（`/inbox/cursor`）与渠道投递记录（`/{id}/deliveries`，已发送页抽屉） |
@@ -78,7 +94,7 @@ src/
 | 数据脱敏 | `masking.ts` | 规则只读查询与批量脱敏试算（`/api/v1/masking`） |
 | 文件与搜索 | `file.ts`、`search.ts` | 文件接口、上传组件、顶栏全文搜索与索引重建 |
 
-后端路径按现有 API 区分：`/api/v1/**` 为认证、用户、文件、站内信和办公平台接入等接口；`/api/v2/**` 为租户管理、工作流定义、运维健康、文件分享与办公会议室/同步向导；`/admin-api/v1/**` 为管理接口；`/api/workflow/**` 为工作流高级操作；`/api/office/**` 为办公业务接口；`/api/mfa/**` 与 `/api/ip-access-control/**` 为认证中心安全能力；标准 OAuth2 使用 `/oauth2/authorize`、`/oauth2/token`。本仓库可确认前端调用路径，目标环境网关是否暴露这些路径需外部核验。
+后端路径按现有 API 区分：`/api/v1/**` 为认证、用户、文件、站内信和办公平台接入等接口；`/api/v2/**` 为租户管理、租户套餐、能力运营、工作流定义、运维健康、文件分享与办公会议室/同步向导/统一通知；`/admin-api/v1/**` 为管理接口；`/integration/v1/**` 为集成中心与物联网管理接口（`/internal/v1/**` 为其集群内部端点，网关强制拒绝外部访问）；`/auth/v1/sessions/**` 为认证中心会话管理；`/api/workflow/**` 为工作流高级操作；`/api/office/**` 为办公业务接口；`/api/mfa/**` 与 `/api/ip-access-control/**` 为认证中心安全能力；标准 OAuth2 使用 `/oauth2/authorize`、`/oauth2/token`、`/oauth2/consent`。本仓库可确认前端调用路径，目标环境网关是否暴露这些路径需外部核验。
 
 ## 3. 架构图
 
@@ -269,6 +285,7 @@ flowchart TD
 | --- | --- |
 | `/login` | 公开登录入口 |
 | `/oauth2/callback`、`/office/callback` | 公开授权回调 |
+| `/oauth2/consent` | 授权同意页；public 匿名页（方案 §12.3 口径）——页面可匿名打开，同意提交须登录，未登录先登录后回跳 |
 | `/dashboard` | 工作台 |
 | `/workflow/monitor`、`/workflow/instances/:id` | 工作流监控与实例详情 |
 | `/workflow/monitor/dashboard` | 工作流重定向入口 |
@@ -637,6 +654,14 @@ flowchart TD
 | 组织同步页无数据 | `/admin-api/v1/org/**` 与 `/api/v1/office/organization/**` 契约、同步任务为 page/size 且返回数组 |
 | 办公绑定分页/筛选不符合预期 | 审批页走 `/bindings/page`（真实 total + status 过滤，platform 必选）；console 页为数组口径 `listBindings`（固定 page=1,size=100）；version 乐观锁冲突 |
 | OAuth2 回调失败 | sessionStorage 上下文、state 一次性消费、redirect_uri、PKCE、token 代理 |
+| 授权同意提交 401 | consent 页为 public 匿名页，但同意提交须登录主体（后端要求认证）；未登录时页面先跳登录并携带本页地址回跳 |
+| 授权重试不生效 | 重试 authorize 要求 redirect_uri 与 PKCE（code_challenge/code_challenge_method=S256）齐全，缺失时页面提示从客户端重新发起 |
+| 登录后直接报缺 accessToken | 登录响应 `mfaRequired=true` 时后端不签发令牌，须走 `POST /auth/v1/mfa/verify` 二步；store 的 `login()` 已按此分流 |
+| 套餐保存后菜单少一层 | `menuIds` 须含父链；后端 `TenantPackageEntity.withParentChain` 与前端提交前补链都需生效，空集合 = 全量 |
+| 套餐/能力/集成页 404 | 网关已显式覆盖 `/api/v2/tenant-packages|capabilities|capability-usage|overview` 与 `/integration/v1/**`（dev/prod/Nacos 三处 + `GatewayRouteProfileConfigTest` 契约）；仍 404 时核验目标环境是否滚动到新配置 |
+| 数据总览无数据 | 页面消费 `GET /api/v2/overview`（权限 `system:monitor:view`）；单源降级为 DEGRADED 属正常（网关内部端点 `/internal/v1/overview` 本就 403，勿改调） |
+| IoT 规则页 404 | 后端已补 `GET /integration/v1/iot/rules`（分页）与 `iot:rule:read` 权限码（V85/V86 种子）；存量环境需执行迁移 |
+| IoT 设备影子不可用 | 设备注册时才会创建影子行；未上报过的设备影子字段为空属正常。desired 写接口后端未实现（API 文档 §10） |
 | Docker 首页正常但接口失败 | API_PROXY_PASS、外部网络、后端 DNS、代理 location |
 
 ## 11. 参考资料与维护方式

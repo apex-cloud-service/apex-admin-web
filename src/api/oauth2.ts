@@ -1,12 +1,13 @@
 /**
  * OAuth2 认证 API
  * ------------------------------------------------------------------
- * 覆盖：标准 OAuth2 授权码流程、第三方社交登录（微信/GitHub 等）
+ * 覆盖：标准 OAuth2 授权码流程、用户授权同意、第三方社交登录（微信/GitHub 等）
  * 
  * 后端接口：
- *   - GET /oauth2/authorize - 授权端点（获取授权码）
- *   - POST /oauth2/token - Token 端点（授权码换取 Token）
- *   - GET /oauth2/userinfo - 获取已授权用户信息
+ *   - GET  /oauth2/authorize - 授权端点（获取授权码；无有效同意记录时返回 consent_required）
+ *   - POST /oauth2/consent   - 记录/撤销用户授权同意（表单提交，需已登录）
+ *   - POST /oauth2/token     - Token 端点（授权码换取 Token）
+ *   - GET  /oauth2/userinfo  - 获取已授权用户信息
  *   - POST /api/v1/auth/social/* - 第三方社交登录
  */
 import { get, post, request as sendRequest } from '@/utils/request'
@@ -168,4 +169,35 @@ export function verifyState(state: string): boolean {
   const savedState = sessionStorage.getItem('oauth2_state')
   sessionStorage.removeItem('oauth2_state')
   return savedState === state
+}
+
+/**
+ * 授权同意提交参数
+ */
+export interface ConsentPayload {
+  /** 客户端 ID */
+  clientId: string
+  /** 申请/同意的 scope（空格分隔，缺省沿用授权请求） */
+  scope?: string
+  /** approve=同意；deny=拒绝并撤销既有同意 */
+  decision: 'approve' | 'deny'
+}
+
+/**
+ * 提交用户授权同意（表单提交，后端按 decision 记录或撤销同意）。
+ * 端点要求已登录主体；成功返回 { consented: boolean }。
+ * @param payload 客户端、scope 与决定
+ */
+export function submitConsent(payload: ConsentPayload): Promise<{ consented: boolean }> {
+  const form = new URLSearchParams({
+    client_id: payload.clientId,
+    decision: payload.decision,
+  })
+  if (payload.scope) form.append('scope', payload.scope)
+  return sendRequest<{ consented: boolean }>({
+    method: 'POST',
+    url: '/oauth2/consent',
+    data: form.toString(),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  })
 }

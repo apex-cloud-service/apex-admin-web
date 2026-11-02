@@ -43,6 +43,39 @@
       <template #header>接口调用趋势（进程启动以来，示例窗口）</template>
       <div ref="chartRef" class="chart" />
     </el-card>
+
+    <!-- 数据总览：跨域只读聚合（D5，GET /api/v2/overview） -->
+    <el-card shadow="never" class="chart-card">
+      <template #header>
+        <div class="overview-header">
+          <span>数据总览（跨域只读聚合）</span>
+          <el-tag v-if="crossOverview" :type="crossOverview.degraded ? 'warning' : 'success'" size="small">
+            {{ crossOverview.degraded ? '部分数据源降级' : '全部可用' }}
+          </el-tag>
+        </div>
+      </template>
+      <el-row v-loading="crossLoading" :gutter="16">
+        <el-col v-for="source in overviewSources" :key="source.name" :xs="24" :sm="8">
+          <el-card shadow="hover" class="source-card">
+            <div class="source-title">
+              <span>{{ source.label }}</span>
+              <el-tag :type="source.result?.status === 'UP' ? 'success' : 'warning'" size="small">
+                {{ source.result?.status === 'UP' ? '可用' : '降级' }}
+              </el-tag>
+            </div>
+            <div v-if="source.result?.status === 'UP'" class="source-body">
+              <div v-for="metric in flattenSource(source.result.data)" :key="metric.key" class="source-metric">
+                <span class="metric-key">{{ metric.key }}</span>
+                <span class="metric-value">{{ metric.value }}</span>
+              </div>
+              <div v-if="flattenSource(source.result.data).length === 0" class="metric-empty">无统计字段</div>
+            </div>
+            <div v-else class="source-error">{{ source.result?.error || '数据源不可达' }}</div>
+          </el-card>
+        </el-col>
+      </el-row>
+      <el-empty v-if="!crossLoading && !crossOverview" description="暂无聚合数据" :image-size="60" />
+    </el-card>
   </div>
 </template>
 
@@ -57,8 +90,9 @@ import * as echarts from 'echarts'
 import { useAppStore } from '@/stores/app'
 import { useUserStore } from '@/stores/user'
 import { getMonitorOverview } from '@/api/monitor'
+import { getCrossDomainOverview } from '@/api/overview'
 import { showError } from '@/utils/request'
-import type { MonitorOverview } from '@/types'
+import type { CrossDomainOverview, MonitorOverview, OverviewSourceResult } from '@/types'
 
 const userStore = useUserStore()
 const appStore = useAppStore()
@@ -67,6 +101,56 @@ const appStore = useAppStore()
 const chartRef = ref<HTMLElement>()
 /** ECharts 实例（卸载时销毁） */
 let chart: echarts.ECharts | null = null
+
+/** 跨域聚合概览（D5） */
+const crossOverview = ref<CrossDomainOverview | null>(null)
+/** 跨域聚合加载中 */
+const crossLoading = ref(false)
+
+/** 数据源展示名（后端 sources 键为 file/workflow/integration） */
+const SOURCE_LABELS: Record<string, string> = {
+  file: '文件存储',
+  workflow: '工作流',
+  integration: '集成与设备',
+}
+
+/** 聚合数据源列表（固定顺序，缺失源按降级展示） */
+const overviewSources = computed(() => {
+  const sources = crossOverview.value?.sources ?? {}
+  const names = ['file', 'workflow', 'integration']
+  return names.map((name) => ({
+    name,
+    label: SOURCE_LABELS[name] || name,
+    result: sources[name] as OverviewSourceResult | undefined,
+  }))
+})
+
+/**
+ * 扁平化数据源的统计字段（仅展示一层标量，嵌套对象折叠为 JSON 文本）。
+ * @param data 数据源返回的业务数据
+ */
+function flattenSource(data?: Record<string, unknown> | null): Array<{ key: string; value: string }> {
+  if (!data || typeof data !== 'object') return []
+  return Object.entries(data)
+    .filter(([, value]) => value !== null && value !== undefined)
+    .map(([key, value]) => ({
+      key,
+      value: typeof value === 'object' ? JSON.stringify(value) : String(value),
+    }))
+}
+
+/** 加载跨域聚合概览（失败不阻塞工作台其他区块） */
+async function loadCrossOverview(): Promise<void> {
+  crossLoading.value = true
+  try {
+    crossOverview.value = await getCrossDomainOverview()
+  } catch {
+    // 聚合端点不可用时保持空态，不弹错（工作台其余数据仍可用）
+    crossOverview.value = null
+  } finally {
+    crossLoading.value = false
+  }
+}
 
 /** 监控概览数据（加载失败时为空对象） */
 const overview = ref<Partial<MonitorOverview>>({})
@@ -170,6 +254,8 @@ function handleResize(): void {
 onMounted(async () => {
   renderChart()
   window.addEventListener('resize', handleResize)
+  // 聚合概览与监控概览并行加载，互不阻塞
+  loadCrossOverview()
   try {
     overview.value = await getMonitorOverview()
   } catch (error) {
@@ -235,5 +321,50 @@ onBeforeUnmount(() => {
 /* 图表容器 */
 .chart {
   height: 320px;
+}
+
+/* 数据总览 */
+.overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.source-card {
+  margin-bottom: 12px;
+}
+
+.source-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.source-metric {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--el-border-color-lighter);
+}
+
+.metric-key {
+  color: var(--el-text-color-secondary);
+}
+
+.metric-value {
+  font-weight: 600;
+}
+
+.metric-empty,
+.source-error {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.source-error {
+  color: var(--el-color-warning);
 }
 </style>

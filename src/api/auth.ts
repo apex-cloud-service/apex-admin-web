@@ -51,6 +51,16 @@ export function login(payload: LoginPayload): Promise<LoginResult> {
 }
 
 /**
+ * MFA 二步验证：以挑战凭据 + TOTP 验证码交换正式令牌。
+ * 认证中心端点 POST /auth/v1/mfa/verify；成功返回与登录同构的正式令牌响应。
+ * @param challengeToken 登录响应返回的短 TTL 挑战凭据
+ * @param code 6 位 TOTP 验证码
+ */
+export function verifyMfaChallenge(challengeToken: string, code: string): Promise<LoginResult> {
+  return post<LoginResult>('/auth/v1/mfa/verify', { challengeToken, code })
+}
+
+/**
  * 退出登录（服务端失效 Token，需携带登录态）。
  */
 export function logout(): Promise<void> {
