@@ -7,6 +7,12 @@
   - 我发起的：查看、详情、撤回，并支持发起新审批
   契约要点：列表元素字段为 processName/currentNode/createdAt，审批操作路径参数为
   processInstanceId；审批人 ID 必填（后端 ApproveRequest @NotBlank，空串会被 400 拒绝）。
+
+  权限要求：
+    - office:approval:initiate - 发起审批
+    - office:approval:approve - 通过/拒绝待办
+    - office:approval:query - 查看审批详情
+    - office:approval:cancel - 撤回我发起的审批
 -->
 <template>
   <div class="approval-container">
@@ -14,7 +20,7 @@
       <template #header>
         <div class="card-header">
           <span>审批流程管理</span>
-          <el-button type="primary" @click="openInitiateDialog">
+          <el-button type="primary" @click="openInitiateDialog" v-permission="'office:approval:initiate'">
             <el-icon><Plus /></el-icon>
             发起审批
           </el-button>
@@ -42,8 +48,8 @@
             </el-table-column>
             <el-table-column label="操作" width="200" fixed="right">
               <template #default="{ row }">
-                <el-button link type="success" @click="handleApprove(row)">通过</el-button>
-                <el-button link type="danger" @click="handleReject(row)">拒绝</el-button>
+                <el-button link type="success" @click="handleApprove(row)" v-permission="'office:approval:approve'">通过</el-button>
+                <el-button link type="danger" @click="handleReject(row)" v-permission="'office:approval:approve'">拒绝</el-button>
                 <el-button link type="primary" @click="openDetail(row)">详情</el-button>
               </template>
             </el-table-column>
@@ -99,11 +105,12 @@
             </el-table-column>
             <el-table-column label="操作" width="170" fixed="right">
               <template #default="{ row }">
-                <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+                <el-button link type="primary" @click="openDetail(row)" v-permission="'office:approval:query'">详情</el-button>
                 <el-button
                   v-if="isPending(row.status)"
                   link
                   type="warning"
+                  v-permission="'office:approval:cancel'"
                   @click="handleCancel(row)"
                 >撤回</el-button>
               </template>
@@ -205,11 +212,10 @@ import {
   getMyInitiatedApprovals,
   getPendingApprovals,
   initiateApproval,
-  PLATFORM_NAMES,
   type ApprovalProcess,
   type InitiateApprovalRequest,
-  type OfficePlatform,
-} from '@/api/office'
+} from '@/api/office-approval'
+import { PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
 
 /** 状态 → 中文名称 */
 const STATUS_NAMES: Record<string, string> = {

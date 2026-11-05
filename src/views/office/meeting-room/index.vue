@@ -2,13 +2,18 @@
   办公会议室管理
   ------------------------------------------------------------------
   会议室台账分页查询（含状态筛选）与 CRUD、时间段可用性查询、预订。
+
+  权限要求：
+  - office:meeting-room:manage - 新增/编辑/删除会议室
+  - office:meeting-room:read - 查询可用会议室
+  - office:meeting-room:book - 预订会议室
 -->
 <template>
   <el-card shadow="never">
     <template #header>
       <div class="card-header">
         <span>会议室管理</span>
-        <el-button type="primary" :icon="Plus" @click="openRoomDialog()">新增会议室</el-button>
+        <el-button type="primary" :icon="Plus" @click="openRoomDialog()" v-permission="'office:meeting-room:manage'">新增会议室</el-button>
       </div>
     </template>
 
@@ -25,7 +30,7 @@
       <el-form-item>
         <el-button type="primary" :icon="Search" @click="search">查询</el-button>
         <el-button :icon="Refresh" @click="reset">重置</el-button>
-        <el-button @click="availableVisible = true">查询可用</el-button>
+        <el-button @click="availableVisible = true" v-permission="'office:meeting-room:read'">查询可用</el-button>
       </el-form-item>
     </el-form>
 
@@ -48,9 +53,9 @@
       <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
       <el-table-column label="操作" width="230" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openRoomDialog(row)">编辑</el-button>
-          <el-button link type="success" @click="openBookingDialog(row)">预订</el-button>
-          <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+          <el-button link type="primary" @click="openRoomDialog(row)" v-permission="'office:meeting-room:manage'">编辑</el-button>
+          <el-button link type="success" @click="openBookingDialog(row)" v-permission="'office:meeting-room:book'">预订</el-button>
+          <el-button link type="danger" @click="handleDelete(row)" v-permission="'office:meeting-room:manage'">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

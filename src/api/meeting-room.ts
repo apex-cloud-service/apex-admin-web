@@ -3,14 +3,11 @@
  * ------------------------------------------------------------------
  * 后端接口（apex-office-service，前缀 /api/v2/office/meeting-rooms）：
  * - GET  /                         - 分页（pageNum/pageSize/status/keyword）
- * - GET  /enabled                  - 启用会议室列表
  * - GET  /available?startTime=&endTime= - 时间段可用会议室
- * - GET  /{roomId}                 - 详情
  * - POST /                         - 创建
  * - PUT  /{roomId}                 - 局部更新
  * - DELETE /{roomId}               - 删除
  * - POST /{roomId}/bookings        - 预订
- * - DELETE /{roomId}/bookings/{eventId} - 取消预订
  */
 import { del, get, post, put } from '@/utils/request'
 import type { PageResponse } from '@/types'
@@ -82,19 +79,9 @@ export function listMeetingRooms(query: MeetingRoomQuery): Promise<PageResponse<
   return get<PageResponse<MeetingRoom>>('/api/v2/office/meeting-rooms', query as unknown as Record<string, unknown>)
 }
 
-/** 查询启用会议室 */
-export function listEnabledMeetingRooms(): Promise<MeetingRoom[]> {
-  return get<MeetingRoom[]>('/api/v2/office/meeting-rooms/enabled')
-}
-
 /** 查询时间段可用会议室 */
 export function listAvailableMeetingRooms(startTime: string, endTime: string): Promise<MeetingRoom[]> {
   return get<MeetingRoom[]>('/api/v2/office/meeting-rooms/available', { startTime, endTime })
-}
-
-/** 查询会议室详情 */
-export function getMeetingRoom(id: number): Promise<MeetingRoom> {
-  return get<MeetingRoom>(`/api/v2/office/meeting-rooms/${id}`)
 }
 
 /** 创建会议室 */
@@ -117,7 +104,3 @@ export function bookMeetingRoom(id: number, payload: BookMeetingRoomPayload): Pr
   return post<MeetingRoomBooking>(`/api/v2/office/meeting-rooms/${id}/bookings`, payload)
 }
 
-/** 取消会议室预订 */
-export function cancelMeetingRoomBooking(roomId: number, eventId: number): Promise<MeetingRoomBooking> {
-  return del<MeetingRoomBooking>(`/api/v2/office/meeting-rooms/${roomId}/bookings/${eventId}`)
-}

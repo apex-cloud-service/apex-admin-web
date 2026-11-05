@@ -1,38 +1,16 @@
 /**
- * 办公平台 API（匹配后端实际接口）
+ * 办公平台基础设施 API（登录回调、应用配置、绑定审批、组织同步）
  * ------------------------------------------------------------------
- * 飞书 / 钉钉 / 企业微信的登录授权、平台配置与账号绑定接口封装。
- * 与 src/api/office.ts（消息/审批/日历/文档业务接口）、src/api/message.ts（站内信）互补，
- * 本文件聚焦「登录接入」「管理端配置」与「组织同步」三类能力。
+ * 用途：
+ * 飞书 / 钉钉 / 企业微信的接入底座：平台标识定义、授权回调换取会话令牌、
+ * 管理端应用配置与账号绑定审批、组织通讯录同步。审批/日历/文档业务见
+ * 同目录 office-approval.ts、office-calendar.ts、office-document.ts。
  *
- * 后端接口（公开，登录页使用）：
- * - GET /api/v1/office/status   - 查询已启用的平台列表
- * - GET /api/v1/office/login    - 获取平台 OAuth2 授权跳转地址
- * - GET /api/v1/office/callback - 授权回调：授权码换取会话令牌
+ * 覆盖：OfficePlatform / PLATFORM_NAMES 共享定义、officeCallback、
+ * 应用配置 CRUD、绑定分页与审批、部门/员工/同步历史查询与部门 CRUD。
  *
- * 后端接口（管理端，办公平台配置/绑定页使用）：
- * - GET    /admin-api/v1/office/apps             - 平台应用配置列表
- * - GET    /admin-api/v1/office/apps/{platform}  - 查询单平台配置
- * - POST   /admin-api/v1/office/apps/{platform}  - 新建平台配置
- * - PUT    /admin-api/v1/office/apps/{platform}  - 更新平台配置（带 version 乐观锁）
- * - DELETE /admin-api/v1/office/apps/{platform}  - 删除平台配置（带 version 乐观锁）
- * - GET    /admin-api/v1/office/bindings         - 账号绑定列表（数组响应，向后兼容）
- * - GET    /admin-api/v1/office/bindings/page     - 账号绑定分页列表（真实 total，支持 status 过滤）
- * - POST   /admin-api/v1/office/bindings/{id}/review - 绑定审批（通过/驳回）
- * - DELETE /admin-api/v1/office/bindings/{id}/unbind - 解除绑定（带 version 乐观锁）
- *
- * 后端接口（管理端，组织同步）：
- * - GET    /admin-api/v1/org/departments            - 同步部门分页列表
- * - GET    /admin-api/v1/org/departments/{id}       - 部门详情
- * - POST   /admin-api/v1/org/departments            - 创建部门（DTO 无后端校验，前端必填校验）
- * - PUT    /admin-api/v1/org/departments/{id}       - 更新部门
- * - DELETE /admin-api/v1/org/departments/{id}       - 删除部门（无级联检查）
- * - GET    /admin-api/v1/org/employees              - 同步员工分页列表
- * - GET    /admin-api/v1/org/employees/{id}         - 员工详情
- * - GET    /admin-api/v1/org/sync-history           - 同步历史分页列表
- * - POST   /api/v1/office/organization/sync      - 触发组织同步
- * - GET    /api/v1/office/organization/sync/tasks - 同步任务列表（page/size，返回数组）
- * - GET    /api/v1/office/organization/mappings   - 平台组织映射列表
+ * @author system
+ * @date 2026-11-05
  */
 import { del, get, post, put } from '@/utils/request'
 import type {
@@ -142,23 +120,6 @@ export interface OfficeBindingReviewRequest {
 /** ========== 公开接口（登录页使用） ========== */
 
 /**
- * 查询已启用的办公平台列表
- * @returns 已启用平台标识数组（登录页据此渲染平台登录按钮）
- */
-export function getPlatformStatus(): Promise<OfficePlatform[]> {
-  return get<OfficePlatform[]>('/api/v1/office/status')
-}
-
-/**
- * 发起办公平台登录
- * @param platform 平台类型
- * @returns 平台 OAuth2 授权跳转地址（前端据此重定向）
- */
-export function startOfficeLogin(platform: OfficePlatform): Promise<string> {
-  return get<string>('/api/v1/office/login', { platform })
-}
-
-/**
  * 办公平台授权回调：用授权码换取本系统会话令牌
  *
  * @param platform 平台类型
@@ -234,7 +195,7 @@ export function deleteApp(platform: OfficePlatform, version: number): Promise<bo
 /** ========== 绑定审批管理（管理端） ========== */
 
 /**
- * 分页查询账号绑定列表
+ * 分页查询账号绑定列表（数组口径，固定 page=1,size=100 时用于统计概览）
  *
  * @param platform 平台类型
  * @param page 页码（从 1 开始）
@@ -358,14 +319,6 @@ export function listOrgSyncTasks(params: {
  */
 export function listOrgMappings(platform?: string): Promise<OrganizationMapping[]> {
   return get<OrganizationMapping[]>('/api/v1/office/organization/mappings', { platform })
-}
-
-/**
- * 查询部门详情
- * @param id 部门 ID
- */
-export function getOrgDepartment(id: number): Promise<OrgDepartment> {
-  return get<OrgDepartment>(`/admin-api/v1/org/departments/${id}`)
 }
 
 /**

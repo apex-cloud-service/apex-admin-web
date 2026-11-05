@@ -88,10 +88,3 @@ export function queryBusinessLogs(params: BusinessLogQuery): Promise<PageRespons
   return get<PageResponse<BusinessLog>>('/admin-api/v1/logs/business', params as unknown as Record<string, unknown>)
 }
 
-/**
- * 统计业务日志数量
- * @param params 统计参数（logType/startTime/endTime）
- */
-export function countBusinessLogs(params: Pick<BusinessLogQuery, 'logType' | 'startTime' | 'endTime'>): Promise<number> {
-  return get<number>('/admin-api/v1/logs/business/count', params as unknown as Record<string, unknown>)
-}

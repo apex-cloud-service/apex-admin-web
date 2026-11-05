@@ -34,14 +34,6 @@ export function listMenuTree(): Promise<MenuNode[]> {
 }
 
 /**
- * 查询菜单详情。
- * @param id 菜单 ID
- */
-export function getMenuDetail(id: number): Promise<MenuNode> {
-  return get<MenuNode>(`/admin-api/v1/menus/${id}`)
-}
-
-/**
  * 创建菜单。
  * @param payload 菜单信息
  */
@@ -239,7 +231,6 @@ export interface JobPayload {
   concurrent?: number
   remark?: string
 }
-
 
 /**
  * 定时任务查询参数（支持分页和筛选）

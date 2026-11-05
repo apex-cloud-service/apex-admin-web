@@ -30,7 +30,7 @@
 | 口径 | 请求 | 响应 | 使用范围 |
 |------|------|------|---------|
 | **常规分页** | 以具体 API 类型和页面调用为准，常见为 `page/size` | 以具体 API 类型为准，常见为 `list/total` | 系统、监控、数据等部分列表；不存在所有非工作流模块统一使用同一分页 DTO 的规则 |
-| **工作流口径** | `{pageNum, pageSize}` | `{records, total}`（待办 `/api/v1/workflows/tasks/pending` 返回通用 PageResponse） | 响应 `records/total` 仅 [src/api/workflow.ts](../../src/api/workflow.ts) 实例列表；`pageNum/pageSize` 请求参数另见 database（数据源）、message（收件箱/已发送）、office-new（组织部门/员工）、meeting-room（会议室）等模块 |
+| **工作流口径** | `{pageNum, pageSize}` | `{records, total}`（待办 `/api/v1/workflows/tasks/pending` 返回通用 PageResponse） | 响应 `records/total` 仅 [src/api/workflow.ts](../../src/api/workflow.ts) 实例列表；`pageNum/pageSize` 请求参数另见 database（数据源）、message（收件箱/已发送）、office-platform（组织部门/员工）、meeting-room（会议室）等模块 |
 | **数组响应（无分页包装）** | 各接口自行携带分页参数 | 纯数组（total 以数组长度近似） | 站内信 inbox/sent（pageNum/pageSize）、组织同步任务（page/size）、办公绑定列表（page/size）、消息模板列表（无分页参数） |
 
 ### 1.4 认证
@@ -229,12 +229,11 @@
 
 ### 2.16 办公平台与站内信（按页面引用的 API 模块并存）
 
-**[src/api/office-new.ts](../../src/api/office-new.ts)**（品牌应用/绑定管理 + 登录 + 组织同步，被 `office/callback`、`office/config`、`office/bindings`、`office/console`、`office/organization`、`PlatformSelector`、`office/message` 引用）：
+**[src/api/office-platform.ts](../../src/api/office-platform.ts)**（办公平台基础设施：平台标识 + 登录回调 + 应用配置 + 绑定审批 + 组织同步；被 `office/callback`、`office/config`、`office/bindings`、`office/console`、`office/organization`、`office/message`、`PlatformSelector` 引用）：
 
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
-| GET | `/api/v1/office/status` | `getPlatformStatus()` | 已启用平台列表（返回平台标识数组） |
-| GET | `/api/v1/office/login?platform=` | `startOfficeLogin(platform)` | 获取平台 OAuth2 授权跳转地址（query 传 platform） |
+| — | — | `OfficePlatform` / `PLATFORM_NAMES` | 平台标识类型与中文名映射，各 office-* 模块共用 |
 | GET | `/api/v1/office/callback?platform=&code=&state=` | `officeCallback(platform, code, state)` | 授权回调换会话（query 传参） |
 | GET | `/admin-api/v1/office/apps` | `listApps()` | 应用配置列表 |
 | GET | `/admin-api/v1/office/apps/{platform}` | `getApp(platform)` | 查询单平台配置 |
@@ -251,11 +250,22 @@
 | POST | `/api/v1/office/organization/sync` | `triggerOrgSync(payload)` | 触发组织同步（platform/syncType/fullSync） |
 | GET | `/api/v1/office/organization/sync/tasks` | `listOrgSyncTasks(params)` | 同步任务列表（⚠️ page/size 口径，返回数组） |
 | GET | `/api/v1/office/organization/mappings` | `listOrgMappings(platform?)` | 平台组织映射列表（apex 侧 ID 为字符串） |
-| GET | `/admin-api/v1/org/departments/{id}` | `getOrgDepartment(id)` | 部门详情 |
 | POST | `/admin-api/v1/org/departments` | `createOrgDepartment(payload)` | 创建部门（后端 DTO 无校验注解；返回体不含生成 id，须刷新列表） |
 | PUT | `/admin-api/v1/org/departments/{id}` | `updateOrgDepartment(id, payload)` | 更新部门（deptLevel/deptPath 由前端推导，后端照抄存储） |
 | DELETE | `/admin-api/v1/org/departments/{id}` | `deleteOrgDepartment(id)` | 删除部门；前端未实现级联关系预检，实际删除约束需以后端响应为准 |
 | GET | `/admin-api/v1/org/employees/{id}` | `getOrgEmployee(id)` | 员工详情 |
+
+**办公业务 API 按子域拆分**（分别被对应页面引用）：
+
+| 模块 | 前缀 | 函数 | 引用页面 |
+|------|------|------|---------|
+| [office-approval.ts](../../src/api/office-approval.ts) | `/api/office/approvals/**`（发起/详情/同意/撤销/pending/initiated） | `initiateApproval` / `getApprovalDetail` / `approveProcess` / `cancelApproval` / `getPendingApprovals` / `getMyInitiatedApprovals`；常量 `APPROVAL_STATUS_NAMES`、`APPROVAL_ACTION_NAMES` | `office/approval` |
+| [office-calendar.ts](../../src/api/office-calendar.ts) | `/api/office/calendar/events/**`（CRUD/列表） | `createCalendarEvent` / `getCalendarEvent` / `updateCalendarEvent` / `deleteCalendarEvent` / `getCalendarEvents` | `office/calendar` |
+| [office-document.ts](../../src/api/office-document.ts) | `/api/office/documents/**`（创建/详情/删除/复制/my） | `createDocument` / `getDocument` / `deleteDocument` / `copyDocument` / `getMyDocuments` | `office/document` |
+
+> 审批列表元素字段为 `processName`/`currentNode`/`createdAt`，路径参数为 `processInstanceId`，`approverId` 必填。文档列表为「我的文档」裸数组，平台/类型/关键词筛选与分页在前端完成；后端无文档更新与分享端点，复制的 `targetFolderId` 走 query。
+>
+> 多模块按职责拆分：`office-platform.ts` 覆盖平台标识、登录回调、应用配置、绑定管理与组织同步，`office-approval.ts` / `office-calendar.ts` / `office-document.ts` 覆盖审批/日历/文档业务，`office-sync-wizard.ts` 覆盖同步向导（预检/预览/执行/重试），`message.ts` 覆盖站内信与模板，`meeting-room.ts` 覆盖会议室。当前仓库可确认这些 API 封装、页面调用和开发代理配置；生产网关是否完整转发对应路径需在部署环境核验。新增办公页面时优先查看页面实际 import 的模块，不要凭前缀猜测。
 
 **[src/api/message.ts](../../src/api/message.ts)**（站内信与消息模板，被 `office/message` 页与 `layouts/AdminLayout.vue` 引用）：
 
@@ -283,22 +293,6 @@
 | GET | `/api/v1/masking/rules` | `listMaskingRules()` | 当前租户授权的规则（Map<版本, Map<字段路径, {type, customRule}>>） |
 | POST | `/api/v1/masking/batch` | `maskBatch(version, documents)` | 批量脱敏（1~100 个 JSON 文档，请求体上限 256KB） |
 
-**[src/api/office.ts](../../src/api/office.ts)**（综合接口，被 `office/approval`、`office/calendar`、`office/document` 引用；`office/message` 与 `office/organization` 已改用 `message.ts` / `office-new.ts`）：
-
-| 子域 | 前缀 | 代表函数 |
-|------|------|---------|
-| 平台状态/登录（旧版函数） | GET `/api/v1/office/status`、POST `/api/v1/office/login/{platform}`、POST `/api/v1/office/callback/{platform}` | `getPlatformStatus` / `startOfficeLogin` / `officeCallback`（旧版 POST 路径参数式封装，页面实际使用 `office-new.ts` 的 GET 版本） |
-| 平台配置/连通性 | `/admin-api/v1/office/config/{platform}`、`/test` | `getPlatformConfig` / `savePlatformConfig` / `testConnectivity`（旧版前端封装，当前页面改用 `office-new.ts` 的应用配置；端点可用性需外部核验） |
-| 绑定（旧版函数） | `/admin-api/v1/office/bindings/**` | `getBindings` / `approveBinding` / `rejectBinding` / `unbindBinding`（旧版前端封装，页面实际使用 `office-new.ts` 版本） |
-| 组织同步（旧版函数） | `/admin-api/v1/office/sync/{platform}/**` | `getSyncStatus` / `triggerSync`（旧版前端封装，当前由 `office-sync-wizard.ts` 与 `office-new.ts` 承担相关页面能力） |
-| 消息（管理） | POST `/admin-api/v1/office/messages/send` | `sendMessage`（旧版前端封装，当前站内信页面使用 `message.ts`） |
-| 管理端文件查询 | `/admin-api/v1/office/files` | `getFiles`（旧版前端封装，当前页面接入状态和端点可用性需外部核验） |
-| 消息（业务） | `/api/office/messages/**`（text/image/file/card、/{messageId}、/sent） | `sendTextMessage` 等 |
-| 审批（业务） | `/api/office/approvals`（发起/详情/同意/撤销/pending/initiated） | `initiateApproval` / `getApprovalDetail` / `approveProcess` / `cancelApproval` / `getPendingApprovals` / `getMyInitiatedApprovals`（⚠️ 列表元素字段为 processName/currentNode/createdAt，路径参数为 processInstanceId；approverId 必填） |
-| 日历（业务） | `/api/office/calendar/events/**`（CRUD/查询/my） | `createCalendarEvent` 等 |
-| 文档（业务） | `/api/office/documents/**`（CRUD/copy/move/share/my） | `createDocument` 等 |
-
-> 多模块按职责拆分：`office-new.ts` 覆盖平台状态、登录、应用配置、绑定管理与组织同步，`office-sync-wizard.ts` 覆盖同步向导（预检/预览/执行/重试），`message.ts` 覆盖站内信与模板，`office.ts` 覆盖审批/日历/文档业务操作。当前仓库可确认这些 API 封装、页面调用和开发代理配置；生产网关是否完整转发对应路径需在部署环境核验。新增办公页面时优先查看页面实际 import 的模块，不要凭前缀猜测。
 
 ### 2.16.1 文件分享 [src/api/file-share.ts](../../src/api/file-share.ts)（使用 `/api/v2/files/{fileId}/shares` 与 `/api/v2/file-shares/**`）
 

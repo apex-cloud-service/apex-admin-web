@@ -8,7 +8,7 @@
     4. 平台账号未绑定时提示「等待管理员审批」，其余失败提示错误
 
   后端接口：
-    - GET /api/v1/office/callback - 办公平台授权回调（见 api/office-new.ts）
+    - GET /api/v1/office/callback - 办公平台授权回调（见 api/office-platform.ts）
 
   Props / Emits：无（路由页面）
 -->
@@ -54,7 +54,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Loading, CircleCloseFilled, Clock } from '@element-plus/icons-vue'
-import { officeCallback, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-new'
+import { officeCallback, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
 import { setToken, setRefreshToken, removeRefreshToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
 

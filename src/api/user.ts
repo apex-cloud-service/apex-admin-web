@@ -5,7 +5,7 @@
  * 后台用户字段已与后端 AdminUserCreateRequest 对齐：
  * 必填 phone/nickname/gender/birthday，无 username/password 字段。
  */
-import { del, get, post, put, request } from '@/utils/request'
+import { get, post, put, request } from '@/utils/request'
 import type { AdminUser, AdminUserDetail, PageQuery, PageResponse, StaffRole, UserIdentity } from '@/types'
 
 /** 用户列表查询参数（后端 page/size/keyword/status） */
@@ -107,14 +107,6 @@ export function listStaffRoles(): Promise<StaffRole[]> {
  */
 export function assignUserRoles(id: string, roleIds: string[]): Promise<void> {
   return put<void>(`/admin-api/v1/users/${id}/roles`, { roleIds })
-}
-
-/**
- * 删除用户（预留接口，后端当前未暴露 DELETE，保留供后续扩展）。
- * @param id 用户 ID
- */
-export function deleteUser(id: string): Promise<void> {
-  return del<void>(`/admin-api/v1/users/${id}`)
 }
 
 /**

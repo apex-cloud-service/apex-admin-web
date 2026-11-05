@@ -18,7 +18,6 @@ vi.mock('@/utils/request', () => request)
 
 import {
   createTenantPackage,
-  getTenantPackage,
   listTenantPackages,
   updateTenantPackage,
 } from './tenant-package'
@@ -51,11 +50,9 @@ import { getCrossDomainOverview } from './overview'
 describe('租户套餐 API', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('列表与详情路径正确', () => {
+  it('列表路径正确', () => {
     listTenantPackages()
-    getTenantPackage('standard')
     expect(request.get).toHaveBeenCalledWith('/api/v2/tenant-packages')
-    expect(request.get).toHaveBeenCalledWith('/api/v2/tenant-packages/standard')
   })
 
   it('更新走无路径参数的 PUT（后端按请求体 packageCode 定位）', () => {

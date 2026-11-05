@@ -2,192 +2,147 @@
  * SSO单点登录配置管理 API
  * ------------------------------------------------------------------
  * 提供SSO提供商管理、会话管理、审计日志、统计信息等功能
- * 
- * 支持的SSO协议:
+ *
+ * 支持的SSO协议(与后端 SsoProtocolType 一致):
  * - SAML 2.0 - 企业级单点登录标准协议
  * - CAS - 中央认证服务协议
  * - LDAP - 轻量级目录访问协议
- * - OAuth2 - 开放授权协议
  * - OIDC - OpenID Connect协议
- * 
+ *
  * 后端接口:
- * - GET/POST/PUT/DELETE /admin-api/v1/sso/providers - SSO提供商管理
+ * - GET/POST/PUT/DELETE /admin-api/v1/sso/providers - SSO提供商管理(列表为裸数组)
  * - POST /admin-api/v1/sso/providers/{id}/test - 测试SSO连接
  * - GET /admin-api/v1/sso/providers/{id}/metadata - 获取SSO元数据
- * - GET/DELETE /admin-api/v1/sso/sessions - SSO会话管理
- * - GET /admin-api/v1/sso/audit-logs - SSO审计日志
- * - GET /admin-api/v1/sso/statistics - SSO统计信息
- * 
- * @author system
- * @date 2024
+ * - GET /admin-api/v1/sso/sessions - SSO会话列表(裸数组)
+ * - POST /admin-api/v1/sso/sessions/{id}/revoke - 撤销单个会话
+ * - POST /admin-api/v1/sso/sessions/users/{userId}/revoke - 撤销用户全部会话
+ * - GET /admin-api/v1/sso/sessions/statistics - SSO会话统计
+ * - GET /admin-api/v1/sso/audit-logs - SSO审计日志(裸数组)
+ *
+ * 权限码: system:sso:provider:list/add/edit/remove/query/test/metadata、
+ * system:sso:session:list/revoke/stat、system:sso:auditlog:list/stat
  */
 import { del, get, post, put } from '@/utils/request'
-import type { PageQuery, PageResponse } from '@/types'
+import type { PageQuery } from '@/types'
+
+/** SSO协议类型(与后端 SsoProtocolType 枚举一致) */
+export type SsoProtocolType = 'SAML' | 'CAS' | 'LDAP' | 'OIDC'
 
 /**
- * SSO提供商配置
+ * SSO提供商配置(与后端 SsoProviderDTO / SsoProviderRequest 一致)
  */
 export interface SSOProvider {
   id?: number
-  /** 提供商标识名称(唯一) */
-  name: string
-  /** SSO类型: SAML/CAS/LDAP/OAUTH2/OIDC */
-  type: 'SAML' | 'CAS' | 'LDAP' | 'OAUTH2' | 'OIDC'
+  /** 提供商名称(租户内唯一) */
+  providerName: string
+  /** 协议类型 */
+  protocolType: SsoProtocolType
   /** 是否启用 */
   enabled: boolean
-  /** 显示名称 */
-  displayName: string
+  /** 认证端点 */
+  authEndpoint?: string
+  /** 登出端点 */
+  logoutEndpoint?: string
+  /** 实体ID(SAML) */
+  entityId?: string
+  /** X.509证书(SAML) */
+  certificate?: string
+  /** 元数据URL(SAML/OIDC 自动配置) */
+  metadataUrl?: string
+  /** 协议扩展配置(JSON字符串) */
+  configJson?: string
   /** 描述信息 */
   description?: string
-  /** 具体配置(根据type不同而不同) */
-  config: Record<string, any>
-  createTime?: string
-  updateTime?: string
+  /** 排序权重 */
+  sortOrder?: number
+  createdAt?: string
+  updatedAt?: string
 }
 
 /**
- * SAML 2.0 配置
- */
-export interface SAMLConfig {
-  /** 实体ID */
-  entityId: string
-  /** 单点登录URL */
-  ssoUrl: string
-  /** 单点登出URL */
-  sloUrl?: string
-  /** X.509证书 */
-  certificate: string
-  /** 名称ID格式 */
-  nameIdFormat?: string
-  /** 是否签名认证请求 */
-  signAuthnRequest?: boolean
-  /** 是否要求断言签名 */
-  wantAssertionsSigned?: boolean
-}
-
-/**
- * CAS协议配置
- */
-export interface CASConfig {
-  /** CAS服务器地址 */
-  serverUrl: string
-  /** 登录URL */
-  loginUrl: string
-  /** 验证URL */
-  validateUrl: string
-  /** 登出URL */
-  logoutUrl?: string
-  /** CAS协议版本 */
-  protocol: 'CAS_1_0' | 'CAS_2_0' | 'CAS_3_0'
-}
-
-/**
- * LDAP目录服务配置
- */
-export interface LDAPConfig {
-  /** LDAP服务器地址 */
-  serverUrl: string
-  /** 基础DN */
-  baseDn: string
-  /** 绑定DN */
-  bindDn: string
-  /** 绑定密码 */
-  bindPassword: string
-  /** 用户过滤器 */
-  userFilter: string
-  /** 用户名属性 */
-  usernameAttribute: string
-  /** 邮箱属性 */
-  emailAttribute?: string
-  /** 显示名属性 */
-  displayNameAttribute?: string
-}
-
-/**
- * OpenID Connect配置
- */
-export interface OIDCConfig {
-  /** 发行者 */
-  issuer: string
-  /** 客户端ID */
-  clientId: string
-  /** 客户端密钥 */
-  clientSecret: string
-  /** 授权端点 */
-  authorizationEndpoint: string
-  /** 令牌端点 */
-  tokenEndpoint: string
-  /** 用户信息端点 */
-  userInfoEndpoint: string
-  /** 授权范围 */
-  scope: string
-  /** 响应类型 */
-  responseType: string
-}
-
-/**
- * SSO会话信息
+ * SSO会话信息(与后端 SsoSessionDTO 一致)
  */
 export interface SSOSession {
   id: number
-  /** 用户ID */
-  userId: number
-  /** 用户名 */
-  username: string
-  /** SSO提供商 */
-  provider: string
-  /** 会话ID */
-  sessionId: string
-  /** IP地址 */
-  ipAddress: string
-  /** 用户代理(浏览器信息) */
-  userAgent?: string
-  /** 登录时间 */
-  loginTime: string
-  /** 最后访问时间 */
-  lastAccessTime: string
-  /** 过期时间 */
-  expiryTime: string
-}
-
-/**
- * SSO审计日志
- */
-export interface SSOAuditLog {
-  id: number
+  providerId?: number
+  /** 提供商名称 */
+  providerName?: string
   /** 用户ID */
   userId?: number
   /** 用户名 */
-  username: string
-  /** SSO提供商 */
-  provider: string
-  /** 操作类型 */
-  action: 'LOGIN' | 'LOGOUT' | 'REFRESH' | 'VALIDATE' | 'ERROR'
-  /** 操作结果 */
-  result: 'SUCCESS' | 'FAILURE'
-  /** IP地址 */
-  ipAddress: string
-  /** 用户代理 */
+  username?: string
+  /** SSO会话令牌 */
+  ssoSessionToken?: string
+  /** 本地会话ID */
+  localSessionId?: string
+  /** 登录IP */
+  loginIp?: string
   userAgent?: string
-  /** 错误信息 */
-  errorMessage?: string
-  /** 创建时间 */
-  createTime: string
+  /** 会话状态: ACTIVE/EXPIRED/LOGOUT */
+  status?: string
+  loginTime?: string
+  expireTime?: string
+  lastActiveTime?: string
+  revokedAt?: string
+  revokedBy?: number
+  revokeReason?: string
 }
 
 /**
- * 获取SSO提供商列表
+ * SSO审计日志(与后端 SsoAuditLogDTO 一致)
  */
-export function listSSOProviders(): Promise<SSOProvider[]> {
-  return get('/admin-api/v1/sso/providers')
+export interface SSOAuditLog {
+  id: number
+  providerId?: number
+  providerName?: string
+  userId?: number
+  username?: string
+  /** 操作类型 */
+  operationType?: string
+  /** 操作结果: SUCCESS/FAILURE */
+  result?: string
+  /** 失败原因 */
+  failureReason?: string
+  /** 操作IP */
+  operatorIp?: string
+  userAgent?: string
+  requestParams?: string
+  responseResult?: string
+  /** 耗时(毫秒) */
+  duration?: number
+  errorStack?: string
+  description?: string
+  createdAt?: string
 }
 
 /**
- * 获取SSO提供商详情
- * @param id 提供商ID
+ * SSO统计信息(与后端 SsoStatisticsDTO 一致)
  */
-export function getSSOProvider(id: number): Promise<SSOProvider> {
-  return get(`/admin-api/v1/sso/providers/${id}`)
+export interface SSOStatistics {
+  activeSessionCount: number
+  todayNewSessionCount: number
+  todayRevokedSessionCount: number
+  todayLoginCount: number
+  todayLoginSuccessCount: number
+  todayLoginFailureCount: number
+  /** 今日登录成功率(百分比) */
+  todayLoginSuccessRate: number
+  todayAvgLoginDuration: number
+  todayMaxLoginDuration: number
+  enabledProviderCount: number
+  totalProviderCount: number
+  mostUsedProviderName?: string
+  mostUsedProviderCount?: number
+}
+
+/**
+ * 获取SSO提供商列表(裸数组,支持按名称筛选)
+ * @param query 分页与筛选参数
+ */
+export function listSSOProviders(
+  query?: PageQuery & { providerName?: string }
+): Promise<SSOProvider[]> {
+  return get('/admin-api/v1/sso/providers', { ...query })
 }
 
 /**
@@ -199,7 +154,7 @@ export function createSSOProvider(data: SSOProvider): Promise<SSOProvider> {
 }
 
 /**
- * 更新SSO提供商
+ * 更新SSO提供商(后端按请求体全量覆盖,须携带完整字段)
  * @param id 提供商ID
  * @param data 提供商配置数据
  */
@@ -224,70 +179,58 @@ export function testSSOConnection(id: number): Promise<{ success: boolean; messa
 }
 
 /**
- * 切换SSO提供商启用状态
- * @param id 提供商ID
- * @param enabled 是否启用
- */
-export function toggleSSOProvider(id: number, enabled: boolean): Promise<void> {
-  return put(`/admin-api/v1/sso/providers/${id}/toggle`, { enabled })
-}
-
-/**
- * 获取SSO元数据(SAML/OIDC等协议的元数据XML或JSON)
+ * 获取SSO元数据(SAML 返回 SP 元数据,OIDC 返回 Discovery 信息,CAS 返回服务配置)
  * @param id 提供商ID
  */
-export function getSSOMetadata(id: number): Promise<string> {
+export function getSSOMetadata(id: number): Promise<unknown> {
   return get(`/admin-api/v1/sso/providers/${id}/metadata`)
 }
 
 /**
- * 获取SSO会话列表
- * @param query 分页查询参数
+ * 获取SSO会话列表(裸数组)
+ * @param query 分页与筛选参数
  */
-export function listSSOSessions(query: PageQuery): Promise<PageResponse<SSOSession>> {
+export function listSSOSessions(
+  query: PageQuery & { userId?: number; providerId?: number; status?: string }
+): Promise<SSOSession[]> {
   return get('/admin-api/v1/sso/sessions', { ...query })
 }
 
 /**
- * 强制终止SSO会话(强制用户下线)
- * @param sessionId 会话ID
+ * 强制终止SSO会话(强制用户下线,后端按数字主键撤销)
+ * @param id 会话主键ID
  */
-export function terminateSSOSession(sessionId: string): Promise<void> {
-  return del(`/admin-api/v1/sso/sessions/${sessionId}`)
+export function terminateSSOSession(id: number): Promise<void> {
+  return post(`/admin-api/v1/sso/sessions/${id}/revoke`)
 }
 
 /**
- * 批量强制终止SSO会话
- * @param sessionIds 会话ID列表
+ * 批量强制终止SSO会话(后端无批量端点,并发调用单条撤销)
+ * @param ids 会话主键ID列表
  */
-export function batchTerminateSSOSessions(sessionIds: string[]): Promise<void> {
-  return post('/admin-api/v1/sso/sessions/batch-terminate', { sessionIds })
+export function batchTerminateSSOSessions(ids: number[]): Promise<void> {
+  return Promise.all(ids.map((id) => terminateSSOSession(id))).then(() => undefined)
 }
 
 /**
- * 获取SSO审计日志列表
- * @param query 查询参数(支持按提供商、操作、结果筛选)
+ * 获取SSO审计日志列表(裸数组)
+ * @param query 分页与筛选参数(时间格式 ISO Date-Time)
  */
 export function listSSOAuditLogs(
-  query: PageQuery & { provider?: string; action?: string; result?: string }
-): Promise<PageResponse<SSOAuditLog>> {
+  query: PageQuery & {
+    providerId?: number
+    userId?: number
+    operationType?: string
+    startTime?: string
+    endTime?: string
+  }
+): Promise<SSOAuditLog[]> {
   return get('/admin-api/v1/sso/audit-logs', { ...query })
 }
 
 /**
- * 获取SSO统计信息
+ * 获取SSO统计信息(会话维度)
  */
-export function getSSOStatistics(): Promise<{
-  /** 提供商总数 */
-  totalProviders: number
-  /** 已启用的提供商数量 */
-  enabledProviders: number
-  /** 当前活跃会话数 */
-  activeSessions: number
-  /** 今日登录次数 */
-  todayLogins: number
-  /** 登录成功率(百分比) */
-  loginSuccessRate: number
-}> {
-  return get('/admin-api/v1/sso/statistics')
+export function getSSOStatistics(): Promise<SSOStatistics> {
+  return get('/admin-api/v1/sso/sessions/statistics')
 }

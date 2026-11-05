@@ -1,8 +1,8 @@
 /**
  * 图表管理 API
  * ------------------------------------------------------------------
- * 提供图表的增删改查、数据查询、状态管理等功能。
- * 
+ * 提供图表的增删改查与数据查询。
+ *
  * 后端接口：
  * - GET /admin-api/v1/charts - 分页查询图表列表
  * - GET /admin-api/v1/charts/{id} - 查询图表详情
@@ -10,7 +10,6 @@
  * - POST /admin-api/v1/charts - 创建图表
  * - PUT /admin-api/v1/charts/{id} - 更新图表
  * - DELETE /admin-api/v1/charts/{id} - 删除图表
- * - PUT /admin-api/v1/charts/{id}/status - 更新图表状态
  */
 import { del, get, post, put } from '@/utils/request'
 import type { Chart, ChartData, PageQuery, PageResponse } from '@/types'
@@ -97,11 +96,3 @@ export function deleteChart(id: string): Promise<void> {
   return del<void>(`/admin-api/v1/charts/${id}`)
 }
 
-/**
- * 更新图表状态
- * @param id 图表ID
- * @param status 状态：0=草稿 1=正常
- */
-export function updateChartStatus(id: string, status: number): Promise<void> {
-  return put<void>(`/admin-api/v1/charts/${id}/status`, { status })
-}

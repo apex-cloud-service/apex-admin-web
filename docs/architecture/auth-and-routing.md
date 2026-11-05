@@ -152,7 +152,7 @@ sequenceDiagram
 
 ## 6. 办公平台接口与独立授权回调（飞书/钉钉/企微）
 
-当前登录页的社交入口实际调用 [src/api/oauth2.ts](../../src/api/oauth2.ts) 并进入 `/oauth2/callback`，不调用办公平台状态或登录接口。办公平台能力由 [src/api/office-new.ts](../../src/api/office-new.ts) 提供，`/office/callback` 是独立的公开回调入口；是否由外部系统或其他页面触发，需结合目标部署和调用方核验。
+当前登录页的社交入口实际调用 [src/api/oauth2.ts](../../src/api/oauth2.ts) 并进入 `/oauth2/callback`，不调用办公平台状态或登录接口。办公平台能力由 [src/api/office-platform.ts](../../src/api/office-platform.ts) 提供，`/office/callback` 是独立的公开回调入口；是否由外部系统或其他页面触发，需结合目标部署和调用方核验。
 
 ```mermaid
 sequenceDiagram
@@ -176,7 +176,7 @@ sequenceDiagram
     Note over OI,B: /office/callback 由独立公开回调页承接，<br/>不属于当前登录页社交入口链路
 ```
 
-绑定审批流转（管理员侧）仍是办公平台管理流程：绑定申请 `PENDING → APPROVED / REJECTED`，见 [office-new.ts](../../src/api/office-new.ts) `reviewBinding()` 与 [绑定管理页](../../src/views/office/bindings/index.vue)。
+绑定审批流转（管理员侧）仍是办公平台管理流程：绑定申请 `PENDING → APPROVED / REJECTED`，见 [office-platform.ts](../../src/api/office-platform.ts) `reviewBinding()` 与 [绑定管理页](../../src/views/office/bindings/index.vue)。
 
 ## 7. 菜单驱动动态路由
 

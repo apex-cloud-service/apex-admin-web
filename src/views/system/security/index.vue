@@ -1,10 +1,13 @@
 <!--
-  账号安全（MFA 与 IP 访问控制）
+  账号安全（MFA、IP 访问控制与认证审计）
   ------------------------------------------------------------------
-  两个 Tab：
+  三个 Tab：
   - 多因素认证：查看我的 MFA 配置、启用 TOTP（二维码+密钥）、短信/邮箱 MFA、备用码、关闭
   - IP 访问控制：白名单/黑名单管理（新增/删除/启停/清理过期/放行检查）
-  契约要点：MFA 配置与 IP 规则列表均为裸数组；IP 写操作参数走 query string。
+  - 认证审计：认证中心 /api/v1/auth/audit-logs 事件查询（失败/高风险/类型/IP/时间范围，
+    裸数组无分页、前端截断展示）与历史清理（后端要求管理员角色）
+  契约要点：MFA 配置与 IP 规则列表均为裸数组；IP 写操作参数走 query string；
+  审计端点 tenantId 必填（取会话记录值）。
 -->
 <template>
   <el-card shadow="never">
@@ -113,6 +116,73 @@
           </el-table-column>
         </el-table>
       </el-tab-pane>
+
+      <!-- 认证审计（认证中心 /api/v1/auth/audit-logs，裸数组无分页，前端截断展示） -->
+      <el-tab-pane label="认证审计" name="auth-audit">
+        <el-form :inline="true" @submit.prevent>
+          <el-form-item label="事件类型">
+            <el-select v-model="auditQuery.eventType" placeholder="全部" clearable style="width: 180px">
+              <el-option v-for="item in AUTH_EVENT_TYPES" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="IP">
+            <el-input v-model="auditQuery.ipAddress" placeholder="按 IP 查询" clearable style="width: 160px" />
+          </el-form-item>
+          <el-form-item label="时间范围">
+            <el-date-picker
+              v-model="auditDateRange"
+              type="datetimerange"
+              value-format="YYYY-MM-DDTHH:mm:ss"
+              start-placeholder="起始"
+              end-placeholder="结束"
+              style="width: 340px"
+            />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="searchAuthAudit">查询</el-button>
+            <el-button @click="loadFailedAudit">失败事件</el-button>
+            <el-button type="warning" @click="loadHighRiskAudit">高风险</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-alert
+          v-if="auditTruncated"
+          title="结果较多，仅展示前 200 条"
+          type="info"
+          :closable="false"
+          style="margin-bottom: 8px"
+        />
+        <el-table v-loading="auditLoading" :data="auditLogs" border stripe>
+          <el-table-column prop="eventTime" label="事件时间" width="170" />
+          <el-table-column prop="username" label="用户" width="120" />
+          <el-table-column label="事件" width="160">
+            <template #default="{ row }">
+              <el-tag size="small">{{ row.eventType }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="110">
+            <template #default="{ row }">
+              <el-tag :type="row.eventStatus === 'SUCCESS' ? 'success' : 'danger'" size="small">
+                {{ row.eventStatus === 'SUCCESS' ? '成功' : row.eventStatus === 'PARTIAL_SUCCESS' ? '部分成功' : '失败' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="风险" width="110">
+            <template #default="{ row }">
+              <el-tag :type="AUDIT_RISK_TAG[row.riskLevel || ''] || 'info'" size="small">
+                {{ row.riskLevel || '-' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="ipAddress" label="IP" width="140" />
+          <el-table-column prop="action" label="操作" min-width="150" show-overflow-tooltip />
+          <el-table-column prop="failureReason" label="失败原因" min-width="150" show-overflow-tooltip />
+        </el-table>
+
+        <div class="audit-footer">
+          <el-button type="danger" plain @click="handleCleanupAudit">清理历史日志（管理员）</el-button>
+        </div>
+      </el-tab-pane>
     </el-tabs>
 
     <!-- TOTP 初始化 -->
@@ -216,6 +286,32 @@
         <el-button type="primary" :loading="saving" @click="submitCheck">检查</el-button>
       </template>
     </el-dialog>
+
+    <!-- 审计日志清理 -->
+    <el-dialog v-model="cleanupVisible" title="清理历史审计日志" width="460px">
+      <el-alert
+        title="删除所选时间之前的全部认证审计日志，操作不可恢复"
+        type="warning"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 12px"
+      />
+      <el-form label-width="90px">
+        <el-form-item label="截止时间">
+          <el-date-picker
+            v-model="cleanupBefore"
+            type="datetime"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            placeholder="删除该时间之前的日志"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="cleanupVisible = false">取消</el-button>
+        <el-button type="danger" :loading="saving" @click="submitCleanupAudit">清理</el-button>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
@@ -249,6 +345,16 @@ import {
   toggleIpRule,
   type IpRuleType,
 } from '@/api/ip-access-control'
+import {
+  cleanupAuthLogs,
+  listAuthEventsByIp,
+  listAuthEventsByTimeRange,
+  listAuthEventsByType,
+  listFailedAuthEvents,
+  listHighRiskAuthEvents,
+  type AuthAuditLog,
+} from '@/api/auth-audit'
+import { getTenantId } from '@/utils/auth'
 import type { IpAccessRule, MfaConfigInfo, TotpSetupInfo } from '@/types'
 
 const activeTab = ref('mfa')
@@ -510,6 +616,131 @@ async function submitCheck(): Promise<void> {
 /** Tab 切换按需加载 */
 function handleTabChange(tab: string | number): void {
   if (tab === 'ip' && whitelist.value.length === 0 && blacklist.value.length === 0) loadIpRules()
+  if (tab === 'auth-audit' && auditLogs.value.length === 0) loadFailedAudit()
+}
+
+// ==================== 认证审计（认证中心） ====================
+/** 认证事件类型选项（与后端 allowableValues 一致） */
+const AUTH_EVENT_TYPES = [
+  { value: 'LOGIN', label: '登录' },
+  { value: 'LOGOUT', label: '登出' },
+  { value: 'TOKEN_ISSUED', label: '令牌签发' },
+  { value: 'TOKEN_REFRESHED', label: '令牌刷新' },
+  { value: 'TOKEN_REVOKED', label: '令牌撤销' },
+  { value: 'PERMISSION_CHANGED', label: '权限变更' },
+  { value: 'ROLE_ASSIGNED', label: '角色分配' },
+  { value: 'SESSION_TERMINATED', label: '会话终止' },
+] as const
+
+/** 风险等级标签颜色 */
+const AUDIT_RISK_TAG: Record<string, string> = {
+  LOW: 'info',
+  MEDIUM: 'warning',
+  HIGH: 'danger',
+  CRITICAL: 'danger',
+}
+
+/** 审计结果前端截断上限（后端全量返回、无分页） */
+const AUDIT_LIMIT = 200
+
+const auditLoading = ref(false)
+const auditLogs = ref<AuthAuditLog[]>([])
+const auditTruncated = ref(false)
+const auditDateRange = ref<[string, string] | null>(null)
+const auditQuery = reactive<{ eventType?: string; ipAddress?: string }>({})
+const cleanupVisible = ref(false)
+const cleanupBefore = ref('')
+
+/** 获取当前租户 ID（审计端点必填） */
+function requireTenantId(): string | null {
+  const tenantId = getTenantId()
+  if (!tenantId) {
+    ElMessage.warning('当前会话未记录租户 ID，无法查询认证审计')
+    return null
+  }
+  return tenantId
+}
+
+/** 执行一次审计查询并回填（统一截断） */
+async function runAudit(loader: () => Promise<AuthAuditLog[]>): Promise<void> {
+  auditLoading.value = true
+  try {
+    const list = (await loader()) || []
+    auditTruncated.value = list.length > AUDIT_LIMIT
+    auditLogs.value = list.slice(0, AUDIT_LIMIT)
+  } catch (error) {
+    showError(error, '查询认证审计失败')
+  } finally {
+    auditLoading.value = false
+  }
+}
+
+/** 失败事件快捷查询 */
+function loadFailedAudit(): void {
+  const tenantId = requireTenantId()
+  if (!tenantId) return
+  runAudit(() => listFailedAuthEvents(tenantId))
+}
+
+/** 高风险事件快捷查询 */
+function loadHighRiskAudit(): void {
+  const tenantId = requireTenantId()
+  if (!tenantId) return
+  runAudit(() => listHighRiskAuthEvents(tenantId))
+}
+
+/** 按筛选条件查询（事件类型 / IP / 时间范围三选一，优先级 类型 > IP > 时间范围） */
+function searchAuthAudit(): void {
+  const tenantId = requireTenantId()
+  if (!tenantId) return
+  if (auditQuery.eventType) {
+    runAudit(() => listAuthEventsByType(auditQuery.eventType!, tenantId))
+    return
+  }
+  if (auditQuery.ipAddress?.trim()) {
+    runAudit(() => listAuthEventsByIp(auditQuery.ipAddress!.trim(), tenantId))
+    return
+  }
+  if (auditDateRange.value) {
+    runAudit(() =>
+      listAuthEventsByTimeRange({
+        tenantId,
+        startTime: auditDateRange.value![0],
+        endTime: auditDateRange.value![1],
+      }),
+    )
+    return
+  }
+  loadFailedAudit()
+}
+
+/** 打开清理对话框 */
+function handleCleanupAudit(): void {
+  cleanupBefore.value = ''
+  cleanupVisible.value = true
+}
+
+/** 提交清理（危险操作，后端要求管理员角色） */
+async function submitCleanupAudit(): Promise<void> {
+  if (!cleanupBefore.value) {
+    ElMessage.warning('请选择清理截止时间')
+    return
+  }
+  try {
+    await ElMessageBox.confirm('确认清理该时间之前的全部审计日志？删除后不可恢复。', '危险操作确认', {
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    const count = await cleanupAuthLogs(cleanupBefore.value)
+    ElMessage.success(`已清理 ${count ?? 0} 条日志`)
+    cleanupVisible.value = false
+    loadFailedAudit()
+  } catch (error) {
+    showError(error, '清理审计日志失败')
+  }
 }
 
 onMounted(loadMfaConfigs)
@@ -541,5 +772,11 @@ onMounted(loadMfaConfigs)
 
 .backup-code {
   font-family: 'Courier New', monospace;
+}
+
+.audit-footer {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

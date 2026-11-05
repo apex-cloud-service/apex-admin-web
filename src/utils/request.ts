@@ -139,9 +139,14 @@ export function get<T = unknown>(url: string, params?: Record<string, unknown>):
  * POST 请求快捷方法。
  * @param url 请求地址
  * @param data 请求体
+ * @param config 附加 Axios 配置（如自定义 headers）
  */
-export function post<T = unknown>(url: string, data?: unknown): Promise<T> {
-  return request<T>({ method: 'POST', url, data })
+export function post<T = unknown>(
+  url: string,
+  data?: unknown,
+  config?: Pick<AxiosRequestConfig, 'headers' | 'timeout' | 'signal'>,
+): Promise<T> {
+  return request<T>({ method: 'POST', url, data, ...config })
 }
 
 /**

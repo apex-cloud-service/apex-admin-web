@@ -1227,6 +1227,12 @@ export interface CapabilityUsage {
   tenantId: string
   capability: string
   callCount: number
+  /** 已用存储字节数（仅 file-storage，单租户查询填充，降级为 null） */
+  storageUsageBytes?: number | null
+  /** 设备总数（仅 iot-device，单租户查询填充，降级为 null） */
+  deviceCount?: number | null
+  /** 站内信总量（仅 office-message，单租户查询填充，降级为 null） */
+  messageCount?: number | null
 }
 
 /* ==================== 开放平台应用（/api/v1/open-apps，D2） ==================== */
@@ -1246,6 +1252,8 @@ export interface OpenApp {
   createdAt?: string
   /** 客户端密钥明文，仅创建/重置响应返回一次 */
   clientSecret?: string
+  /** 主体用户ID，必须为同租户的启用用户；文件/工作流开放写必填 */
+  subjectUserId?: number
 }
 
 /** 开放应用创建/更新请求（后端 OpenAppRequest） */
@@ -1259,6 +1267,40 @@ export interface OpenAppPayload {
   rateLimitTier?: string
   contact?: string
   status?: string
+  /** 主体用户ID，必须为同租户的启用用户；文件/工作流开放写必填 */
+  subjectUserId?: number
+}
+
+/** 开放应用迁移注册条目（后端 OpenAppRegistrationRequest，secret 为哈希） */
+export interface OpenAppRegistrationPayload {
+  clientId: string
+  /** 客户端密钥（迁移场景传哈希占位，明文密钥不由本接口上行） */
+  clientSecret?: string
+  appName?: string
+  description?: string
+  redirectUris?: string[]
+  scopes?: string[]
+  rateLimitTier?: string
+  contact?: string
+  enabled?: boolean
+  subjectUserId?: number
+  subjectValidated?: boolean
+}
+
+/** 开放应用迁移导入条目（后端 OpenAppImportRequest） */
+export interface OpenAppImportItem {
+  registration: OpenAppRegistrationPayload
+  importId: string
+  sourceFingerprint?: string
+  hashAlgorithm?: string
+  secretHash?: string
+}
+
+/** 开放应用迁移导入汇总（后端 Summary，失败项只含异常类型名） */
+export interface OpenAppMigrationSummary {
+  total: number
+  succeeded: number
+  failures: Array<{ importId: string; success: boolean; error: string }>
 }
 
 /** 开放 scope 目录条目（后端 /api/v1/open-apps/scopes，与创建校验同源注册表） */

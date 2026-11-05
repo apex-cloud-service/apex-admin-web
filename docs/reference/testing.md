@@ -37,7 +37,7 @@ npx vitest run src/utils/__tests__/request.spec.ts   # 指定文件
 | `src/utils/__tests__/auth-config.spec.ts` | 6 | 认证配置 API 契约：权限筛选/分页参数、写接口路径、掩码密钥不回写、PKCE 不可关闭 |
 | `src/utils/__tests__/auth.spec.ts` | 4 | 会话存取：token/refreshToken/identity 读写与 `clearSession` 清理 |
 | `src/utils/__tests__/validate.spec.ts` | 4 | `validateEmail` / `validatePhone` 校验行为与中文错误信息 |
-| `src/api/office-new.test.ts` | 4 | 办公平台 API 契约：应用更新乐观锁 version 随 body 回传；解绑 version 走 query；绑定分页 platform/status/分页参数 |
+| `src/api/office-platform.test.ts` | 4 | 办公平台基础设施 API 契约：应用更新乐观锁 version 随 body 回传；解绑 version 走 query；绑定分页 platform/status/分页参数 |
 | `src/api/message.test.ts` | 8 | 站内信接口契约：收件箱/已发送返回纯数组、分页参数、标记已读路径；消息模板管理（创建/更新/删除路径） |
 | `src/api/workflow.test.ts` | 1 | 工作流实例详情路由契约（`/admin-api/v1/workflows/instances/{id}`） |
 | `src/api/generator.test.ts` | 5 | 生成器 API 契约：基础端点调用、同步向导模板/预检/预览、异步任务契约 |
@@ -46,7 +46,7 @@ npx vitest run src/utils/__tests__/request.spec.ts   # 指定文件
 
 ### 4.1 文件与命名
 
-- 位置：与被测代码就近；工具类集中在 `src/utils/__tests__/`，业务 API 直接与被测模块同目录（如 `src/api/office-new.test.ts`）；
+- 位置：与被测代码就近；工具类集中在 `src/utils/__tests__/`，业务 API 直接与被测模块同目录（如 `src/api/office-platform.test.ts`）；
 - 命名：`{被测模块}.spec.ts` 或 `{被测模块}.test.ts`（Vitest 默认同时匹配 `*.spec.*` 与 `*.test.*`）；
 - 禁止依赖后端服务：网络请求一律 mock，通常 `vi.mock('@/utils/request')`。
 

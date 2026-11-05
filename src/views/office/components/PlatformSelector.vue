@@ -39,7 +39,7 @@
  * - 受控组件：选中值由父组件通过 modelValue 传入，选择后回传更新
  */
 import { computed } from 'vue'
-import { PLATFORM_NAMES, type OfficePlatform } from '@/api/office-new'
+import { PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
 
 /** 组件入参定义 */
 interface Props {

@@ -3,7 +3,6 @@
  * ------------------------------------------------------------------
  * 后端接口（apex-system PlatformTenantRouter，前缀 /api/v2/platform/tenants）：
  * - GET  /                          - 租户分页（pageNum/pageSize 必填，tenantCode/tenantName 模糊、status 精确）
- * - GET  /{id}                      - 租户详情
  * - POST /                          - 创建租户（租户编码全局唯一，创建后不可变更）
  * - POST /{id}/actions              - 生命周期动作（disable/enable/freeze/unfreeze/deactivate/archive）
  * - PUT  /{id}/quota                - 调整配额（null 表示不限制）
@@ -37,14 +36,6 @@ export interface TenantQuery {
  */
 export function listTenants(query: TenantQuery): Promise<PageResponse<TenantInfo>> {
   return get<PageResponse<TenantInfo>>('/api/v2/platform/tenants', query as unknown as Record<string, unknown>)
-}
-
-/**
- * 查询租户详情
- * @param id 租户 ID
- */
-export function getTenant(id: number): Promise<TenantInfo> {
-  return get<TenantInfo>(`/api/v2/platform/tenants/${id}`)
 }
 
 /**

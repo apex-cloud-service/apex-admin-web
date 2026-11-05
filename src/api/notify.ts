@@ -4,7 +4,6 @@
  * 后端接口（apex-office-service OfficeNotifyRouter，前缀 /api/v2/office/notify）：
  * - GET    /templates                - 模板分页（channel/keyword 过滤，pageNum/pageSize）
  * - POST   /templates                - 创建模板
- * - GET    /templates/{templateId}   - 模板详情
  * - PUT    /templates/{templateId}   - 更新模板
  * - DELETE /templates/{templateId}   - 删除模板
  * - GET    /requests                 - 投递留痕分页（channel/templateCode/status 过滤）
@@ -67,14 +66,6 @@ export function listNotifyTemplates(query: NotifyTemplateQuery): Promise<PageRes
     '/api/v2/office/notify/templates',
     query as unknown as Record<string, unknown>,
   )
-}
-
-/**
- * 查询通知模板详情
- * @param templateId 模板 ID
- */
-export function getNotifyTemplate(templateId: number): Promise<NotifyTemplate> {
-  return get<NotifyTemplate>(`/api/v2/office/notify/templates/${templateId}`)
 }
 
 /**

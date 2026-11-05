@@ -40,12 +40,12 @@
 | 统一通知 | `api/notify.ts`、`views/office/notify/` | `/api/v2/office/notify/templates`（pageNum/pageSize）与 `/requests` 留痕；按模板投递走内部端点 `POST /internal/v1/notify`，管理端无发送入口 |
 | 数据总览 | `api/overview.ts`、`views/dashboard/index.vue` | D5 聚合 `GET /api/v2/overview`（租户取可信上下文、权限码 `system:monitor:view`）；单源降级返回 `sources.{file,workflow,integration}.status=DEGRADED`；内部端点 `/internal/v1/overview` 网关 403，浏览器不可直连 |
 | 在线会话 | `api/session.ts`、`views/monitor/session.vue` | `/auth/v1/sessions/**`：`online` 为**裸数组不分页**；单会话终止按 `sessionId`（会话唯一标识），详情按数字主键；全部端点要求管理员角色 |
-| 账号安全 | `api/mfa.ts`、`api/ip-access-control.ts`、`views/system/security/` | MFA configs 与 IP 规则列表均为裸数组；IP 写操作走 query 参数（非 body） |
+| 账号安全 | `api/mfa.ts`、`api/ip-access-control.ts`、`api/auth-audit.ts`、`views/system/security/`、`views/system/role/` | MFA configs 与 IP 规则列表均为裸数组；IP 写操作走 query 参数（非 body）；认证审计（security 页第三 Tab）tenantId 必填、裸数组无分页、前端截断 200 条，清理需管理员角色；角色页权限 Tab 按钮挂 `system:permission:*`（V88） |
 | 登录 MFA | `views/login/index.vue`、`stores/user.ts`、`api/auth.ts` | 登录响应 `mfaRequired=true` 时不签发令牌，须用 `challengeToken` 调 `POST /auth/v1/mfa/verify` 换取正式令牌（挑战一次性消费） |
 | 授权同意 | `views/oauth2/consent.vue`、`api/oauth2.ts` | `POST /oauth2/consent`（form-urlencoded：client_id/scope/decision）；按方案 §12.3 登记 **public 匿名页**——页面可匿名打开，同意提交须登录（后端要求认证主体），未登录先登录后回跳 |
 | 运维健康 | `api/operations.ts`、`views/monitor/operations/` | 前端封装 health-report、snapshots、trend、租户摘要和导出相关子路径；快照分页为 page/size；页面含报告/快照/趋势/导出/租户摘要五个页签；未封装根路径与导出任务列表，端点是否存在需以目标后端契约为准 |
-| 办公平台 | `api/office.ts`、`api/office-new.ts`、`views/office/` | 业务接口与配置绑定接口分离、version、组织同步与部门 CRUD；绑定列表双接口并存（数组口径 / `/bindings/page` 真实分页） |
-| 文件上传 | `api/file.ts`、两个上传组件 | Element Plus/XHR 路径不经过 Axios 拦截器 |
+| 办公平台 | `api/office-platform.ts`、`api/office-{approval,calendar,document}.ts`、`views/office/` | 平台标识与 `PLATFORM_NAMES` 唯一定义在 office-platform；业务接口按子域拆分、version、组织同步与部门 CRUD；绑定列表双接口并存（数组口径 / `/bindings/page` 真实分页） |
+| 文件上传 | `api/file.ts`、两个上传组件 | Element Plus/XHR 路径不经过 Axios 拦截器；增强组件 `enableChunk` 开启时超限文件走分片上传（`/api/v1/file/chunk/**`，upload 为原始字节流、参数走 query） |
 | 部署 | `vite.config.ts`、`Dockerfile`、`docker/nginx.conf` | 构建期变量与运行期反代变量 |
 
 ## 2. 项目结构与业务边界
@@ -87,12 +87,12 @@ src/
 | 物联网 | `iot.ts` | 设备分页/注册/注销/遥测历史、规则创建/详情/启停（`/integration/v1/iot`） |
 | 统一通知 | `notify.ts` | 通知模板 CRUD 与投递留痕（`/api/v2/office/notify`） |
 | 在线会话 | `session.ts` | 在线列表/统计、用户会话查询与批量下线、单会话终止（`/auth/v1/sessions`） |
-| 账号安全 | `mfa.ts`、`ip-access-control.ts` | MFA 配置与 IP 白/黑名单（`/api/mfa`、`/api/ip-access-control`） |
+| 账号安全 | `mfa.ts`、`ip-access-control.ts`、`auth-audit.ts` | MFA 配置与 IP 白/黑名单（`/api/mfa`、`/api/ip-access-control`）；认证中心审计事件查询与清理（`/api/v1/auth/audit-logs/**`） |
 | 运维健康 | `operations.ts` | `/api/v2/operations/*` 报告/快照/趋势/租户摘要/导出 |
 | 站内信 | `message.ts` | 收件箱/已发送/发送/未读数、WebSocket 推送与消息模板管理（`/api/v1/messages`、`/admin-api/v1/message-templates`）；游标增量收件箱（`/inbox/cursor`）与渠道投递记录（`/{id}/deliveries`，已发送页抽屉） |
-| 办公平台 | `office.ts`、`office-new.ts`、`office-sync-wizard.ts`、`meeting-room.ts` | 业务接口与配置绑定接口分离、version、组织同步（部门 CRUD/员工/同步历史/触发同步/映射）、同步向导（预检/预览/执行/重试）、会议室；绑定查询有 `/bindings`（数组）与 `/bindings/page`（真实分页 + status 过滤）两套 |
+| 办公平台 | `office-platform.ts`、`office-approval.ts`、`office-calendar.ts`、`office-document.ts`、`office-sync-wizard.ts`、`meeting-room.ts` | 业务接口按子域拆分、version、组织同步（部门 CRUD/员工/同步历史/触发同步/映射）、同步向导（预检/预览/执行/重试）、会议室；绑定查询有 `/bindings`（数组）与 `/bindings/page`（真实分页 + status 过滤）两套 |
 | 数据脱敏 | `masking.ts` | 规则只读查询与批量脱敏试算（`/api/v1/masking`） |
-| 文件与搜索 | `file.ts`、`search.ts` | 文件接口、上传组件、顶栏全文搜索与索引重建 |
+| 文件与搜索 | `file.ts`、`search.ts` | 文件接口（含分片上传）、上传组件、顶栏全文搜索与索引重建 |
 
 后端路径按现有 API 区分：`/api/v1/**` 为认证、用户、文件、站内信和办公平台接入等接口；`/api/v2/**` 为租户管理、租户套餐、能力运营、工作流定义、运维健康、文件分享与办公会议室/同步向导/统一通知；`/admin-api/v1/**` 为管理接口；`/integration/v1/**` 为集成中心与物联网管理接口（`/internal/v1/**` 为其集群内部端点，网关强制拒绝外部访问）；`/auth/v1/sessions/**` 为认证中心会话管理；`/api/workflow/**` 为工作流高级操作；`/api/office/**` 为办公业务接口；`/api/mfa/**` 与 `/api/ip-access-control/**` 为认证中心安全能力；标准 OAuth2 使用 `/oauth2/authorize`、`/oauth2/token`、`/oauth2/consent`。本仓库可确认前端调用路径，目标环境网关是否暴露这些路径需外部核验。
 
@@ -414,7 +414,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    CAP[office-new.ts 定义平台状态与登录 API；当前登录页未调用]
+    CAP[office-platform.ts 定义授权回调 API；当前登录页未调用]
     CAP -.接口能力.-> STATUS[GET /api/v1/office/status]
     CAP -.接口能力.-> URL[GET /api/v1/office/login：platform]
     URL -.返回授权地址；跳转需调用方接入.-> PLATFORM[平台授权]
@@ -445,7 +445,7 @@ sequenceDiagram
     autonumber
     actor A as 管理员
     participant V as bindings 页面
-    participant API as office-new.ts / request.ts
+    participant API as office-platform.ts / request.ts
     participant B as 后端
     A->>V: 选择平台（必选）与状态并查询
     V->>API: listBindingsPage(platform, status?, page, size)
@@ -465,7 +465,7 @@ sequenceDiagram
     Note over V,B: 解绑（APPROVED）使用 DELETE /bindings/{id}/unbind?version={version}
 ```
 
-`office.ts` 负责办公业务，`office-new.ts` 负责平台状态、登录、应用配置和绑定。绑定审批页（`views/office/bindings/index.vue`）已使用 `listBindingsPage`（`GET /admin-api/v1/office/bindings/page`），具备真实 `total` 与 `status`（PENDING/APPROVED/REJECTED/REVOKED）服务端过滤，platform 为必选条件。`views/office/console/index.vue` 仍使用数组口径的 `listBindings`（`GET /admin-api/v1/office/bindings`，返回数组，调用时固定 `page=1,size=100`）。审批与解绑均携带 `version` 乐观锁，冲突由后端拒绝。
+`office-platform.ts` 负责平台标识、授权回调、应用配置、绑定审批与组织同步；审批/日历/文档业务分别在 `office-approval.ts`、`office-calendar.ts`、`office-document.ts`。绑定审批页（`views/office/bindings/index.vue`）已使用 `listBindingsPage`（`GET /admin-api/v1/office/bindings/page`），具备真实 `total` 与 `status`（PENDING/APPROVED/REJECTED/REVOKED）服务端过滤，platform 为必选条件。`views/office/console/index.vue` 仍使用数组口径的 `listBindings`（`GET /admin-api/v1/office/bindings`，返回数组，调用时固定 `page=1,size=100`）。审批与解绑均携带 `version` 乐观锁，冲突由后端拒绝。
 
 ## 7. 常规业务、工作流与上传
 
@@ -613,7 +613,7 @@ flowchart TD
 
 当前 package.json 没有 lint 或独立 typecheck 脚本；类型检查使用上述 vue-tsc 或 build 命令。不得记录不存在的 `npm run lint`。Vitest 使用 happy-dom 和 `src/test/setup.ts`，覆盖率配置没有阈值；Playwright 已安装但尚无配置及 E2E 用例，不应宣称已有浏览器端自动化覆盖。
 
-请求刷新测试覆盖认证端点排除、单次重放、并发单飞及重放错误保留；另有 OAuth2 PKCE/state、认证配置 API 和校验工具测试。API 层还有 `api/message.test.ts`、`api/workflow.test.ts`、`api/office-new.test.ts`，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status）。DOM 模拟测试不能替代真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证。
+请求刷新测试覆盖认证端点排除、单次重放、并发单飞及重放错误保留；另有 OAuth2 PKCE/state、认证配置 API 和校验工具测试。API 层还有 `api/message.test.ts`、`api/workflow.test.ts`、`api/office-platform.test.ts`，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status）。DOM 模拟测试不能替代真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证。
 
 `VITE_API_PROXY_TARGET` 用于开发代理；`VITE_API_BASE_URL` 用于 Axios baseURL；OAuth2 客户端相关变量参照 `.env.example` 和 `env.d.ts`。不输出真实环境文件中的密钥，不把构建期与运行期配置混为一谈。
 
@@ -653,6 +653,8 @@ flowchart TD
 | 组织部门保存后无 ID 或层级为空 | createDepartment 返回体不含生成 id（须刷新列表）、deptLevel/deptPath 后端照抄不计算（前端推导） |
 | 组织同步页无数据 | `/admin-api/v1/org/**` 与 `/api/v1/office/organization/**` 契约、同步任务为 page/size 且返回数组 |
 | 办公绑定分页/筛选不符合预期 | 审批页走 `/bindings/page`（真实 total + status 过滤，platform 必选）；console 页为数组口径 `listBindings`（固定 page=1,size=100）；version 乐观锁冲突 |
+| 办公文档列表为空或创建失败 | 文档列表数据源为 `GET /api/office/documents/my?ownerId=`（裸数组，平台/类型/关键词筛选与分页在前端完成）；创建须携带 ownerId/ownerName 且 platform 为小写（feishu/dingtalk/wecom），documentType 仅 DOC/SHEET/SLIDE/MINDMAP/FOLDER/FILE；后端无文档更新与分享端点，复制/移动的 targetFolderId 走 query 参数 |
+| SSO 页面操作 403/404 | 提供商与页面的启用切换走整体 `PUT /providers/{id}`（后端全量覆盖，须携带完整字段）；会话撤销为 `POST /sessions/{id}/revoke`（按数字主键，批量前端并发）；会话/审计列表均为裸数组；统计走 `GET /sessions/statistics`；页面权限码为 `system:sso:provider:*`、`system:sso:session:*`、`system:sso:auditlog:*` |
 | OAuth2 回调失败 | sessionStorage 上下文、state 一次性消费、redirect_uri、PKCE、token 代理 |
 | 授权同意提交 401 | consent 页为 public 匿名页，但同意提交须登录主体（后端要求认证）；未登录时页面先跳登录并携带本页地址回跳 |
 | 授权重试不生效 | 重试 authorize 要求 redirect_uri 与 PKCE（code_challenge/code_challenge_method=S256）齐全，缺失时页面提示从客户端重新发起 |

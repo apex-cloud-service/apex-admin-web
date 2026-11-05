@@ -86,7 +86,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Connection, ChatDotRound, Checked, Calendar } from '@element-plus/icons-vue'
-import { listApps, listBindings, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-new'
+import { listApps, listBindings, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
 
 /** ========== 状态定义 ========== */
 

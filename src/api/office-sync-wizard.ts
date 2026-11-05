@@ -1,10 +1,10 @@
 /**
  * 办公组织同步向导 API（/api/v2/office/sync）
  * ------------------------------------------------------------------
- * 预检 → 预览 → 执行 → 任务查询/重试；任务列表使用 page/size 且返回数组。
+ * 预检 → 预览 → 执行与任务重试；任务分页查询由组织同步接口承担。
  */
-import { get, post } from '@/utils/request'
-import type { OrgSyncRequest, OrgSyncResult, OrgSyncTask } from '@/types'
+import { post } from '@/utils/request'
+import type { OrgSyncRequest, OrgSyncResult } from '@/types'
 
 /** 预检结果 */
 export interface SyncPreflightResult {
@@ -33,16 +33,6 @@ export function previewOrgSync(platform: string, syncType: 'DEPARTMENT' | 'MEMBE
 /** 执行组织同步（创建同步任务） */
 export function executeOrgSync(payload: OrgSyncRequest): Promise<OrgSyncResult> {
   return post<OrgSyncResult>('/api/v2/office/sync/tasks', payload)
-}
-
-/** 分页查询同步任务列表（page/size，返回数组） */
-export function listWizardSyncTasks(params: { platform?: string; page: number; size: number }): Promise<OrgSyncTask[]> {
-  return get<OrgSyncTask[]>('/api/v2/office/sync/tasks', params)
-}
-
-/** 查询同步任务详情 */
-export function getWizardSyncTask(taskId: number): Promise<OrgSyncTask> {
-  return get<OrgSyncTask>(`/api/v2/office/sync/tasks/${taskId}`)
 }
 
 /** 重试同步任务 */

@@ -5,6 +5,13 @@
   - 组织数据：同步部门与员工列表（员工可按部门过滤）
   - 同步历史：每次同步的执行记录（来源/状态/耗时/数量）
   - 同步操作：按平台触发部门或成员同步，跟踪同步任务与平台映射
+
+  权限要求：
+  - office:organization:dept - 部门新增/编辑/删除
+  - office:organization:user - 查看员工详情
+  - office:organization:sync - 触发组织同步
+  - office:sync:read - 同步向导预检与预览
+  - office:sync:execute - 执行同步与重试失败任务
 -->
 <template>
   <div class="organization-container">
@@ -30,7 +37,7 @@
               <el-option label="正常" value="ACTIVE" />
               <el-option label="停用" value="INACTIVE" />
             </el-select>
-            <el-button type="primary" @click="openDeptDialog()">新增部门</el-button>
+            <el-button type="primary" @click="openDeptDialog()" v-permission="'office:organization:dept'">新增部门</el-button>
           </div>
           <el-table
             v-loading="deptLoading"
@@ -51,8 +58,8 @@
             <el-table-column prop="externalId" label="平台侧ID" min-width="140" show-overflow-tooltip />
             <el-table-column label="操作" width="140" fixed="right">
               <template #default="{ row }">
-                <el-button link type="primary" @click.stop="openDeptDialog(row)">编辑</el-button>
-                <el-button link type="danger" @click.stop="handleDeleteDept(row)">删除</el-button>
+                <el-button link type="primary" @click.stop="openDeptDialog(row)" v-permission="'office:organization:dept'">编辑</el-button>
+                <el-button link type="danger" @click.stop="handleDeleteDept(row)" v-permission="'office:organization:dept'">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -91,7 +98,7 @@
             </el-table-column>
             <el-table-column label="操作" width="90" fixed="right">
               <template #default="{ row }">
-                <el-button link type="primary" @click="showEmployeeDetail(row)">详情</el-button>
+                <el-button link type="primary" @click="showEmployeeDetail(row)" v-permission="'office:organization:user'">详情</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -166,7 +173,7 @@
               <el-switch v-model="syncForm.fullSync" />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" :loading="syncing" @click="handleTriggerSync">
+              <el-button type="primary" :loading="syncing" v-permission="'office:organization:sync'" @click="handleTriggerSync">
                 触发同步
               </el-button>
             </el-form-item>
@@ -186,9 +193,9 @@
               </el-radio-group>
             </el-form-item>
             <el-form-item>
-              <el-button :loading="wizardLoading" @click="handleWizardPreflight">预检</el-button>
-              <el-button type="primary" :loading="wizardLoading" @click="handleWizardPreview">预览</el-button>
-              <el-button type="success" :loading="wizardLoading" :disabled="!wizardReady" @click="handleWizardExecute">执行同步</el-button>
+              <el-button :loading="wizardLoading" v-permission="'office:sync:read'" @click="handleWizardPreflight">预检</el-button>
+              <el-button type="primary" :loading="wizardLoading" v-permission="'office:sync:read'" @click="handleWizardPreview">预览</el-button>
+              <el-button type="success" :loading="wizardLoading" :disabled="!wizardReady" v-permission="'office:sync:execute'" @click="handleWizardExecute">执行同步</el-button>
             </el-form-item>
           </el-form>
           <el-alert v-if="wizardMessage" :title="wizardMessage" :type="wizardReady ? 'success' : 'warning'" :closable="false" style="margin-bottom: 12px" />
@@ -226,7 +233,7 @@
             <el-table-column prop="version" label="版本" width="80" />
             <el-table-column label="操作" width="90" fixed="right">
               <template #default="{ row }">
-                <el-button v-if="row.state === 'FAILED'" link type="primary" @click="handleWizardRetry(row)">重试</el-button>
+                <el-button v-if="row.state === 'FAILED'" link type="primary" v-permission="'office:sync:execute'" @click="handleWizardRetry(row)">重试</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -356,7 +363,7 @@ import {
   triggerOrgSync,
   updateOrgDepartment,
   type OrgDepartmentPayload,
-} from '@/api/office-new'
+} from '@/api/office-platform'
 import {
   executeOrgSync,
   preflightOrgSync,

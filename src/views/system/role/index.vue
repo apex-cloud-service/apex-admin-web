@@ -5,6 +5,10 @@
   - 后台角色：/admin-api/v1/staff-roles（后台账号可分配角色，只读列表）
   - 系统角色/权限：/api/v1/auth/roles|permissions 的管理 CRUD，
     与登录链路（我的角色/我的权限）同源数据域
+
+  权限要求：
+  - system:role:create/update/remove - 角色增改删
+  - system:permission:create/update/remove - 权限增改删
 -->
 <template>
   <el-card shadow="never">
@@ -24,7 +28,7 @@
       <!-- 系统角色 -->
       <el-tab-pane label="系统角色" name="roles">
         <div class="tab-toolbar">
-          <el-button type="primary" @click="openRoleDialog()">
+          <el-button type="primary" @click="openRoleDialog()" v-permission="'system:role:create'">
             <el-icon><Plus /></el-icon>
             新增角色
           </el-button>
@@ -45,8 +49,8 @@
           </el-table-column>
           <el-table-column label="操作" width="140" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openRoleDialog(row)">编辑</el-button>
-              <el-button link type="danger" @click="handleDeleteRole(row)">删除</el-button>
+              <el-button link type="primary" @click="openRoleDialog(row)" v-permission="'system:role:update'">编辑</el-button>
+              <el-button link type="danger" @click="handleDeleteRole(row)" v-permission="'system:role:remove'">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -55,7 +59,7 @@
       <!-- 系统权限 -->
       <el-tab-pane label="系统权限" name="permissions">
         <div class="tab-toolbar">
-          <el-button type="primary" @click="openPermissionDialog()">
+          <el-button type="primary" @click="openPermissionDialog()" v-permission="'system:permission:create'">
             <el-icon><Plus /></el-icon>
             新增权限
           </el-button>
@@ -79,8 +83,8 @@
           </el-table-column>
           <el-table-column label="操作" width="140" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openPermissionDialog(row)">编辑</el-button>
-              <el-button link type="danger" @click="handleDeletePermission(row)">删除</el-button>
+              <el-button link type="primary" @click="openPermissionDialog(row)" v-permission="'system:permission:update'">编辑</el-button>
+              <el-button link type="danger" @click="handleDeletePermission(row)" v-permission="'system:permission:remove'">删除</el-button>
             </template>
           </el-table-column>
         </el-table>

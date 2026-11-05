@@ -1,16 +1,14 @@
 /**
  * OAuth2 认证 API
  * ------------------------------------------------------------------
- * 覆盖：标准 OAuth2 授权码流程、用户授权同意、第三方社交登录（微信/GitHub 等）
- * 
+ * 覆盖：标准 OAuth2 授权码流程（含 PKCE）与用户授权同意
+ *
  * 后端接口：
  *   - GET  /oauth2/authorize - 授权端点（获取授权码；无有效同意记录时返回 consent_required）
  *   - POST /oauth2/consent   - 记录/撤销用户授权同意（表单提交，需已登录）
  *   - POST /oauth2/token     - Token 端点（授权码换取 Token）
- *   - GET  /oauth2/userinfo  - 获取已授权用户信息
- *   - POST /api/v1/auth/social/* - 第三方社交登录
  */
-import { get, post, request as sendRequest } from '@/utils/request'
+import { request as sendRequest } from '@/utils/request'
 import type { LoginResult } from '@/types'
 
 /**
@@ -138,26 +136,6 @@ export function consumeAuthorization(state: string): Pick<OAuth2TokenRequest, 'c
   } catch {
     return null
   }
-}
-
-/**
- * 获取已授权用户信息
- * @returns 用户信息（需已登录，携带 Token）
- */
-export function getUserInfo(): Promise<Record<string, unknown>> {
-  return get<Record<string, unknown>>('/oauth2/userinfo')
-}
-
-/**
- * 第三方社交登录（微信/GitHub 等）
- * @param request 社交登录参数
- * @returns 登录结果
- */
-export function socialLogin(request: SocialLoginRequest): Promise<LoginResult> {
-  return post<LoginResult>(`/api/v1/auth/social/${request.provider}`, {
-    code: request.code,
-    state: request.state,
-  })
 }
 
 /**

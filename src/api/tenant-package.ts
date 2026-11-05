@@ -3,7 +3,6 @@
  * ------------------------------------------------------------------
  * 后端接口（apex-system TenantPackageRouter，前缀 /api/v2/tenant-packages）：
  * - GET  /                 - 套餐列表（裸数组，非分页）
- * - GET  /{packageCode}    - 套餐详情
  * - POST /                 - 创建套餐
  * - PUT  /                 - 更新套餐（按请求体 packageCode 定位）
  *
@@ -18,14 +17,6 @@ import type { TenantPackage, TenantPackagePayload } from '@/types'
  */
 export function listTenantPackages(): Promise<TenantPackage[]> {
   return get<TenantPackage[]>('/api/v2/tenant-packages')
-}
-
-/**
- * 查询套餐详情
- * @param packageCode 套餐编码
- */
-export function getTenantPackage(packageCode: string): Promise<TenantPackage> {
-  return get<TenantPackage>(`/api/v2/tenant-packages/${encodeURIComponent(packageCode)}`)
 }
 
 /**

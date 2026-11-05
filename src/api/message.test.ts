@@ -18,12 +18,10 @@ import {
   sendMessage,
   listInboxMessages,
   listSentMessages,
-  getMessageDetail,
   markMessageRead,
   markAllMessagesRead,
   getUnreadCount,
   issueMessageSocketTicket,
-  listInboxCursor,
   listMessageDeliveries,
   listMessageTemplates,
   createMessageTemplate,
@@ -49,12 +47,10 @@ describe('站内信 API', () => {
     expect(request.get).toHaveBeenCalledWith('/api/v1/messages/sent', { pageNum: 1, pageSize: 10 })
   })
 
-  it('详情/已读/全部已读/未读数路径正确', () => {
-    getMessageDetail(9)
+  it('已读/全部已读/未读数路径正确', () => {
     markMessageRead(9)
     markAllMessagesRead()
     getUnreadCount()
-    expect(request.get).toHaveBeenCalledWith('/api/v1/messages/9')
     expect(request.put).toHaveBeenCalledWith('/api/v1/messages/9/read')
     expect(request.put).toHaveBeenCalledWith('/api/v1/messages/read-all')
     expect(request.get).toHaveBeenCalledWith('/api/v1/messages/unread/count')
@@ -63,13 +59,6 @@ describe('站内信 API', () => {
   it('ws-ticket 走 POST 且无请求体', () => {
     issueMessageSocketTicket()
     expect(request.post).toHaveBeenCalledWith('/api/v1/messages/ws-ticket')
-  })
-
-  it('游标收件箱默认与自定义参数均走 afterId/limit', () => {
-    listInboxCursor()
-    listInboxCursor(123, 50)
-    expect(request.get).toHaveBeenCalledWith('/api/v1/messages/inbox/cursor', { afterId: 0, limit: 20 })
-    expect(request.get).toHaveBeenCalledWith('/api/v1/messages/inbox/cursor', { afterId: 123, limit: 50 })
   })
 
   it('投递记录按消息 ID 查询', () => {

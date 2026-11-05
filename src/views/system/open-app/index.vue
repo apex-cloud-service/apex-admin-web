@@ -8,25 +8,47 @@
       PUT  /{clientId}              - 更新
       POST /{clientId}/reset-secret - 重置密钥（响应含一次性明文 clientSecret）
   - scope 目录 /api/v1/open-apps/scopes（apex-system，与创建校验同源注册表）
+  - 存量迁移 /admin-api/v1/open-apps/migration/export|import（导出含哈希不含明文，
+      导入逐条汇总成功与失败，单条失败不影响其余）
   权限要求（按钮 v-permission）：open:app:manage。
   明文密钥只在创建/重置响应出现一次，页面仅内存展示，不写入本地存储。
+  主体用户（subjectUserId）须为同租户启用用户，文件/工作流开放写 scope 必填。
 -->
 <template>
   <el-card shadow="never">
     <template #header>
       <div class="card-header">
         <span>开放应用</span>
-        <el-button type="primary" :icon="Plus" @click="openCreate" v-permission="'open:app:manage'">
-          注册应用
-        </el-button>
+        <div class="header-actions">
+          <el-button :icon="Download" @click="handleExportMigration" v-permission="'open:app:manage'">
+            导出配置
+          </el-button>
+          <el-button @click="triggerImportFile" v-permission="'open:app:manage'">导入配置</el-button>
+          <el-button type="primary" :icon="Plus" @click="openCreate" v-permission="'open:app:manage'">
+            注册应用
+          </el-button>
+        </div>
       </div>
     </template>
+
+    <input
+      ref="importFileInput"
+      type="file"
+      accept=".json,application/json"
+      style="display: none"
+      @change="handleImportFile"
+    />
 
     <el-table v-loading="loading" :data="list" border stripe>
       <el-table-column prop="clientId" label="客户端 ID" min-width="180">
         <template #default="{ row }"><el-tag>{{ row.clientId }}</el-tag></template>
       </el-table-column>
       <el-table-column prop="appName" label="应用名称" min-width="150" show-overflow-tooltip />
+      <el-table-column label="主体用户" width="130">
+        <template #default="{ row }">
+          {{ subjectUserLabel(row.subjectUserId) }}
+        </template>
+      </el-table-column>
       <el-table-column label="scope" min-width="220">
         <template #default="{ row }">
           <el-tag v-for="scope in parseScopes(row.scopes)" :key="scope" size="small" type="info" class="scope-tag">
@@ -111,6 +133,22 @@
         <el-form-item label="联系人">
           <el-input v-model="form.contact" placeholder="技术联系人邮箱" />
         </el-form-item>
+        <el-form-item label="主体用户">
+          <el-select
+            v-model="form.subjectUserId"
+            filterable
+            clearable
+            placeholder="选择主体用户（文件/工作流开放写必填）"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="user in subjectUsers"
+              :key="user.id"
+              :label="`${user.nickname}（${user.id}）`"
+              :value="Number(user.id)"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item v-if="isEdit" label="状态">
           <el-radio-group v-model="form.status">
             <el-radio value="ENABLED">启用</el-radio>
@@ -140,6 +178,23 @@
         </template>
       </el-input>
     </el-dialog>
+
+    <!-- 迁移导入结果 -->
+    <el-dialog v-model="importResultVisible" title="迁移导入结果" width="560px">
+      <el-result
+        :icon="importSummary?.failures.length ? 'warning' : 'success'"
+        :title="`共 ${importSummary?.total ?? 0} 条，成功 ${importSummary?.succeeded ?? 0} 条`"
+      >
+        <template #sub-title>
+          <div v-if="importSummary?.failures.length" class="failure-list">
+            <div v-for="item in importSummary.failures" :key="item.importId" class="failure-item">
+              {{ item.importId }}：{{ item.error }}
+            </div>
+          </div>
+          <span v-else>全部导入成功</span>
+        </template>
+      </el-result>
+    </el-dialog>
   </el-card>
 </template>
 
@@ -148,19 +203,30 @@
  * 开放应用管理脚本
  * - 列表分页为 page/size 且后端返回数组（无 total），以「本页满页」判断下一页
  * - 创建/重置返回的一次性 clientSecret 仅内存展示
+ * - 主体用户下拉取后台用户列表；迁移导出下载 JSON、导入解析后逐条上行
  */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Download } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
 import {
   createOpenApp,
+  exportOpenAppMigration,
+  importOpenAppMigration,
   listOpenApps,
   listOpenAppScopes,
   resetOpenAppSecret,
   updateOpenApp,
 } from '@/api/open-app'
-import type { OpenApp, OpenAppPayload, OpenAppScope } from '@/types'
+import { listUsers } from '@/api/user'
+import type {
+  AdminUser,
+  OpenApp,
+  OpenAppImportItem,
+  OpenAppMigrationSummary,
+  OpenAppPayload,
+  OpenAppScope,
+} from '@/types'
 
 /** 列表加载中 */
 const loading = ref(false)
@@ -176,6 +242,8 @@ const list = ref<OpenApp[]>([])
 const scopes = ref<OpenAppScope[]>([])
 /** scope 目录不可用（接口失败或空）——此时允许手输 scope */
 const scopeCatalogUnavailable = ref(false)
+/** 主体用户候选（同租户后台用户） */
+const subjectUsers = ref<AdminUser[]>([])
 
 /** 弹窗状态 */
 const dialogVisible = ref(false)
@@ -191,6 +259,7 @@ const form = reactive<OpenAppPayload>({
   rateLimitTier: 'default',
   contact: '',
   status: 'ENABLED',
+  subjectUserId: undefined,
 })
 /** 校验规则 */
 const rules: FormRules = {
@@ -201,6 +270,11 @@ const rules: FormRules = {
 /** 一次性密钥弹窗 */
 const secretVisible = ref(false)
 const secretValue = ref('')
+
+/** 迁移导入文件选择器与结果弹窗 */
+const importFileInput = ref<HTMLInputElement>()
+const importResultVisible = ref(false)
+const importSummary = ref<OpenAppMigrationSummary>()
 
 /**
  * 解析 scope（后端列表接口可能返回 JSON 文本或数组）。
@@ -215,6 +289,16 @@ function parseScopes(value?: string[] | string): string[] {
   } catch {
     return []
   }
+}
+
+/**
+ * 主体用户展示文案（id 映射昵称，未匹配显示数字 ID）。
+ * @param userId 主体用户ID
+ */
+function subjectUserLabel(userId?: number): string {
+  if (!userId) return '-'
+  const user = subjectUsers.value.find((item) => Number(item.id) === userId)
+  return user ? user.nickname : String(userId)
 }
 
 /** 加载应用列表 */
@@ -266,6 +350,7 @@ function openCreate(): void {
     rateLimitTier: 'default',
     contact: '',
     status: 'ENABLED',
+    subjectUserId: undefined,
   })
   dialogVisible.value = true
 }
@@ -282,6 +367,7 @@ function openEdit(row: OpenApp): void {
     rateLimitTier: row.rateLimitTier ?? 'default',
     contact: row.contact ?? '',
     status: row.status ?? 'ENABLED',
+    subjectUserId: row.subjectUserId,
   })
   dialogVisible.value = true
 }
@@ -349,8 +435,78 @@ async function copySecret(): Promise<void> {
   }
 }
 
+/** 加载主体用户候选（前 100 个，失败不阻断页面） */
+async function fetchSubjectUsers(): Promise<void> {
+  try {
+    const result = await listUsers({ page: 1, size: 100 })
+    subjectUsers.value = result.list || []
+  } catch {
+    subjectUsers.value = []
+  }
+}
+
+/** 导出迁移配置（含密钥哈希，JSON 文件下载） */
+async function handleExportMigration(): Promise<void> {
+  try {
+    const items = (await exportOpenAppMigration()) || []
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `open-apps-migration-${Date.now()}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success(`已导出 ${items.length} 条配置`)
+  } catch (error) {
+    showError(error, '导出迁移配置失败')
+  }
+}
+
+/** 触发迁移导入文件选择 */
+function triggerImportFile(): void {
+  importFileInput.value?.click()
+}
+
+/**
+ * 解析所选 JSON 文件并提交迁移导入
+ * @param event 文件选择事件
+ */
+async function handleImportFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  let items: OpenAppImportItem[]
+  try {
+    const parsed = JSON.parse(await file.text())
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      ElMessage.warning('导入文件须为非空 JSON 数组')
+      return
+    }
+    items = parsed
+  } catch {
+    ElMessage.error('导入文件不是合法的 JSON')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(`确认导入 ${items.length} 条开放应用配置？`, '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+
+  try {
+    importSummary.value = await importOpenAppMigration(items)
+    importResultVisible.value = true
+    fetchList()
+  } catch (error) {
+    showError(error, '迁移导入失败')
+  }
+}
+
 onMounted(async () => {
-  await Promise.all([fetchList(), fetchScopes()])
+  await Promise.all([fetchList(), fetchScopes(), fetchSubjectUsers()])
 })
 </script>
 
@@ -361,9 +517,26 @@ onMounted(async () => {
   align-items: center;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
 .scope-tag {
   margin-right: 4px;
   margin-bottom: 2px;
+}
+
+.failure-list {
+  max-height: 200px;
+  overflow-y: auto;
+  text-align: left;
+  font-size: 13px;
+  color: var(--el-color-danger);
+}
+
+.failure-item {
+  padding: 2px 0;
 }
 
 .pager {

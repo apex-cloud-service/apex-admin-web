@@ -5,6 +5,12 @@
   - 日历视图（按月展示当日事件，点击日期查询）
   - 事件列表（日期筛选、分页）
   - 事件创建 / 查看 / 编辑 / 删除
+
+  权限要求：
+  - office:calendar:create - 创建事件
+  - office:calendar:query - 查看事件详情
+  - office:calendar:update - 编辑事件
+  - office:calendar:delete - 删除事件
 -->
 <template>
   <div class="office-calendar-container">
@@ -17,7 +23,7 @@
             <el-option label="钉钉" value="DINGTALK" />
             <el-option label="企业微信" value="WECOM" />
           </el-select>
-          <el-button type="primary" :icon="Plus" @click="handleCreate">创建事件</el-button>
+          <el-button type="primary" :icon="Plus" @click="handleCreate" v-permission="'office:calendar:create'">创建事件</el-button>
         </div>
       </div>
     </el-card>
@@ -92,9 +98,9 @@
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleView(row)">查看</el-button>
-            <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button link type="primary" @click="handleView(row)" v-permission="'office:calendar:query'">查看</el-button>
+            <el-button link type="primary" @click="handleEdit(row)" v-permission="'office:calendar:update'">编辑</el-button>
+            <el-button link type="danger" @click="handleDelete(row)" v-permission="'office:calendar:delete'">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -249,26 +255,6 @@
   </div>
 </template>
 
-/**
- * 日历管理页面
- * ------------------------------------------------------------------
- * 功能说明:
- * 1. 日历视图 - 以月历形式展示日历事件
- * 2. 事件列表 - 查看和管理日历事件
- * 3. 创建事件 - 支持飞书、钉钉、企业微信三大平台
- * 4. 编辑事件 - 修改事件时间、标题、参与者等信息
- * 5. 删除事件 - 删除不需要的日历事件
- * 6. 查看详情 - 查看事件的详细信息
- * 
- * 权限要求:
- * - office:calendar:view - 查看权限(必需)
- * - office:calendar:create - 创建日历事件
- * - office:calendar:edit - 编辑日历事件
- * - office:calendar:delete - 删除日历事件
- * 
- * @author system
- * @date 2024
- */
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
@@ -279,13 +265,12 @@ import {
   updateCalendarEvent,
   deleteCalendarEvent,
   getCalendarEvent,
-  PLATFORM_NAMES,
-  type OfficePlatform,
   type CalendarEvent,
   type CreateEventRequest,
   type UpdateEventRequest,
   type CalendarEventsQuery,
-} from '@/api/office'
+} from '@/api/office-calendar'
+import { PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
 import { listUsers } from '@/api/user'
 
 // ==================== 页面状态管理 ====================

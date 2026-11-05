@@ -2,10 +2,11 @@
   办公平台配置页面
   ------------------------------------------------------------------
   功能：飞书、钉钉、企业微信平台配置管理（AppId、AppSecret、回调 URL）
-  
+
   权限：
-    - office:config:view - 查看办公平台配置
-    - office:config:edit - 编辑办公平台配置
+    - office:app:create - 创建平台配置
+    - office:app:update - 编辑平台配置
+    - office:app:delete - 删除平台配置
 -->
 <template>
   <div class="office-config-container">
@@ -47,16 +48,18 @@
               type="primary"
               size="small"
               @click="openEditDialog(platform)"
+              v-permission="'office:app:update'"
               v-if="getAppConfig(platform)"
             >
               编辑配置
             </el-button>
-            <el-button type="success" size="small" @click="openCreateDialog(platform)" v-else>
+            <el-button type="success" size="small" @click="openCreateDialog(platform)" v-else v-permission="'office:app:create'">
               创建配置
             </el-button>
             <el-button
               type="danger"
               size="small"
+              v-permission="'office:app:delete'"
               @click="handleDelete(platform)"
               v-if="getAppConfig(platform)"
             >
@@ -137,7 +140,7 @@ import {
   type OfficePlatform,
   type OfficeAppResponse,
   type OfficeAppRequest,
-} from '@/api/office-new'
+} from '@/api/office-platform'
 
 /** ========== 状态定义 ========== */
 

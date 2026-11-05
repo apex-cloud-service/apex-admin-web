@@ -1,7 +1,7 @@
 # 记忆卡 · apex-admin-web（管理后台前端）
 
 > **用法**：接手前端或需要改页面时先读本卡（约 3 分钟），细节按文末指针进入 `AGENTS.md` 与 `docs/`。
-> **基线**：2026-11-01 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净
+> **基线**：2026-11-03 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净
 > **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-10-30）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
 
 ## 1. 一句话
@@ -27,7 +27,7 @@ Apex Scaffold 的管理后台（前后端分离独立工程），消费 `apex-sc
 
 ```text
 src/
-├── api/          39 个按业务域拆分的类型化接口文件（无统一 index.ts）
+├── api/          38 个按业务域拆分的类型化接口文件（无统一 index.ts）
 ├── router/       index.ts 静态路由 + dynamic.ts 菜单转路由 + VIEW_REGISTRY
 ├── views/        62 个 .vue 页面，14 个业务目录
 ├── stores/       user / permission / app / office
@@ -39,7 +39,7 @@ src/
 └── test/         Vitest 全局准备
 ```
 
-业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `oauth2` `profile` `public` `login` `demo` `error`。测试文件 10 个（请求层单飞刷新、OAuth2 PKCE/state、认证配置、消息/工作流/办公 API 契约、新增平台 API 契约）。
+业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `oauth2` `profile` `public` `login` `demo` `error`。测试文件 **10 个**：`src/api/` 5 个业务 API 契约（消息/工作流/办公平台/平台模块/生成器），`src/utils/__tests__/` 5 个工具测试（请求层单飞刷新、OAuth2 PKCE/state、认证配置、会话、校验）。
 
 ## 4. 契约前缀（后端改路径必查这里）
 
@@ -92,11 +92,12 @@ src/
 | 数据总览无数据 | 页面走 `GET /api/v2/overview`（权限 `system:monitor:view`）；单源 DEGRADED 属正常，勿改调内部端点 |
 | IoT 规则 404 / 影子空 | 规则分页与影子查询端点已补（V85/V86 种子）；存量环境需执行迁移；未上报过遥测的设备影子为空属正常 |
 
-## 7. 当前状态（2026-11-02）
+## 7. 当前状态（2026-11-05）
 
-- 工作树含未提交改动（2026-11-02 补齐 §12 前端清单 + 后端配套端点）。
-- 11-02 交付：MFA 二步登录、OAuth2 consent 匿名页（public + 登录回跳）、在线会话页、租户套餐页、租户开通向导字段、开放应用页（scope 走 system 同源注册表）、能力目录与用量页、统一通知页、集成中心（连接器+凭据）、IoT 设备页（影子/遥测/命令下发与历史）与规则页（分页列表）、8 个 api 模块与 22 条契约用例、工作台数据总览。
-- 后端同批补齐（apex-scaffold）：网关路由（integration-domain 独立路由 + `/api/v2/**` 逐前缀显式覆盖，dev/prod/Nacos + 契约测试）、`GET /api/v1/open-apps/scopes`、`GET /api/v2/overview`、IoT 规则分页/影子/命令端点、V85 权限种子与 V86 菜单种子（8 页面 + 集成中心目录）。
+- 11-05：办公平台 API 层重构——`office.ts` / `office-new.ts` 拆为 `office-platform.ts`（平台标识+登录回调+应用配置+绑定审批+组织同步）、`office-approval.ts`、`office-calendar.ts`、`office-document.ts`；`OfficePlatform` 与 `PLATFORM_NAMES` 收敛为单一定义。同步全仓注释整改、清理死类型与连续空行。
+- 11-03 提交 `d839a04`（29 文件 / +5140）：新增租户套餐、能力运营、开放平台、集成中心、物联网、统一通知、在线会话、OAuth2 授权同意页，并接入 MFA 二步登录。
+- 11-02 交付（已在库）：MFA 二步登录、OAuth2 consent 匿名页（public + 登录回跳）、在线会话页、租户套餐页、开放应用页、能力目录与用量页、统一通知页、集成中心（连接器+凭据）、IoT 设备页（影子/遥测/命令下发与历史）与规则页、工作台数据总览。
+- 后端同批补齐（apex-scaffold）：网关路由（integration 独立路由 + `/api/v2/**` 逐前缀显式覆盖，dev/prod/Nacos + 契约测试）、`GET /api/v1/open-apps/scopes`、`GET /api/v2/overview`、IoT 规则分页/影子/命令端点、V85 权限种子与 V86/V87 菜单与业务种子。
 - 已知能力缺口：**业务侧无租户切换器**（登录态绑定单一租户，仅平台侧有租户台账页）；`office` Store 无调用点；`generator` 历史回滚无前端入口；IoT 影子 desired 写接口后端未实现。
 
 ## 8. 指针

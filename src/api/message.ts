@@ -4,9 +4,7 @@
  * 后端接口（站内信，apex-office-service；inbox/sent 返回纯数组而非分页对象）：
  * - POST /api/v1/messages                - 发送站内信（recipientIds 为系统用户 ID 列表）
  * - GET  /api/v1/messages/inbox          - 收件箱（pageNum/pageSize，返回 MessageDTO 数组）
- * - GET  /api/v1/messages/inbox/cursor   - 游标增量收件箱（afterId/limit，返回数组；游标为收件记录 ID）
  * - GET  /api/v1/messages/sent           - 已发送（pageNum/pageSize，返回 MessageDTO 数组）
- * - GET  /api/v1/messages/{id}           - 消息详情
  * - GET  /api/v1/messages/{id}/deliveries - 消息渠道投递记录（发送人看全量、接收人仅本人）
  * - PUT  /api/v1/messages/{id}/read      - 标记已读
  * - PUT  /api/v1/messages/read-all       - 全部已读
@@ -76,14 +74,6 @@ export function listSentMessages(pageNum: number, pageSize: number): Promise<Int
 }
 
 /**
- * 查询消息详情
- * @param id 消息 ID
- */
-export function getMessageDetail(id: number): Promise<InternalMessage> {
-  return get<InternalMessage>(`/api/v1/messages/${id}`)
-}
-
-/**
  * 标记消息已读
  * @param id 消息 ID
  */
@@ -127,15 +117,6 @@ export interface InboxCursorItem {
   sendTime?: string
   readStatus?: boolean
   readTime?: string
-}
-
-/**
- * 游标式增量查询收件箱（按收件记录 ID 单调递增，适合轮询拉取新消息）
- * @param afterId 游标（上一轮最后一条的 recipientRecordId，首页传 0）
- * @param limit 单次条数（后端钳制 [1,100]，默认 20）
- */
-export function listInboxCursor(afterId = 0, limit = 20): Promise<InboxCursorItem[]> {
-  return get<InboxCursorItem[]>('/api/v1/messages/inbox/cursor', { afterId, limit })
 }
 
 /** 消息渠道投递记录（后端 MessageDeliveryDTO；送达/失败与收件箱已读互不覆盖） */

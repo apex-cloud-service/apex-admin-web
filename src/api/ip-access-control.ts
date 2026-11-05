@@ -4,10 +4,8 @@
  * 后端接口（apex-auth-service AuthCenterRouterConfig；⚠️ 写操作参数均在 query string，不是 JSON body）：
  * - GET    /api/ip-access-control/whitelist           - 白名单列表（⚠️ 裸数组）
  * - POST   /api/ip-access-control/whitelist?ipAddress=&description=
- * - DELETE /api/ip-access-control/whitelist?ipAddress=
  * - GET    /api/ip-access-control/blacklist           - 黑名单列表（⚠️ 裸数组）
  * - POST   /api/ip-access-control/blacklist?ipAddress=&description=&durationMinutes=
- * - DELETE /api/ip-access-control/blacklist?ipAddress=
  * - PUT    /api/ip-access-control/{ruleId}/enable|disable
  * - DELETE /api/ip-access-control/{ruleId}
  * - POST   /api/ip-access-control/cleanup             - 清理过期规则（Result<number>）
@@ -49,15 +47,6 @@ export function addIpRule(
   if (description) params.set('description', description)
   if (durationMinutes != null) params.set('durationMinutes', String(durationMinutes))
   return post<IpAccessRule>(`${listPath(type)}?${params.toString()}`)
-}
-
-/**
- * 按 IP 地址移除规则
- * @param type 规则类型
- * @param ipAddress 规则中的 IP 地址
- */
-export function removeIpRuleByAddress(type: IpRuleType, ipAddress: string): Promise<void> {
-  return del<void>(`${listPath(type)}?ipAddress=${encodeURIComponent(ipAddress)}`)
 }
 
 /**

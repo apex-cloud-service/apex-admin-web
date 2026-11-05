@@ -7,13 +7,8 @@
  * - POST   /api/mfa/sms/enable?phoneNumber=  - 启用短信 MFA
  * - POST   /api/mfa/email/enable?email=      - 启用邮箱 MFA
  * - DELETE /api/mfa/{type}                   - 关闭指定类型（TOTP/SMS/EMAIL）
- * - POST   /api/mfa/verify?code=&type=       - 校验动态码（Result<boolean>）
- * - POST   /api/mfa/send-code?type=          - 发送验证码（SMS/EMAIL）
  * - GET    /api/mfa/configs                  - 我的 MFA 配置（⚠️ 裸数组，无 Result 包装）
- * - GET    /api/mfa/status                   - 是否启用任意 MFA（Result<boolean>）
  * - POST   /api/mfa/backup-codes/regenerate  - 重新生成备用码
- * - POST   /api/mfa/backup-codes/verify?code= - 校验备用码
- * - POST   /api/mfa/unlock?userId=&type=     - 解锁（需管理员）
  *
  * 另有一组需显式传 userId/tenantId 的 /api/v1/mfa/** 契约，管理端不使用。
  */
@@ -62,23 +57,6 @@ export function disableMfa(type: MfaType): Promise<void> {
 }
 
 /**
- * 校验动态验证码
- * @param code 验证码
- * @param type MFA 类型
- */
-export function verifyMfaCode(code: string, type: MfaType): Promise<boolean> {
-  return post<boolean>(`/api/mfa/verify?code=${encodeURIComponent(code)}&type=${type}`)
-}
-
-/**
- * 发送 MFA 验证码
- * @param type SMS 或 EMAIL
- */
-export function sendMfaCode(type: Exclude<MfaType, 'TOTP'>): Promise<void> {
-  return post<void>(`/api/mfa/send-code?type=${type}`)
-}
-
-/**
  * 查询我的 MFA 配置（后端返回裸数组）
  */
 export function listMfaConfigs(): Promise<MfaConfigInfo[]> {
@@ -86,34 +64,10 @@ export function listMfaConfigs(): Promise<MfaConfigInfo[]> {
 }
 
 /**
- * 查询是否已启用任意 MFA
- */
-export function getMfaStatus(): Promise<boolean> {
-  return get<boolean>('/api/mfa/status')
-}
-
-/**
  * 重新生成备用恢复码
  */
 export function regenerateBackupCodes(): Promise<BackupCodesResult> {
   return post<BackupCodesResult>('/api/mfa/backup-codes/regenerate')
-}
-
-/**
- * 校验备用恢复码
- * @param code 备用码
- */
-export function verifyBackupCode(code: string): Promise<boolean> {
-  return post<boolean>(`/api/mfa/backup-codes/verify?code=${encodeURIComponent(code)}`)
-}
-
-/**
- * 解锁用户被锁定的 MFA（需管理员权限）
- * @param userId 用户 ID
- * @param type MFA 类型
- */
-export function unlockMfa(userId: number, type: MfaType): Promise<void> {
-  return post<void>(`/api/mfa/unlock?userId=${userId}&type=${type}`)
 }
 
 /** MFA 类型 → 中文名称 */

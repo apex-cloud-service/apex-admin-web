@@ -83,7 +83,22 @@
         <el-table v-loading="usageLoading" :data="usageList" border stripe>
           <el-table-column prop="tenantId" label="租户" width="160" />
           <el-table-column prop="capability" label="能力" min-width="180" />
-          <el-table-column prop="callCount" label="调用次数" width="140" />
+          <el-table-column prop="callCount" label="调用次数" width="120" />
+          <el-table-column label="存储用量" width="140">
+            <template #default="{ row }">
+              {{ row.storageUsageBytes == null ? '-' : formatBytes(row.storageUsageBytes) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="设备数" width="100">
+            <template #default="{ row }">
+              {{ row.deviceCount == null ? '-' : row.deviceCount }}
+            </template>
+          </el-table-column>
+          <el-table-column label="站内信量" width="110">
+            <template #default="{ row }">
+              {{ row.messageCount == null ? '-' : row.messageCount }}
+            </template>
+          </el-table-column>
         </el-table>
         <Pagination :total="usageTotal" @change="onUsagePageChange" />
       </el-tab-pane>
@@ -196,6 +211,19 @@ function onUsagePageChange(page: number, size: number): void {
   usageQuery.pageNum = page
   usageQuery.pageSize = size
   fetchUsage()
+}
+
+/** 字节数 → 可读大小（B/KB/MB/GB/TB，保留 2 位小数），0 显示 "0 B" */
+function formatBytes(bytes: number): string {
+  if (!bytes) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let size = bytes
+  let unitIndex = 0
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024
+    unitIndex++
+  }
+  return `${size.toFixed(2)} ${units[unitIndex]}`
 }
 
 onMounted(loadCatalog)

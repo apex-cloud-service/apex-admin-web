@@ -1,11 +1,10 @@
 <!--
   办公平台绑定页面
   ------------------------------------------------------------------
-  功能：用户与办公平台账号绑定、解绑操作
-  
+  功能：办公平台账号绑定申请的审批（通过/拒绝）与解绑；支持按平台与状态筛选
+
   权限：
-    - office:binding:view - 查看绑定状态
-    - office:binding:bind - 绑定账号
+    - office:binding:review - 审批绑定申请（通过/拒绝）
     - office:binding:unbind - 解绑账号
 -->
 <template>
@@ -74,6 +73,7 @@
               v-if="row.status === 'PENDING'"
               type="success"
               size="small"
+              v-permission="'office:binding:review'"
               @click="handleApprove(row)"
             >
               批准
@@ -82,6 +82,7 @@
               v-if="row.status === 'PENDING'"
               type="warning"
               size="small"
+              v-permission="'office:binding:review'"
               @click="handleReject(row)"
             >
               拒绝
@@ -90,6 +91,7 @@
               v-if="row.status === 'APPROVED'"
               type="danger"
               size="small"
+              v-permission="'office:binding:unbind'"
               @click="handleUnbind(row)"
             >
               解绑
@@ -139,7 +141,7 @@ import {
   PLATFORM_NAMES,
   type OfficePlatform,
   type OfficeBindingResponse,
-} from '@/api/office-new'
+} from '@/api/office-platform'
 
 /** ========== 状态定义 ========== */
 

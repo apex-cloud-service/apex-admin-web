@@ -6,7 +6,6 @@
  * - DELETE /user/{userId}      - 批量终止该用户全部会话
  * - GET    /online             - 在线用户列表（裸数组，无分页）
  * - GET    /statistics         - 在线用户统计（totalOnlineUsers/timestamp）
- * - GET    /{sessionId}        - 会话详情（路径占位实际传数字主键，非会话标识）
  * - DELETE /{sessionId}        - 终止单个会话（sessionId 为会话唯一标识，非数字主键）
  *
  * 说明：全部端点要求管理员角色（后端 @RequireAdminRole），前端仅做展示层权限控制。
@@ -48,14 +47,6 @@ export function listOnlineSessions(): Promise<OnlineSession[]> {
  */
 export function getOnlineStatistics(): Promise<OnlineStatistics> {
   return get<OnlineStatistics>('/auth/v1/sessions/statistics')
-}
-
-/**
- * 查询会话详情
- * @param id 会话记录数字主键（后端 GET /{sessionId} 实际按数字 ID 查询）
- */
-export function getSessionDetail(id: number): Promise<AuthSession> {
-  return get<AuthSession>(`/auth/v1/sessions/${id}`)
 }
 
 /**

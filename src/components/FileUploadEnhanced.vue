@@ -6,10 +6,13 @@
     - 粘贴上传（Ctrl+V，enable-paste）
     - 图片裁剪（cropperjs，enable-cropper）
     - 图片压缩（canvas 重绘，enable-compress）
+    - 大文件分片上传（enable-chunk，超过单发上限时走 init → 逐片上传 → merge）
     - 自定义上传进度弹窗
 
   后端接口：
     - POST /api/v1/files/generic - 通用文件上传（FormData：file + sex）
+    - POST /api/v1/file/chunk/init|upload|merge - 分片上传（启用 enableChunk 时）
+    - GET  /api/v1/file/status/{fileId} - 查询已上传分片
 
   Props：
     - sex: 性别路由参数（0=男/AM，1=女/AF），随 FormData 上送
@@ -23,6 +26,8 @@
     - enableCompress: 是否自动压缩图片（超过宽高上限按 compressQuality 压缩）
     - enableCropper: 是否启用图片裁剪（裁剪确认后走独立 XHR 上传）
     - enablePaste: 是否启用 Ctrl+V 粘贴图片上传（组件需持有焦点）
+    - enableChunk: 是否启用分片上传（文件超过单发上限但不超过 chunkMaxSizeMB 时生效）
+    - chunkMaxSizeMB: 分片上传允许的最大文件大小（MB，默认 500）
     - compressQuality: 压缩质量（0~1）
     - compressMaxWidth / compressMaxHeight: 压缩后最大宽/高（px）
 
@@ -154,12 +159,14 @@
  * 增强版文件上传组件逻辑
  * - 基于 el-upload 完成基础上传，扩展压缩/裁剪/粘贴/进度能力
  * - 裁剪与粘贴路径绕过 el-upload，走独立 XHR 上传（uploadProcessedFile）
+ * - enableChunk 开启时，超过单发上限的文件走分片上传（uploadByChunks，apex-file-service）
  */
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Upload, UploadFilled } from '@element-plus/icons-vue'
 import { getToken } from '@/utils/auth'
 import { MAX_UPLOAD_SIZE } from '@/settings'
+import { initChunkUpload, mergeChunks, uploadChunk, type ChunkMergeResult } from '@/api/file'
 import type { FileUploadResult } from '@/types'
 import type { UploadProps, UploadUserFile, UploadProgressEvent, UploadRawFile } from 'element-plus'
 import Cropper from 'cropperjs'
@@ -195,6 +202,10 @@ interface Props {
   compressMaxWidth?: number
   /** 压缩后最大高度（px） */
   compressMaxHeight?: number
+  /** 是否启用大文件分片上传（超过单发上限时走 /api/v1/file/chunk 流程） */
+  enableChunk?: boolean
+  /** 分片上传允许的最大文件大小（MB） */
+  chunkMaxSizeMB?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -210,7 +221,9 @@ const props = withDefaults(defineProps<Props>(), {
   enablePaste: false,
   compressQuality: 0.8,
   compressMaxWidth: 1920,
-  compressMaxHeight: 1080
+  compressMaxHeight: 1080,
+  enableChunk: false,
+  chunkMaxSizeMB: 500
 })
 
 const emit = defineEmits<{
@@ -533,6 +546,70 @@ const uploadProcessedFile = async (file: File): Promise<void> => {
   }
 }
 
+/**
+ * 分片上传（超过单发上限且 enableChunk 开启时启用）
+ *
+ * 流程：init 登记 → 按分片顺序 POST 原始字节（服务端 uploaded=false 表示已存在可跳过）
+ * → merge 合并。进度按「已完成分片 / 总分片」折算。
+ *
+ * @param file 待上传的大文件
+ */
+const uploadByChunks = async (file: File): Promise<void> => {
+  const CHUNK_SIZE = 5 * 1024 * 1024
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
+
+  progressVisible.value = true
+  uploadStatus.value = ''
+  uploadProgress.value = 0
+  uploadProgressText.value = '正在初始化分片上传...'
+
+  try {
+    const initResult = await initChunkUpload({
+      fileName: file.name,
+      fileSize: file.size,
+      chunkSize: CHUNK_SIZE,
+      totalChunks,
+      contentType: file.type || undefined,
+    })
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const chunk = file.slice(chunkIndex * CHUNK_SIZE, Math.min((chunkIndex + 1) * CHUNK_SIZE, file.size))
+      await uploadChunk(
+        { fileId: initResult.fileId, chunkIndex, totalChunks },
+        chunk,
+      )
+      uploadProgress.value = Math.round(((chunkIndex + 1) / totalChunks) * 100)
+      uploadProgressText.value = `正在上传分片 ${chunkIndex + 1}/${totalChunks}...`
+    }
+
+    uploadProgressText.value = '正在合并分片...'
+    const merged: ChunkMergeResult = await mergeChunks({ fileId: initResult.fileId })
+
+    uploadStatus.value = 'success'
+    uploadProgressText.value = '上传成功！'
+    setTimeout(() => {
+      progressVisible.value = false
+    }, 1000)
+    ElMessage.success('上传成功')
+
+    // 与 handleSuccess 对齐：分片结果映射为 FileUploadResult（Local 存储地址无预签名 TTL）
+    emit('success', {
+      bucketName: merged.bucketName,
+      objectName: merged.fileName,
+      url: merged.url,
+      expiresIn: 0,
+    })
+  } catch (error) {
+    console.error('分片上传失败：', error)
+    uploadStatus.value = 'exception'
+    uploadProgressText.value = '上传失败'
+    setTimeout(() => {
+      progressVisible.value = false
+      ElMessage.error('分片上传失败')
+    }, 2000)
+  }
+}
+
 /** ========== el-upload 回调 ========== */
 
 /**
@@ -546,6 +623,10 @@ const uploadProcessedFile = async (file: File): Promise<void> => {
  */
 const beforeUpload: UploadProps['beforeUpload'] = async (rawFile: UploadRawFile): Promise<boolean | File> => {
   if (rawFile.size > MAX_UPLOAD_SIZE) {
+    if (props.enableChunk && rawFile.size <= props.chunkMaxSizeMB * 1024 * 1024) {
+      void uploadByChunks(rawFile)
+      return false
+    }
     ElMessage.error(`文件大小不能超过 ${maxSizeMB} MB`)
     return false
   }

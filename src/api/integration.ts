@@ -4,12 +4,10 @@
  * 后端接口（apex-integration IntegrationConnectorRouter，前缀 /integration/v1）：
  * - GET    /connectors              - 连接器配置分页（connectorType 过滤，pageNum/pageSize）
  * - POST   /connectors              - 创建连接器配置
- * - GET    /connectors/{id}         - 连接器详情
  * - PUT    /connectors/{id}         - 更新连接器配置
  * - DELETE /connectors/{id}         - 逻辑删除
  * - GET    /credentials             - 凭据元数据列表（裸数组，不含密文）
  * - POST   /credentials             - 注册凭据（secret 仅上行，AES-256-GCM 加密存储）
- * - GET    /credentials/{id}        - 凭据元数据
  * - PUT    /credentials/{id}/rotate - 轮换凭据（版本递增，旧版本立即失效）
  * - DELETE /credentials/{id}        - 删除凭据
  *
@@ -52,14 +50,6 @@ export function listConnectors(query: ConnectorQuery): Promise<PageResponse<Conn
 }
 
 /**
- * 查询连接器详情
- * @param id 配置 ID
- */
-export function getConnector(id: number): Promise<ConnectorConfig> {
-  return get<ConnectorConfig>(`/integration/v1/connectors/${id}`)
-}
-
-/**
  * 创建连接器配置
  * @param payload 类型、配置标识与配置 JSON
  */
@@ -93,14 +83,6 @@ export function listCredentials(credentialType?: string): Promise<IntegrationCre
     '/integration/v1/credentials',
     credentialType ? { credentialType } : undefined,
   )
-}
-
-/**
- * 查询凭据元数据
- * @param id 凭据 ID
- */
-export function getCredential(id: number): Promise<IntegrationCredential> {
-  return get<IntegrationCredential>(`/integration/v1/credentials/${id}`)
 }
 
 /**

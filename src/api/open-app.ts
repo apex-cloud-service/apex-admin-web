@@ -12,7 +12,13 @@
  * 权限码：open:app:read / open:app:manage。明文密钥仅创建/重置响应返回一次，不落本地。
  */
 import { get, post, put } from '@/utils/request'
-import type { OpenApp, OpenAppPayload, OpenAppScope } from '@/types'
+import type {
+  OpenApp,
+  OpenAppImportItem,
+  OpenAppMigrationSummary,
+  OpenAppPayload,
+  OpenAppScope,
+} from '@/types'
 
 /** 开放应用分页查询参数（page 从 0 开始） */
 export interface OpenAppQuery {
@@ -26,14 +32,6 @@ export interface OpenAppQuery {
  */
 export function listOpenApps(query: OpenAppQuery): Promise<OpenApp[]> {
   return get<OpenApp[]>('/api/v1/open-apps', query as unknown as Record<string, unknown>)
-}
-
-/**
- * 查询开放应用详情
- * @param clientId 客户端 ID
- */
-export function getOpenApp(clientId: string): Promise<OpenApp> {
-  return get<OpenApp>(`/api/v1/open-apps/${encodeURIComponent(clientId)}`)
 }
 
 /**
@@ -66,4 +64,19 @@ export function resetOpenAppSecret(clientId: string): Promise<OpenApp> {
  */
 export function listOpenAppScopes(): Promise<OpenAppScope[]> {
   return get<OpenAppScope[]>('/api/v1/open-apps/scopes')
+}
+
+/**
+ * 导出存量开放应用迁移清单（含密钥哈希，不含明文；平台管理员专用）
+ */
+export function exportOpenAppMigration(): Promise<OpenAppImportItem[]> {
+  return get<OpenAppImportItem[]>('/admin-api/v1/open-apps/migration/export')
+}
+
+/**
+ * 批量导入存量开放应用（逐条写入，单条失败不影响其余）
+ * @param items 迁移清单（通常来自 export 响应）
+ */
+export function importOpenAppMigration(items: OpenAppImportItem[]): Promise<OpenAppMigrationSummary> {
+  return post<OpenAppMigrationSummary>('/admin-api/v1/open-apps/migration/import', items)
 }

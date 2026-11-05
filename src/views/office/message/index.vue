@@ -6,6 +6,12 @@
   - 已发送：分页查看本人发送的消息
   - 消息模板：启用模板列表与增改删
   发送站内信时接收人取同步员工中已绑定系统账号（userId 非空）的人员。
+
+  权限要求：
+  - office:message:list - 全部已读
+  - office:message:send - 发送消息
+  - office:message:query - 查看消息详情与投递记录
+  - office:notify:template:manage - 消息模板增改删
 -->
 <template>
   <div class="message-container">
@@ -14,10 +20,10 @@
         <div class="card-header">
           <span>消息中心</span>
           <div class="header-actions">
-            <el-button :disabled="unreadCount === 0" @click="handleReadAll">
+            <el-button :disabled="unreadCount === 0" @click="handleReadAll" v-permission="'office:message:list'">
               全部已读
             </el-button>
-            <el-button type="primary" @click="openSendDialog">
+            <el-button type="primary" @click="openSendDialog" v-permission="'office:message:send'">
               <el-icon><Position /></el-icon>
               发送消息
             </el-button>
@@ -79,8 +85,8 @@
             </el-table-column>
             <el-table-column label="操作" width="160" fixed="right">
               <template #default="{ row }">
-                <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-                <el-button link type="primary" @click="openDeliveries(row)">投递记录</el-button>
+                <el-button link type="primary" @click="openDetail(row)" v-permission="'office:message:query'">详情</el-button>
+                <el-button link type="primary" @click="openDeliveries(row)" v-permission="'office:message:query'">投递记录</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -90,7 +96,7 @@
         <!-- 消息模板 -->
         <el-tab-pane label="消息模板" name="templates">
           <div class="tab-toolbar">
-            <el-button type="primary" @click="openTemplateDialog()">
+            <el-button type="primary" @click="openTemplateDialog()" v-permission="'office:notify:template:manage'">
               <el-icon><Plus /></el-icon>
               新增模板
             </el-button>
@@ -114,8 +120,8 @@
             </el-table-column>
             <el-table-column label="操作" width="140" fixed="right">
               <template #default="{ row }">
-                <el-button link type="primary" @click="openTemplateDialog(row)">编辑</el-button>
-                <el-button link type="danger" @click="handleDeleteTemplate(row)">删除</el-button>
+                <el-button link type="primary" @click="openTemplateDialog(row)" v-permission="'office:notify:template:manage'">编辑</el-button>
+                <el-button link type="danger" @click="handleDeleteTemplate(row)" v-permission="'office:notify:template:manage'">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -283,7 +289,7 @@ import {
   updateMessageTemplate,
   type MessageDelivery,
 } from '@/api/message'
-import { listOrgEmployees } from '@/api/office-new'
+import { listOrgEmployees } from '@/api/office-platform'
 import { subscribeMessagePush } from '@/utils/message-socket'
 import type {
   InternalMessage,
