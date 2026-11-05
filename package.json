@@ -11,7 +11,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "test:report": "vitest run --coverage --coverage.reportsDirectory=reports/coverage --reporter=default --reporter=junit --outputFile.junit=reports/test-results.xml --reporter=json --outputFile.json=reports/test-results.json",
+    "test:report": "vitest run --coverage --coverage.reportsDirectory=reports/coverage --coverage.reporter=text --coverage.reporter=json --coverage.reporter=json-summary --coverage.reporter=html --coverage.reporter=lcov --reporter=default --reporter=junit --outputFile.junit=reports/test-results.xml --reporter=json --outputFile.json=reports/test-results.json && node scripts/quality/normalize-test-report.mjs",
     "check:comments": "node scripts/quality/check-comments.mjs",
     "analyze": "vite build && open dist/stats.html",
     "generate:api": "openapi-generator-cli generate",

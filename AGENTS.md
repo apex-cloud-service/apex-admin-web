@@ -608,7 +608,7 @@ flowchart TD
 | `npx vitest run` | 单次测试 |
 | `npm run test` | Vitest 默认交互/监听入口 |
 | `npm run test:coverage` | 覆盖率检查（`@vitest/coverage-v8` 已安装，输出 `coverage/`） |
-| `npm run test:report` | 单次运行并输出 JUnit XML + JSON + HTML/lcov 到 `reports/`（不入库） |
+| `npm run test:report` | 单次运行并输出 JUnit XML + JSON + HTML/lcov 到 `reports/`（机器可读结果入库，HTML/lcov 不入库） |
 | `npm run preview` | 本地预览构建产物 |
 | `npm run analyze` | 构建并打开产物分析报告 |
 

@@ -57,6 +57,9 @@ npm run test       # Vitest 单元测试
 
 ## 7. 提交内容边界
 
-- 不提交：`dist/`、`node_modules/`、`reports/`、本地环境文件（`.env.local`）、`*.bak` 备份文件；
+- 不提交：`dist/`、`node_modules/`、本地环境文件（`.env.local`）、`*.bak` 备份文件；
+- `reports/` 仅提交机器可读结果：`test-results.xml`、`test-results.json`、`coverage/coverage-summary.json`；
+  这三份由 `npm run test:report` 生成后经 `scripts/quality/normalize-test-report.mjs` 归一化（绝对路径转仓库相对路径、主机名置为 localhost），提交前不要手工改回；
+  HTML、lcov 与 `coverage-final.json` 等生成物不入库（见 `.gitignore`），需要时本地重建；
 - 依赖变更需同时提交 `package.json` + `package-lock.json`；
 - 涉及密钥/密码的配置一律不进仓库（`VITE_*` 变量会进入前端产物，见 AGENTS.md §1）。

@@ -26,15 +26,16 @@
 | `npx vue-tsc --noEmit` | 类型检查 | 通过 |
 | `npm run build` | 生产构建 | 通过 |
 
-产物（`reports/` 已在 `.gitignore`/`CONTRIBUTING.md` 中约定不入库）：
+产物分为入库与本地生成两类（边界见 `.gitignore` 与 `CONTRIBUTING.md` §7）：
 
-| 文件 | 说明 |
-| --- | --- |
-| `reports/test-results.xml` | JUnit 格式，供 CI/测试平台消费 |
-| `reports/test-results.json` | Vitest JSON 格式，含每个用例耗时与状态 |
-| `reports/coverage/index.html` | HTML 覆盖率报告（可逐文件钻取） |
-| `reports/coverage/lcov.info`、`lcov-report/` | lcov 报告，供覆盖率平台消费 |
-| `reports/coverage/coverage-summary.json` | 机器可读覆盖率汇总 |
+| 文件 | 说明 | 是否入库 |
+| --- | --- | --- |
+| `reports/test-results.xml` | JUnit 格式，供 CI/测试平台消费 | 入库 |
+| `reports/test-results.json` | Vitest JSON 格式，含每个用例耗时与状态 | 入库 |
+| `reports/coverage/coverage-summary.json` | 机器可读覆盖率汇总，供 CI 比对 | 入库 |
+| `reports/coverage/index.html` | HTML 覆盖率报告（可逐文件钻取） | 不入库（可重建） |
+| `reports/coverage/lcov.info`、`lcov-report/` | lcov 报告，供覆盖率平台消费 | 不入库（可重建） |
+| `reports/coverage/coverage-final.json` | v8 原始覆盖率数据（约 220KB） | 不入库（可重建） |
 
 ## 3. 用例分布
 
@@ -134,7 +135,7 @@
    - `router/dynamic.ts` 的菜单转换规则
    - `api/auth.ts` 的登录/MFA/角色权限兼容契约
    - `components/Pagination.vue` 的事件契约
-3. 新增 `npm run test:report` 脚本，把 JUnit/JSON/HTML/lcov 产物固定输出到 `reports/`。
+3. 新增 `npm run test:report` 脚本，把 JUnit/JSON/HTML/lcov 产物固定输出到 `reports/`；其中 JUnit XML、用例 JSON 与覆盖率摘要 JSON 纳入版本管理，并由 `scripts/quality/normalize-test-report.mjs` 归一化绝对路径与主机名后再提交。
 
 ## 6. 未覆盖范围与风险
 
@@ -155,7 +156,7 @@
 npm install
 npx vitest run            # 全量单次运行
 npm run test:coverage     # 覆盖率（输出至 coverage/）
-npm run test:report       # 本次报告口径：JUnit + JSON + HTML/lcov 到 reports/
+npm run test:report       # 本次报告口径：JUnit + JSON + HTML/lcov 到 reports/（机器可读结果入库）
 npx vue-tsc --noEmit      # 类型检查
 npm run build             # 生产构建
 ```

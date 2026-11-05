@@ -12,7 +12,7 @@
 | 全局准备 | [src/test/setup.ts](../../src/test/setup.ts)：mock `ResizeObserver` 与 `window.matchMedia`（Element Plus / ECharts 依赖） |
 | E2E | @playwright/test ^1.63.0 已安装，**尚无配置文件与用例** |
 | 覆盖率 | v8 provider（`@vitest/coverage-v8`），报告 text/json/html/lcov（`npm run test:coverage`） |
-| 报告产物 | `npm run test:report` 输出 JUnit XML + JSON + 覆盖率到 `reports/`（不入库） |
+| 报告产物 | `npm run test:report` 输出 JUnit XML + JSON + 覆盖率到 `reports/`；脚本末尾调用 `scripts/quality/normalize-test-report.mjs` 归一化路径与主机名；机器可读结果入库，HTML/lcov 不入库 |
 | CI | 无（本地执行） |
 
 ## 2. 常用命令
@@ -21,7 +21,7 @@
 npm run test            # watch 模式运行全部用例
 npm run test:ui         # Vitest UI 面板
 npm run test:coverage   # 覆盖率报告（v8，输出 coverage/）
-npm run test:report     # 单次运行 + JUnit/JSON/HTML/lcov 报告，输出 reports/
+npm run test:report     # 单次运行 + JUnit/JSON/HTML/lcov 报告，输出 reports/（自动归一化后仅机器可读结果入库）
 npx vitest run          # CI 式单次运行（不 watch）
 npx vitest run src/utils/__tests__/request.spec.ts   # 指定文件
 ```
