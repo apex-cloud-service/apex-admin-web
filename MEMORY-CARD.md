@@ -1,7 +1,7 @@
 # 记忆卡 · apex-admin-web（管理后台前端）
 
 > **用法**：接手前端或需要改页面时先读本卡（约 3 分钟），细节按文末指针进入 `AGENTS.md` 与 `docs/`。
-> **基线**：2026-11-03 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净
+> **基线**：2026-11-05 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净
 > **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-10-30）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
 
 ## 1. 一句话
@@ -39,7 +39,7 @@ src/
 └── test/         Vitest 全局准备
 ```
 
-业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `oauth2` `profile` `public` `login` `demo` `error`。测试文件 **10 个**：`src/api/` 5 个业务 API 契约（消息/工作流/办公平台/平台模块/生成器），`src/utils/__tests__/` 5 个工具测试（请求层单飞刷新、OAuth2 PKCE/state、认证配置、会话、校验）。
+业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `oauth2` `profile` `public` `login` `demo` `error`。测试文件 **22 个**：`src/api/` 6 个业务 API 契约（认证/消息/工作流/办公平台/平台模块/生成器），其余 16 个为 `*.spec.ts` 单测（`utils/__tests__` 8、`stores/__tests__` 3、`composables/__tests__` 2、`components`/`directives`/`router` 各 1）。
 
 ## 4. 契约前缀（后端改路径必查这里）
 
