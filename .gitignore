@@ -42,6 +42,7 @@ lerna-debug.log*
 coverage/
 coverage-html/
 .nyc_output/
+reports/
 
 # ===== 测试缓存 =====
 test-results/

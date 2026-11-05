@@ -2,7 +2,7 @@
 
 本文件是本仓库的开发入口，说明当前实现、模块边界、关键业务链路和变更约束。修改前先定位相关源码；文档与实现不一致时，以执行代码、类型定义和配置为依据，并同步修正文档。历史分析文档和文件头注释不能代替实现核对。
 
-**核对日期：2026-10-30。** 本次依据前端仓库核对；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
+**核对日期：2026-11-05。** 本次依据前端仓库核对；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
 
 ## 1. 开发入口与关键约束
 
@@ -607,13 +607,16 @@ flowchart TD
 | `npm run build` | 类型检查与生产构建，输出 dist |
 | `npx vitest run` | 单次测试 |
 | `npm run test` | Vitest 默认交互/监听入口 |
-| `npm run test:coverage -- --run` | 单次覆盖率检查，取决于覆盖率提供器可用性 |
+| `npm run test:coverage` | 覆盖率检查（`@vitest/coverage-v8` 已安装，输出 `coverage/`） |
+| `npm run test:report` | 单次运行并输出 JUnit XML + JSON + HTML/lcov 到 `reports/`（不入库） |
 | `npm run preview` | 本地预览构建产物 |
 | `npm run analyze` | 构建并打开产物分析报告 |
 
 当前 package.json 没有 lint 或独立 typecheck 脚本；类型检查使用上述 vue-tsc 或 build 命令。不得记录不存在的 `npm run lint`。Vitest 使用 happy-dom 和 `src/test/setup.ts`，覆盖率配置没有阈值；Playwright 已安装但尚无配置及 E2E 用例，不应宣称已有浏览器端自动化覆盖。
 
-请求刷新测试覆盖认证端点排除、单次重放、并发单飞及重放错误保留；另有 OAuth2 PKCE/state、认证配置 API 和校验工具测试。API 层还有 `api/message.test.ts`、`api/workflow.test.ts`、`api/office-platform.test.ts`，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status）。DOM 模拟测试不能替代真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证。
+截至 2026-11-05，共 22 个测试文件、185 个用例（`npx vitest run` 全绿），详见 [测试报告](docs/archived/project-reports/test-report-2026-11-05.md)。请求刷新测试覆盖认证端点排除、单次重放、并发单飞及重放错误保留；另有 OAuth2 PKCE/state、认证配置 API、脱敏/XSS/存储工具、`v-permission` 指令、`useCrud`/`useTableConfig`、user/app/permission Store、动态路由菜单转换和 `Pagination` 组件测试。API 层还有 `api/auth.test.ts`、`api/message.test.ts`、`api/workflow.test.ts`、`api/office-platform.test.ts`、`api/platform.test.ts`、`api/generator.test.ts`，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status）。
+
+覆盖率存在两个口径：默认配置不设 `coverage.include`，只统计被用例加载的模块（2026-11-05 行覆盖 73.12%）；强制 `--coverage.include='src/**/*.{ts,vue}'` 的全量口径行覆盖为 6.04%，因 62 个页面组件与多数 API/工具模块无用例。引用覆盖率须注明口径，不得以默认口径宣称整体覆盖水平。DOM 模拟测试不能替代真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证。
 
 `VITE_API_PROXY_TARGET` 用于开发代理；`VITE_API_BASE_URL` 用于 Axios baseURL；OAuth2 客户端相关变量参照 `.env.example` 和 `env.d.ts`。不输出真实环境文件中的密钥，不把构建期与运行期配置混为一谈。
 

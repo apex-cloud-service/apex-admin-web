@@ -50,6 +50,7 @@
   - [AGENTS 检查报告](archived/project-reports/agents-check-report-2026-09-13.md)
   - [AGENTS 补充建议](archived/project-reports/agents-supplements-2026-09-13.md)
   - [办公平台前端交付](archived/project-reports/office-frontend-delivery-2026-09-14.md)
+  - [前端测试报告（2026-11-05）](archived/project-reports/test-report-2026-11-05.md)
 - [前后端优化实施方案](archived/frontend-backend-optimization-plan-2026-10-01.md) - 前后端功能匹配评审与分级优化方案
 - [后端待实现功能清单](archived/backend-pending-features-2026-10-01.md) - 后端待实现功能清单与接口契约
 - [后端代码生成器实现](archived/backend-code-generator-implementation-2026-10-01.md) - 代码生成器模块后端完整实现代码
