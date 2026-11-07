@@ -2,7 +2,7 @@
 
 本文件是本仓库的开发入口，说明当前实现、模块边界、关键业务链路和变更约束。修改前先定位相关源码；文档与实现不一致时，以执行代码、类型定义和配置为依据，并同步修正文档。历史分析文档和文件头注释不能代替实现核对。
 
-**核对日期：2026-11-05。** 本次依据前端仓库核对；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
+**核对日期：2026-11-06。** 本次依据前端仓库与 apex-scaffold（HEAD 953426d0）的前后端对照评审核对（见 [评审报告](docs/archived/project-reports/frontend-backend-review-2026-11-06.md)）；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
 
 ## 1. 开发入口与关键约束
 
@@ -17,7 +17,6 @@
 - 菜单展示、按钮展示和后端接口鉴权是三个不同层次。前端隐藏元素不能替代后端权限校验。
 - 不在浏览器配置中保存客户端密钥、数据库密码等秘密；`VITE_*` 会进入前端产物。
 - 优先复用现有组件、类型和工具；不把未接入的工具描述成全局机制。
-- 不修改残留备份 `src/router/dynamic.ts.bak`，不以其内容作为当前实现依据。
 - 除用户明确要求外，不新增代码注释，不创建额外文档，不提交 Git commit。
 
 ### 阅读导航
@@ -286,6 +285,8 @@ flowchart TD
 | `/login` | 公开登录入口 |
 | `/oauth2/callback`、`/office/callback` | 公开授权回调 |
 | `/oauth2/consent` | 授权同意页；public 匿名页（方案 §12.3 口径）——页面可匿名打开，同意提交须登录，未登录先登录后回跳 |
+| `/password-recovery` | 密码找回公开页（public；调用 `/auth/v2/password-recovery/**`，依赖已绑定邮箱/手机号） |
+| `/share` | 匿名分享兑换页（public、hidden；token 即凭证，调 `/api/v2/file-shares/exchange`） |
 | `/dashboard` | 工作台 |
 | `/workflow/monitor`、`/workflow/instances/:id` | 工作流监控与实例详情 |
 | `/workflow/monitor/dashboard` | 工作流重定向入口 |
@@ -609,6 +610,10 @@ flowchart TD
 | `npm run test` | Vitest 默认交互/监听入口 |
 | `npm run test:coverage` | 覆盖率检查（`@vitest/coverage-v8` 已安装，输出 `coverage/`） |
 | `npm run test:report` | 单次运行并输出 JUnit XML + JSON + HTML/lcov 到 `reports/`（机器可读结果入库，HTML/lcov 不入库） |
+| `npm run test:ui` | Vitest 浏览器 UI 交互界面 |
+| `npm run check:comments` | 注释规范检查（`scripts/quality/check-comments.mjs`，仅检查注释存在性，查不出注释与实现的一致性） |
+| `npm run generate:api` | openapi-generator-cli 生成 API 客户端（依赖 OpenAPI 描述源配置，当前非主链路） |
+| `npm run audit` / `npm run audit:fix` | npm 依赖安全审计与自动修复 |
 | `npm run preview` | 本地预览构建产物 |
 | `npm run analyze` | 构建并打开产物分析报告 |
 

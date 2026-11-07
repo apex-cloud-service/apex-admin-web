@@ -9,7 +9,7 @@
  * - POST   /api/v1/file/chunk/init    - 初始化分片上传
  * - POST   /api/v1/file/chunk/upload  - 上传单个分片（原始字节流）
  * - POST   /api/v1/file/chunk/merge   - 合并分片
- * - GET    /api/v1/file/status/{fileId} - 查询已上传分片
+ * - GET    /api/v1/file/chunk/status/{fileId} - 查询已上传分片（断点续传）
  */
 import { del, get, post } from '@/utils/request'
 import type { FileUploadResult } from '@/types'
@@ -146,5 +146,5 @@ export function mergeChunks(payload: { fileId: number; fileName?: string }): Pro
  * @param fileId 文件记录主键
  */
 export function getChunkStatus(fileId: number): Promise<ChunkInitResult> {
-  return get<ChunkInitResult>(`/api/v1/file/status/${fileId}`)
+  return get<ChunkInitResult>(`/api/v1/file/chunk/status/${fileId}`)
 }
