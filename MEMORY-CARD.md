@@ -1,7 +1,7 @@
 # 记忆卡 · apex-admin-web（管理后台前端）
 
 > **用法**：接手前端或需要改页面时先读本卡（约 3 分钟），细节按文末指针进入 `AGENTS.md` 与 `docs/`。
-> **基线**：2026-11-08 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树含未提交变更
+> **基线**：2026-11-08 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`c1d5ae7` 已提交）
 > **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-10-30）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
 
 ## 1. 一句话
@@ -27,7 +27,7 @@ Apex Scaffold 的管理后台（前后端分离独立工程），消费 `apex-sc
 
 ```text
 src/
-├── api/          38 个按业务域拆分的类型化接口文件（无统一 index.ts）
+├── api/          39 个按业务域拆分的类型化接口文件（无统一 index.ts）
 ├── router/       index.ts 静态路由 + dynamic.ts 菜单转路由 + VIEW_REGISTRY
 ├── views/        62 个 .vue 页面，14 个业务目录
 ├── stores/       user / permission / app / office
@@ -39,7 +39,7 @@ src/
 └── test/         Vitest 全局准备
 ```
 
-业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `oauth2` `profile` `public` `login` `demo` `error`。测试文件 **22 个**：`src/api/` 6 个业务 API 契约（认证/消息/工作流/办公平台/平台模块/生成器），其余 16 个为 `*.spec.ts` 单测（`utils/__tests__` 8、`stores/__tests__` 3、`composables/__tests__` 2、`components`/`directives`/`router` 各 1）。
+业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `oauth2` `profile` `public` `login` `demo` `error`。测试文件 **24 个**：`src/api/` 7 个业务 API 契约（认证/消息/工作流/办公平台/平台模块/生成器/通知），其余 17 个为 `*.spec.ts` 单测（`utils/__tests__` 9、`stores/__tests__` 3、`composables/__tests__` 2、`components`/`directives`/`router` 各 1）。
 
 ## 4. 契约前缀（后端改路径必查这里）
 
