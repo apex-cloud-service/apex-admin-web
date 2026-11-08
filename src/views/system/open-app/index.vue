@@ -206,7 +206,9 @@
  * - 主体用户下拉取后台用户列表；迁移导出下载 JSON、导入解析后逐条上行
  */
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Download } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
 import {

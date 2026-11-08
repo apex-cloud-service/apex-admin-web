@@ -13,13 +13,24 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { PageResponse } from '@/types'
 import { useCrud } from '@/composables/useCrud'
 
+// useCrud 经深路径按需导入函数式组件，主入口与深路径须 mock 为同一实例才能命中断言
+const { messageMock, messageBoxMock } = vi.hoisted(() => ({
+  messageMock: { success: vi.fn(), warning: vi.fn() },
+  messageBoxMock: { confirm: vi.fn() },
+}))
 vi.mock('element-plus', () => ({
-  ElMessage: { success: vi.fn(), warning: vi.fn() },
-  ElMessageBox: { confirm: vi.fn() },
+  ElMessage: messageMock,
+  ElMessageBox: messageBoxMock,
+}))
+vi.mock('element-plus/es/components/message/index.mjs', () => ({
+  ElMessage: messageMock,
+}))
+vi.mock('element-plus/es/components/message-box/index.mjs', () => ({
+  ElMessageBox: messageBoxMock,
 }))
 
 /** ElMessageBox.confirm 的重载返回类型不适用于断言「确定」分支，统一以 mock 函数调用 */
-const confirmMock = ElMessageBox.confirm as unknown as ReturnType<typeof vi.fn>
+const confirmMock = messageBoxMock.confirm as unknown as ReturnType<typeof vi.fn>
 
 interface Row {
   id: string

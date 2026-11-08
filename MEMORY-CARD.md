@@ -1,7 +1,7 @@
 # 记忆卡 · apex-admin-web（管理后台前端）
 
 > **用法**：接手前端或需要改页面时先读本卡（约 3 分钟），细节按文末指针进入 `AGENTS.md` 与 `docs/`。
-> **基线**：2026-11-05 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净
+> **基线**：2026-11-08 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树含未提交变更
 > **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-10-30）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
 
 ## 1. 一句话
@@ -10,7 +10,7 @@ Apex Scaffold 的管理后台（前后端分离独立工程），消费 `apex-sc
 
 ## 2. 技术栈与命令
 
-- Vue 3.5 / Vite 6 / TypeScript ~5.7 / Vue Router 4 / Pinia 2 / Element Plus 2 / Axios / ECharts 5 / CropperJS，Node `>=18`。
+- Vue 3.5 / Vite 6 / TypeScript ~5.7 / Vue Router 4 / Pinia 2 / Element Plus 2（**unplugin-vue-components 深路径按需引入**，11-08 起）/ Axios / ECharts 5（`utils/echarts.ts` 按需注册）/ CropperJS，Node `>=18`。
 - 页面统一 `<script setup lang="ts">`；路径别名 `@` → `src/`。
 
 | 命令 | 用途 |
@@ -91,9 +91,14 @@ src/
 | 套餐/能力/集成页 404 | 网关已显式覆盖（dev/prod/Nacos + 契约测试）；仍 404 核验目标环境配置是否滚动 |
 | 数据总览无数据 | 页面走 `GET /api/v2/overview`（权限 `system:monitor:view`）；单源 DEGRADED 属正常，勿改调内部端点 |
 | IoT 规则 404 / 影子空 | 规则分页与影子查询端点已补（V85/V86 种子）；存量环境需执行迁移；未上报过遥测的设备影子为空属正常 |
+| 集成/IoT/在线会话/密码找回页 404 或返回 HTML | 代理须覆盖 `/integration/v1`、`/auth/v1\|v2`（带版本前缀，勿用裸 `/integration` 撞菜单路由）；`/oauth2/consent` 仅 POST 反代 |
+| 站内信模板编辑/删除 404 | 网关 office 路由须含 `/admin-api/v1/message-templates/**`（后端已修，环境需滚动新配置） |
 
-## 7. 当前状态（2026-11-05）
+## 7. 当前状态（2026-11-08）
 
+- 11-08（二批）：**通知中心 SSE 接入**（api/notification.ts + utils/notification-stream.ts fetch 流式客户端 + NotificationCenter 面板）；E2E 拉起真实环境验证并修复后端三处 SSE 阻断（Sinks autoCancel、网关 notification-stream 路由、NettyConfig 读超时边界，均 apex-scaffold）；`nginx -t` 容器内通过。SSE 请求必须带 `Accept: text/event-stream`。
+- 11-08：前后端路由端点评审落地——修复代理缺口（vite/nginx 补 `/auth/v1|v2`、`/integration/v1`、`/oauth2/consent` POST）与后端网关死角（`/admin-api/v1/message-templates/**`，apex-scaffold）；构建优化：EP 按需引入 + ECharts 按需注册（JS 2988→2236 KB，-25%）、79 处错误提示统一 `showError`。详见 [评审报告](docs/archived/project-reports/frontend-backend-review-2026-11-08.md)。
+- 11-07：`d381de0` 修正分片状态查询路径，落地前后端对照评审文档。
 - 11-05：办公平台 API 层重构——`office.ts` / `office-new.ts` 拆为 `office-platform.ts`（平台标识+登录回调+应用配置+绑定审批+组织同步）、`office-approval.ts`、`office-calendar.ts`、`office-document.ts`；`OfficePlatform` 与 `PLATFORM_NAMES` 收敛为单一定义。同步全仓注释整改、清理死类型与连续空行。
 - 11-03 提交 `d839a04`（29 文件 / +5140）：新增租户套餐、能力运营、开放平台、集成中心、物联网、统一通知、在线会话、OAuth2 授权同意页，并接入 MFA 二步登录。
 - 11-02 交付（已在库）：MFA 二步登录、OAuth2 consent 匿名页（public + 登录回跳）、在线会话页、租户套餐页、开放应用页、能力目录与用量页、统一通知页、集成中心（连接器+凭据）、IoT 设备页（影子/遥测/命令下发与历史）与规则页、工作台数据总览。

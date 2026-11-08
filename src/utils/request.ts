@@ -9,7 +9,7 @@
  *   5. 请求超时：默认 30s（与后端全局响应超时对齐）
  */
 import axios, { type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { CODE_UNAUTHORIZED, RESULT_SUCCESS } from '@/settings'
 import { getRefreshToken, getToken, setRefreshToken, setToken, clearSession, getTenantId } from '@/utils/auth'
 import { refreshToken } from '@/api/auth'

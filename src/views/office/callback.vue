@@ -52,7 +52,7 @@
  */
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Loading, CircleCloseFilled, Clock } from '@element-plus/icons-vue'
 import { officeCallback, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
 import { setToken, setRefreshToken, removeRefreshToken } from '@/utils/auth'

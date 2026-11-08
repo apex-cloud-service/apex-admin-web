@@ -132,11 +132,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import FileUpload from '@/components/FileUploadEnhanced.vue'
 import { deleteFile } from '@/api/file'
 import type { FileUploadResult } from '@/types'
 import type { UploadUserFile } from 'element-plus'
+import { showError } from '@/utils/request'
 
 // 组件引用
 const upload1Ref = ref<InstanceType<typeof FileUpload>>()
@@ -301,7 +302,7 @@ const handleDeleteFile = async (): Promise<void> => {
     upload1Result.value = null
   } catch (error) {
     console.error('删除文件失败：', error)
-    ElMessage.error('删除文件失败')
+    showError(error, '删除文件失败')
   } finally {
     deleting.value = false
   }

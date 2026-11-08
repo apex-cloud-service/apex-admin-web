@@ -446,7 +446,9 @@
  */
 <script setup lang="ts">
 import { ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Loading } from '@element-plus/icons-vue'
 import {
   listDataSources,
@@ -482,6 +484,7 @@ import {
   type GenArtifact,
 } from '@/api/generator'
 import type { PageQuery } from '@/types'
+import { showError } from '@/utils/request'
 
 // 当前激活的标签页
 const activeTab = ref('datasource')
@@ -577,7 +580,7 @@ async function loadDataSources() {
   try {
     datasources.value = await listDataSources()
   } catch (error) {
-    ElMessage.error('加载数据源失败')
+    showError(error, '加载数据源失败')
   } finally {
     loading.value = false
   }
@@ -626,7 +629,7 @@ async function submitDataSource() {
     datasourceDialogVisible.value = false
     await loadDataSources()
   } catch (error) {
-    ElMessage.error('操作失败')
+    showError(error, '操作失败')
   }
 }
 
@@ -643,7 +646,7 @@ async function handleTestConnection(row: DataSource) {
       ElMessage.error('连接失败')
     }
   } catch (error) {
-    ElMessage.error('测试连接失败')
+    showError(error, '测试连接失败')
   }
 }
 
@@ -659,7 +662,7 @@ async function handleViewTables(row: DataSource) {
   try {
     tables.value = await listTables(row.id)
   } catch (error) {
-    ElMessage.error('加载表列表失败')
+    showError(error, '加载表列表失败')
   } finally {
     tablesLoading.value = false
   }
@@ -686,7 +689,7 @@ async function handleViewColumns(row: TableInfo) {
   try {
     columns.value = await getTableColumns(currentDatasourceId.value, row.tableName)
   } catch (error) {
-    ElMessage.error('加载字段明细失败')
+    showError(error, '加载字段明细失败')
   } finally {
     columnsLoading.value = false
   }
@@ -704,7 +707,7 @@ async function handleDeleteDataSource(row: DataSource) {
     ElMessage.success('删除成功')
     await loadDataSources()
   } catch (error) {
-    ElMessage.error('删除失败')
+    showError(error, '删除失败')
   }
 }
 
@@ -718,7 +721,7 @@ async function loadConfigs() {
     configs.value = result.list || []
     configTotal.value = result.total
   } catch (error) {
-    ElMessage.error('加载配置失败')
+    showError(error, '加载配置失败')
   } finally {
     configLoading.value = false
   }
@@ -761,7 +764,7 @@ async function handleDatasourceChange(datasourceId: number) {
   try {
     tables.value = await listTables(datasourceId)
   } catch (error) {
-    ElMessage.error('加载表列表失败')
+    showError(error, '加载表列表失败')
   }
 }
 
@@ -803,7 +806,7 @@ async function submitConfig() {
     configDialogVisible.value = false
     await loadConfigs()
   } catch (error) {
-    ElMessage.error('操作失败')
+    showError(error, '操作失败')
   }
 }
 
@@ -819,7 +822,7 @@ async function handleDeleteConfig(row: GeneratorConfig) {
     ElMessage.success('删除成功')
     await loadConfigs()
   } catch (error) {
-    ElMessage.error('删除失败')
+    showError(error, '删除失败')
   }
 }
 
@@ -836,7 +839,7 @@ async function handleGenerate(row: GeneratorConfig) {
     const failCount = files.length - okCount
     ElMessage.success(`代码生成完成，成功 ${okCount} 个文件${failCount > 0 ? `，失败 ${failCount} 个` : ''}`)
   } catch (error) {
-    ElMessage.error('生成失败')
+    showError(error, '生成失败')
   }
 }
 
@@ -864,7 +867,7 @@ async function loadHistory() {
     history.value = result.list || []
     historyTotal.value = result.total
   } catch (error) {
-    ElMessage.error('加载历史记录失败')
+    showError(error, '加载历史记录失败')
   } finally {
     historyLoading.value = false
   }
@@ -933,7 +936,7 @@ async function loadTemplates() {
   try {
     templates.value = await listGenTemplates()
   } catch (error) {
-    ElMessage.error('加载模板目录失败')
+    showError(error, '加载模板目录失败')
   }
 }
 
@@ -949,7 +952,7 @@ async function handleWizardPreflight() {
   try {
     wizardPreflight.value = await preflightGenerate(wizardConfigId.value)
   } catch (error) {
-    ElMessage.error('预检失败')
+    showError(error, '预检失败')
   } finally {
     wizardPreflightLoading.value = false
   }
@@ -970,7 +973,7 @@ async function handleWizardPreview() {
       wizardCollapse.value.push('preview')
     }
   } catch (error) {
-    ElMessage.error('预览失败')
+    showError(error, '预览失败')
   } finally {
     wizardPreviewLoading.value = false
   }
@@ -994,7 +997,7 @@ async function handleWizardSubmit() {
     ElMessage.success(`任务已受理：${result.taskId}`)
     openTaskDialog(result.taskId)
   } catch (error) {
-    ElMessage.error('提交任务失败')
+    showError(error, '提交任务失败')
   } finally {
     wizardSubmitting.value = false
   }
@@ -1028,7 +1031,7 @@ function startPolling(taskId: number) {
       }
     } catch (error) {
       stopPolling()
-      ElMessage.error('查询任务进度失败')
+      showError(error, '查询任务进度失败')
     }
   }
   void poll()
@@ -1054,7 +1057,7 @@ async function loadTaskArtifacts(taskId: number) {
   try {
     taskArtifacts.value = await listGenTaskArtifacts(taskId)
   } catch (error) {
-    ElMessage.error('加载任务产物失败')
+    showError(error, '加载任务产物失败')
   }
 }
 
@@ -1069,7 +1072,7 @@ async function handleTaskCancel() {
     await cancelGenTask(taskProgress.value.id)
     ElMessage.success('取消请求已提交')
   } catch (error) {
-    ElMessage.error('取消失败')
+    showError(error, '取消失败')
   } finally {
     taskCancelLoading.value = false
   }
@@ -1089,7 +1092,7 @@ async function handleDownloadArtifact(row: GenArtifact) {
     link.click()
     URL.revokeObjectURL(url)
   } catch (error) {
-    ElMessage.error('下载产物失败')
+    showError(error, '下载产物失败')
   }
 }
 

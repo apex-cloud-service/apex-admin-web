@@ -137,7 +137,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import Pagination from '@/components/Pagination.vue'
 import { showError } from '@/utils/request'
 import { listUsers } from '@/api/user'

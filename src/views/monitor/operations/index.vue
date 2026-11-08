@@ -287,7 +287,7 @@
  * - 快照分页使用后端 page/size 口径
  */
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Refresh } from '@element-plus/icons-vue'
 import Pagination from '@/components/Pagination.vue'
 import { showError } from '@/utils/request'

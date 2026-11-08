@@ -317,7 +317,7 @@
  * - 所有指标接口失败时置灰展示，不阻塞页面
  */
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import * as echarts from 'echarts'
+import * as echarts from '@/utils/echarts'
 import { Refresh } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
 import { useAppStore } from '@/stores/app'

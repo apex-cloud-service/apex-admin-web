@@ -113,7 +113,7 @@
  * - 用量按 capability 必填查询，日期区间最大 92 天（后端约束，前端提示）
  */
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Search } from '@element-plus/icons-vue'
 import Pagination from '@/components/Pagination.vue'
 import { showError } from '@/utils/request'

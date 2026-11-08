@@ -136,7 +136,9 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import Pagination from '@/components/Pagination.vue'
 import { showError } from '@/utils/request'
 import {

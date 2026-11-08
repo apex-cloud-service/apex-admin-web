@@ -88,7 +88,7 @@
  */
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { showError } from '@/utils/request'
 import {
   confirmPasswordRecovery,

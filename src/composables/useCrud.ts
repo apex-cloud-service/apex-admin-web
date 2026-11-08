@@ -5,7 +5,8 @@
  * 适配统一分页口径（PageQuery{page, size} + PageResponse{list, total}）。
  */
 import { ref, type Ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import type { PageResponse } from '@/types'
 
 /** CRUD 接口适配器：由调用方接入具体业务的 API 函数 */

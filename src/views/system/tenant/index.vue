@@ -173,7 +173,9 @@
  * - 生命周期动作携带当前记录 version 作为乐观锁，冲突由后端拒绝
  */
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { ArrowDown, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import Pagination from '@/components/Pagination.vue'
 import { showError } from '@/utils/request'

@@ -232,7 +232,7 @@
  * - 通过 ref 调用组件暴露的 clearFiles 清空方法
  */
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import {
   Picture,
   Crop,

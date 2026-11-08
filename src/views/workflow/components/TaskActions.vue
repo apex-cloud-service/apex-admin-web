@@ -134,10 +134,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { rollbackTask, transferTask, delegateTask } from '@/api/workflow'
 import { listUsers } from '@/api/user'
+import { showError } from '@/utils/request'
 
 /**
  * 组件属性
@@ -234,7 +235,7 @@ const confirmRollback = async () => {
     rollbackVisible.value = false
     emit('success')
   } catch (error: any) {
-    ElMessage.error(error.message || '回退失败')
+    showError(error, '回退失败')
   } finally {
     loading.value = false
   }
@@ -274,7 +275,7 @@ const confirmTransfer = async () => {
     transferVisible.value = false
     emit('success')
   } catch (error: any) {
-    ElMessage.error(error.message || '转办失败')
+    showError(error, '转办失败')
   } finally {
     loading.value = false
   }
@@ -314,7 +315,7 @@ const confirmDelegate = async () => {
     delegateVisible.value = false
     emit('success')
   } catch (error: any) {
-    ElMessage.error(error.message || '委派失败')
+    showError(error, '委派失败')
   } finally {
     loading.value = false
   }

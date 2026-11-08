@@ -7,7 +7,7 @@
  */
 import { watch, onMounted, onBeforeUnmount, type Ref } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { readJSON, writeJSON, readRaw, writeRaw, removeItem, hasItem } from '@/utils/storage'
 import { DRAFT_KEY_PREFIX, DRAFT_TIMESTAMP_KEY_SUFFIX } from '@/settings'
 

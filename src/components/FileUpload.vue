@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Plus, Upload } from '@element-plus/icons-vue'
 import { getToken } from '@/utils/auth'
 import { MAX_UPLOAD_SIZE } from '@/settings'

@@ -174,7 +174,8 @@
  */
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { ChatDotRound, Key, Lock, OfficeBuilding, User } from '@element-plus/icons-vue'
 import { getCaptcha } from '@/api/auth'
 import {

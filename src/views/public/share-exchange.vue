@@ -42,7 +42,7 @@
  */
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { showError } from '@/utils/request'
 import { downloadFileShare, exchangeFileShare, type FileShareExchangeResult } from '@/api/file-share'
 

@@ -71,7 +71,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { showError } from '@/utils/request'
 import { listMaskingRules, maskBatch } from '@/api/masking'
 import type { MaskingRule } from '@/types'

@@ -99,7 +99,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { TrendCharts, Loading, Bell, Timer } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+import * as echarts from '@/utils/echarts'
 import { useAppStore } from '@/stores/app'
 import { getWorkflowStatistics, getWorkflowTrend } from '@/api/workflow'
 import type { WorkflowStatistics, WorkflowTrend } from '@/types/workflow'

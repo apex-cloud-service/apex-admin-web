@@ -25,7 +25,7 @@
  */
 import { onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { exchangeToken, consumeAuthorization } from '@/api/oauth2'
 import { setToken, setRefreshToken, removeRefreshToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'

@@ -144,7 +144,8 @@
  * - 详情抽屉、创建与启停；JSON 字段提交前做语法校验
  */
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import Pagination from '@/components/Pagination.vue'
 import { showError } from '@/utils/request'

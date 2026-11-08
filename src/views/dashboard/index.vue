@@ -86,7 +86,7 @@
  * - 趋势图：ECharts 折线图（真实接口计数器聚合，演示窗口）
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import * as echarts from 'echarts'
+import * as echarts from '@/utils/echarts'
 import { useAppStore } from '@/stores/app'
 import { useUserStore } from '@/stores/user'
 import { getMonitorOverview } from '@/api/monitor'

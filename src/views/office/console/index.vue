@@ -84,9 +84,9 @@
  */
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { Connection, ChatDotRound, Checked, Calendar } from '@element-plus/icons-vue'
 import { listApps, listBindings, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
+import { showError } from '@/utils/request'
 
 /** ========== 状态定义 ========== */
 
@@ -209,7 +209,7 @@ const loadData = async () => {
       }
     }
   } catch (error: any) {
-    ElMessage.error(error.message || '加载数据失败')
+    showError(error, '加载数据失败')
   }
 }
 

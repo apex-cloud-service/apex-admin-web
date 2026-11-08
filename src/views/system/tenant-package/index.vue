@@ -156,7 +156,8 @@
  * - 菜单、权限码、能力三类裁剪集合分别用「全量」开关表达空集合语义
  */
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, type FormInstance, type FormRules, type TreeInstance } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules, TreeInstance } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
 import {

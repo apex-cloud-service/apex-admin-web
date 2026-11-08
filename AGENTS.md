@@ -2,7 +2,7 @@
 
 本文件是本仓库的开发入口，说明当前实现、模块边界、关键业务链路和变更约束。修改前先定位相关源码；文档与实现不一致时，以执行代码、类型定义和配置为依据，并同步修正文档。历史分析文档和文件头注释不能代替实现核对。
 
-**核对日期：2026-11-06。** 本次依据前端仓库与 apex-scaffold（HEAD 953426d0）的前后端对照评审核对（见 [评审报告](docs/archived/project-reports/frontend-backend-review-2026-11-06.md)）；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
+**核对日期：2026-11-08。** 本次依据前端仓库（HEAD d381de0）与 apex-scaffold（HEAD 68e8cfe1）的前后端对照评审与代理链路修复核对（见 [评审报告](docs/archived/project-reports/frontend-backend-review-2026-11-08.md)）；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
 
 ## 1. 开发入口与关键约束
 
@@ -29,6 +29,7 @@
 | 常规 CRUD | 相邻页面、对应 `api/*.ts`、`types/index.ts` | DTO、分页、错误提示与刷新行为 |
 | 工作流 | `api/workflow.ts`、`types/workflow.ts`、`views/workflow/` | 特殊分页、静态入口、发起流程（workflowCode 调用方提供）、待办办理语义、组件接入范围 |
 | 站内信 | `api/message.ts`、`utils/message-socket.ts`、`views/office/message/`、`layouts/AdminLayout.vue` | 收件箱/模板契约、WebSocket 推送（ticket/pong/1h 重连）、数组响应口径；AdminLayout 未读角标 = 60s 轮询 + WS 推送触发刷新 |
+| 通知中心 | `api/notification.ts`、`utils/notification-stream.ts`、`components/NotificationCenter/` | system 域 `/api/v1/notifications/**`；SSE（`/notifications/stream`）用 fetch 流式实现（网关仅认 Authorization 头，EventSource 不可用），请求必须带 `Accept: text/event-stream`（后端据此豁免 30s 响应超时）；断线 5s→30s 退避 |
 | 数据脱敏 | `api/masking.ts`、`views/system/masking/` | 规则只读（启动配置）、批量试算；本仓库可确认前端路径与开发代理，目标网关路由需外部核验 |
 | 租户管理 | `api/tenant.ts`、`views/system/tenant/` | `/api/v2/platform/tenants`、pageNum/pageSize 必填、生命周期动作小写枚举、配额 null=不限、version 乐观锁；开通向导可同时提交 `adminUsername`/`adminPassword`（后端成对使用） |
 | 租户套餐 | `api/tenant-package.ts`、`views/system/tenant-package/` | `/api/v2/tenant-packages`；列表为裸数组、更新走无路径参数的 `PUT`（后端按请求体 `packageCode` 定位）；`menuIds`/`permissionCodes`/`features` **空集合 = 全量放行**；提交前补全菜单父链 |
@@ -57,7 +58,7 @@ src/
 ├── layouts/               AdminLayout：菜单、顶栏、面包屑、主视图
 ├── views/                 login、oauth2、public（匿名分享/找回页）、dashboard、profile、error、demo
 │                          system、monitor、data、office、workflow
-├── components/            Pagination、GlobalSearch、EmptyState、上传组件
+├── components/            Pagination、GlobalSearch、NotificationCenter、EmptyState、上传组件
 ├── composables/           useCrud、useTableConfig、useFormDraft、useBreakpoint
 ├── stores/                user、permission、app、office
 ├── directives/            permission
@@ -89,6 +90,7 @@ src/
 | 账号安全 | `mfa.ts`、`ip-access-control.ts`、`auth-audit.ts` | MFA 配置与 IP 白/黑名单（`/api/mfa`、`/api/ip-access-control`）；认证中心审计事件查询与清理（`/api/v1/auth/audit-logs/**`） |
 | 运维健康 | `operations.ts` | `/api/v2/operations/*` 报告/快照/趋势/租户摘要/导出 |
 | 站内信 | `message.ts` | 收件箱/已发送/发送/未读数、WebSocket 推送与消息模板管理（`/api/v1/messages`、`/admin-api/v1/message-templates`）；游标增量收件箱（`/inbox/cursor`）与渠道投递记录（`/{id}/deliveries`，已发送页抽屉） |
+| 通知中心 | `notification.ts` | 系统事件通知收件箱/未读/已读与 SSE 实时推送（`/api/v1/notifications/**`，system 域）；与 office 域站内信是两套独立通道 |
 | 办公平台 | `office-platform.ts`、`office-approval.ts`、`office-calendar.ts`、`office-document.ts`、`office-sync-wizard.ts`、`meeting-room.ts` | 业务接口按子域拆分、version、组织同步（部门 CRUD/员工/同步历史/触发同步/映射）、同步向导（预检/预览/执行/重试）、会议室；绑定查询有 `/bindings`（数组）与 `/bindings/page`（真实分页 + status 过滤）两套 |
 | 数据脱敏 | `masking.ts` | 规则只读查询与批量脱敏试算（`/api/v1/masking`） |
 | 文件与搜索 | `file.ts`、`search.ts` | 文件接口（含分片上传）、上传组件、顶栏全文搜索与索引重建 |
@@ -112,7 +114,7 @@ flowchart TB
     UP --> G
     G --> DEV[Vite 开发代理]
     G --> PROD[Nginx 生产反代]
-    DEV --> PATH[api / admin-api / OAuth2 授权与令牌路径]
+    DEV --> PATH[api / admin-api / auth v1v2 / integration v1 / OAuth2 授权令牌与 consent POST]
     PROD --> PATH
     PATH --> BE[后端接口边界]
     BE -.搜索接口依赖.-> SEARCH[全文搜索服务]
@@ -170,7 +172,7 @@ flowchart LR
     PROXY --> BE[配置的后端 upstream]
 ```
 
-开发服务器默认 `0.0.0.0:5173`，代理目标取 `VITE_API_PROXY_TARGET`，缺省 `http://127.0.0.1:8080`。Vite 对 `/api`、`/admin-api` 及 OAuth2 授权/令牌路径配置代理。构建包含 vendor 分包，生产移除 console/debugger，分析报告为 `dist/stats.html`。
+开发服务器默认 `0.0.0.0:5173`，代理目标取 `VITE_API_PROXY_TARGET`，缺省 `http://127.0.0.1:8080`。Vite 对 `/api`、`/admin-api`、`/auth/v1|v2`、`/integration/v1` 及 OAuth2 授权/令牌/consent（仅 POST，GET 回退 SPA）路径配置代理，nginx 同域反代口径一致。构建包含 vendor 分包，生产移除 console/debugger，分析报告为 `dist/stats.html`。
 
 Docker 使用 Node 18 Alpine 构建和 Nginx 运行两个阶段；当前安装命令是 `npm install`。`VITE_API_BASE_URL` 在构建时注入，运行时修改不能重写已打包的 JavaScript；`API_PROXY_PASS` 只影响 Nginx upstream。Compose 依赖外部网络 `apex-scaffold_apex-network`；首页健康检查仅证明静态服务可访问。
 
@@ -673,6 +675,10 @@ flowchart TD
 | IoT 规则页 404 | 后端已补 `GET /integration/v1/iot/rules`（分页）与 `iot:rule:read` 权限码（V85/V86 种子）；存量环境需执行迁移 |
 | IoT 设备影子不可用 | 设备注册时才会创建影子行；未上报过的设备影子字段为空属正常。desired 写接口后端未实现（API 文档 §10） |
 | Docker 首页正常但接口失败 | API_PROXY_PASS、外部网络、后端 DNS、代理 location |
+| 集成中心/IoT/在线会话/密码找回页 404 或接口返回 HTML | vite 与 nginx 须反代 `/integration/v1`、`/auth/v1|v2`（前缀带 API 版本，避免撞菜单目录 SPA 路由 `/integration`）；`/oauth2/consent` 仅 POST 反代、GET 回退 SPA |
+| 站内信模板编辑/删除 404 | 网关 office-domain 路由须含 `/admin-api/v1/message-templates/**`（仅精确路径时 `{id}` 子路径落入 system 兜底 404），需后端随版本滚动 |
+| 通知 SSE 30s 被掐断或不推送 | 请求须带 `Accept: text/event-stream`（后端豁免全局响应超时的开关）；网关须有 breaker-free 的 `notification-stream` 路由 + metadata `response-timeout`；后端 Sinks autoCancel=false 与 NettyConfig 读超时边界（请求读完成即解除）须在位 |
+| Element Plus 组件无样式或函数式提示英文 | 模板组件经 unplugin-vue-components 深路径解析器按需引入（勿改回 `element-plus/es` 桶文件）；ElMessage/ElMessageBox 等函数式组件样式在 main.ts 全局补齐，语言包经应用级 provideGlobalConfig + `_context` 回填 |
 
 ## 11. 参考资料与维护方式
 

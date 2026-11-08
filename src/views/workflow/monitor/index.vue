@@ -65,7 +65,8 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
 import Statistics from './Statistics.vue'

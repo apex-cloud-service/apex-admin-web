@@ -364,7 +364,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import {
   listSSOProviders,
@@ -384,6 +386,7 @@ import {
   type SSOStatistics,
 } from '@/api/sso'
 import type { PageQuery } from '@/types'
+import { showError } from '@/utils/request'
 
 // 当前激活的标签页
 const activeTab = ref('providers')
@@ -514,7 +517,7 @@ async function loadProviders() {
       providerName: providerQuery.providerName || undefined,
     })
   } catch (error) {
-    ElMessage.error('加载SSO提供商失败')
+    showError(error, '加载SSO提供商失败')
   } finally {
     loading.value = false
   }
@@ -561,7 +564,7 @@ async function handleDelete(row: SSOProvider) {
       await loadProviders()
     }
   } catch (error) {
-    ElMessage.error('删除失败')
+    showError(error, '删除失败')
   }
 }
 
@@ -587,7 +590,7 @@ async function handleToggle(row: SSOProvider) {
       ElMessage.success(row.enabled ? '已启用' : '已禁用')
     }
   } catch (error) {
-    ElMessage.error('操作失败')
+    showError(error, '操作失败')
     row.enabled = !row.enabled
   }
 }
@@ -606,7 +609,7 @@ async function handleTest(row: SSOProvider) {
       }
     }
   } catch (error) {
-    ElMessage.error('测试连接失败')
+    showError(error, '测试连接失败')
   }
 }
 
@@ -621,7 +624,7 @@ async function handleViewMetadata(row: SSOProvider) {
       metadataVisible.value = true
     }
   } catch (error) {
-    ElMessage.error('获取元数据失败')
+    showError(error, '获取元数据失败')
   }
 }
 
@@ -653,7 +656,7 @@ async function submitForm() {
     dialogVisible.value = false
     await loadProviders()
   } catch (error) {
-    ElMessage.error('操作失败')
+    showError(error, '操作失败')
   }
 }
 
@@ -678,7 +681,7 @@ async function loadSessions() {
     sessions.value = list || []
     sessionTotal.value = list?.length || 0
   } catch (error) {
-    ElMessage.error('加载会话列表失败')
+    showError(error, '加载会话列表失败')
   } finally {
     sessionLoading.value = false
   }
@@ -701,7 +704,7 @@ async function handleTerminateSession(row: SSOSession) {
     ElMessage.success('下线成功')
     await loadSessions()
   } catch (error) {
-    ElMessage.error('操作失败')
+    showError(error, '操作失败')
   }
 }
 
@@ -717,7 +720,7 @@ async function handleBatchTerminate() {
     ElMessage.success('批量下线成功')
     await loadSessions()
   } catch (error) {
-    ElMessage.error('操作失败')
+    showError(error, '操作失败')
   }
 }
 
@@ -735,7 +738,7 @@ async function loadLogs() {
     logs.value = list || []
     logTotal.value = list?.length || 0
   } catch (error) {
-    ElMessage.error('加载审计日志失败')
+    showError(error, '加载审计日志失败')
   } finally {
     logLoading.value = false
   }
@@ -757,7 +760,7 @@ async function loadStatistics() {
   try {
     statistics.value = await getSSOStatistics()
   } catch (error) {
-    ElMessage.error('加载统计信息失败')
+    showError(error, '加载统计信息失败')
   }
 }
 

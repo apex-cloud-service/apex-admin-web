@@ -168,7 +168,9 @@
  * 实现文档的 CRUD 操作、状态管理、查看下载等功能
  */
 import { ref, reactive } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { Search, Refresh, Plus, Edit, Delete, View, Download } from '@element-plus/icons-vue'
 import Pagination from '@/components/Pagination.vue'
 import { listDocuments, createDocument, updateDocument, deleteDocument, getDocumentDetail, downloadDocument, updateDocumentStatus } from '@/api/document'

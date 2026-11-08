@@ -2,7 +2,7 @@
   管理后台主布局
   ------------------------------------------------------------------
   左侧：菜单侧边栏（基于路由表渲染，目录/菜单树形展示）
-  顶部：折叠开关、全局搜索、站内信未读提醒、明暗主题切换、用户信息与登出
+  顶部：折叠开关、全局搜索、通知中心（SSE）、站内信未读提醒、明暗主题切换、用户信息与登出
   主体：<router-view> 渲染当前页面
 -->
 <template>
@@ -63,6 +63,8 @@
         <div class="header-right">
           <!-- 全局搜索 -->
           <GlobalSearch />
+          <!-- 通知中心（system 域，SSE 实时推送） -->
+          <NotificationCenter />
           <!-- 站内信未读提醒 -->
           <el-tooltip content="站内信" placement="bottom">
             <el-badge
@@ -115,11 +117,12 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter, type RouteRecordRaw } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { Bell, Expand, Fold, Moon, Sunny } from '@element-plus/icons-vue'
 import { useAppStore } from '@/stores/app'
 import { useUserStore } from '@/stores/user'
 import GlobalSearch from '@/components/GlobalSearch/index.vue'
+import NotificationCenter from '@/components/NotificationCenter/index.vue'
 import { getUnreadCount } from '@/api/message'
 import { subscribeMessagePush } from '@/utils/message-socket'
 

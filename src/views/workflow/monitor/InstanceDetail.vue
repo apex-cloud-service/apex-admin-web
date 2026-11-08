@@ -152,9 +152,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { getWorkflowInstanceDetail, suspendInstance, resumeInstance } from '@/api/workflow'
 import type { WorkflowInstanceDetail } from '@/types/workflow'
+import { showError } from '@/utils/request'
 
 const route = useRoute()
 const router = useRouter()
@@ -230,7 +231,7 @@ const confirmSuspend = async () => {
     suspendDialogVisible.value = false
     await loadDetail()
   } catch (error: any) {
-    ElMessage.error(error.message || '挂起失败')
+    showError(error, '挂起失败')
   } finally {
     operationLoading.value = false
   }
@@ -261,7 +262,7 @@ const confirmResume = async () => {
     resumeDialogVisible.value = false
     await loadDetail()
   } catch (error: any) {
-    ElMessage.error(error.message || '恢复失败')
+    showError(error, '恢复失败')
   } finally {
     operationLoading.value = false
   }

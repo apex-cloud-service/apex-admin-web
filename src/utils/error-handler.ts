@@ -2,7 +2,8 @@
  * 错误处理工具
  * 提供统一的错误处理和用户提示
  */
-import { ElMessage, ElNotification } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElNotification } from 'element-plus/es/components/notification/index.mjs'
 
 /**
  * 错误类型枚举

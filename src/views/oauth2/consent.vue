@@ -78,7 +78,7 @@
  */
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Lock } from '@element-plus/icons-vue'
 import { submitConsent } from '@/api/oauth2'
 import { getToken } from '@/utils/auth'

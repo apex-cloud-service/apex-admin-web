@@ -129,7 +129,9 @@
  * - 更新/删除均携带 version 乐观锁，冲突时后端拒绝
  */
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import {
   listApps,
@@ -141,6 +143,7 @@ import {
   type OfficeAppResponse,
   type OfficeAppRequest,
 } from '@/api/office-platform'
+import { showError } from '@/utils/request'
 
 /** ========== 状态定义 ========== */
 
@@ -205,7 +208,7 @@ const loadApps = async () => {
   try {
     apps.value = await listApps()
   } catch (error) {
-    ElMessage.error('加载配置失败')
+    showError(error, '加载配置失败')
   }
 }
 
@@ -264,7 +267,7 @@ const handleSubmit = async () => {
       dialogVisible.value = false
       await loadApps()
     } catch (error: any) {
-      ElMessage.error(error.message || '操作失败')
+      showError(error, '操作失败')
     } finally {
       submitLoading.value = false
     }
@@ -288,7 +291,7 @@ const handleDelete = async (platform: OfficePlatform) => {
     await loadApps()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '删除失败')
+      showError(error, '删除失败')
     }
   }
 }

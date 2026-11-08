@@ -132,7 +132,8 @@
  * - 审批与解绑均携带 version 乐观锁，冲突时后端拒绝
  */
 import { computed, ref, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import {
   listBindingsPage,
@@ -142,6 +143,7 @@ import {
   type OfficePlatform,
   type OfficeBindingResponse,
 } from '@/api/office-platform'
+import { showError } from '@/utils/request'
 
 /** ========== 状态定义 ========== */
 
@@ -236,7 +238,7 @@ const loadBindings = async () => {
     bindings.value = data.list
     total.value = data.total
   } catch (error: any) {
-    ElMessage.error(error.message || '加载失败')
+    showError(error, '加载失败')
   } finally {
     loading.value = false
   }
@@ -299,7 +301,7 @@ const handleApprove = async (row: OfficeBindingResponse) => {
     await loadBindings()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '批准失败')
+      showError(error, '批准失败')
     }
   }
 }
@@ -328,7 +330,7 @@ const handleReject = async (row: OfficeBindingResponse) => {
     await loadBindings()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '拒绝失败')
+      showError(error, '拒绝失败')
     }
   }
 }
@@ -353,7 +355,7 @@ const handleUnbind = async (row: OfficeBindingResponse) => {
     await loadBindings()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '解绑失败')
+      showError(error, '解绑失败')
     }
   }
 }

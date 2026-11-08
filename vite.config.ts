@@ -2,15 +2,46 @@
  * Vite 构建配置
  * ------------------------------------------------------------------
  * - 别名：@ → src/
- * - 开发代理：/api、/admin-api 及 OAuth2 端点转发到后端
+ * - 开发代理：/api、/admin-api、/auth/v1|v2、/integration/v1 及 OAuth2 端点转发到后端
  *   （目标取 .env 的 VITE_API_PROXY_TARGET，默认 127.0.0.1:8080）
  * - 产物分包：按框架/UI/图表/请求库等拆 chunk，压缩时移除 console
  * - 构建分析：rollup-plugin-visualizer 输出 dist/stats.html
  */
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { fileURLToPath, URL } from 'node:url'
+
+// 指令与子组件没有同名目录：指令指向宿主目录，
+// 子组件（*Item/*Group/*Pane 等）指向其组件族目录（已核对各 index.mjs 的导出）
+const DIRECTIVE_DIRS: Record<string, string> = {
+  ElLoadingDirective: 'loading',
+  ElInfiniteScroll: 'infinite-scroll',
+  ElPopoverDirective: 'popover',
+  ElAside: 'container',
+  ElHeader: 'container',
+  ElMain: 'container',
+  ElFooter: 'container',
+  ElBreadcrumbItem: 'breadcrumb',
+  ElCheckboxGroup: 'checkbox',
+  ElCollapseItem: 'collapse',
+  ElDescriptionsItem: 'descriptions',
+  ElDropdownItem: 'dropdown',
+  ElDropdownMenu: 'dropdown',
+  ElFormItem: 'form',
+  ElMenuItem: 'menu',
+  ElMenuItemGroup: 'menu',
+  ElSubMenu: 'menu',
+  ElOption: 'select',
+  ElRadioButton: 'radio',
+  ElRadioGroup: 'radio',
+  ElStep: 'steps',
+  ElTabPane: 'tabs',
+  ElTableColumn: 'table',
+  ElTimelineItem: 'timeline',
+}
 
 export default defineConfig(({ mode }) => {
   // 仅加载代理目标相关环境变量
@@ -18,6 +49,24 @@ export default defineConfig(({ mode }) => {
   return {
   plugins: [
     vue(),
+    // Element Plus 模板组件按需解析：组件与样式随用随引（指令含 v-loading）。
+    // 默认解析器从 element-plus/es 桶文件导入，桶文件显式 import 全部组件导致
+    // JS 产物无法收缩，这里把来源改写为组件级深路径
+    Components({
+      resolvers: ElementPlusResolver().map(entry => ({
+        ...entry,
+        resolve: async (name: string) => {
+          const result = await entry.resolve(name)
+          if (result && result.from === 'element-plus/es') {
+            const dir =
+              DIRECTIVE_DIRS[result.name] ??
+              result.name.slice(2).replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+            return { ...result, from: `element-plus/es/components/${dir}/index` }
+          }
+          return result
+        },
+      })),
+    }),
     // 构建产物体积分析（生成 dist/stats.html，构建后手动打开查看）
     visualizer({
       filename: './dist/stats.html',
@@ -38,6 +87,30 @@ export default defineConfig(({ mode }) => {
     proxy: {
       // OAuth2 标准端点（登录页跳转/令牌交换）转发后端
       '^/oauth2/(authorize|token)(?:[?]|$)': {
+        target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
+      // 授权同意端点：仅 POST 反代后端；GET 是前端 SPA 同意页路由，回退 index.html
+      '/oauth2/consent': {
+        target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
+        changeOrigin: true,
+        bypass(req) {
+          if (req.method === 'GET') {
+            return '/index.html'
+          }
+        },
+      },
+      // 认证中心前缀（登录 MFA 二步验证 /auth/v1/mfa/verify、在线会话 /auth/v1/sessions、密码找回 /auth/v2）
+      '/auth/v1': {
+        target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
+      '/auth/v2': {
+        target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
+      // 集成中心与物联网（仅 API 版本前缀，避免与菜单目录 SPA 路由 /integration 冲突）
+      '/integration/v1': {
         target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
         changeOrigin: true,
       },

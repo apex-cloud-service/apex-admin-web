@@ -226,7 +226,9 @@
  * - 文档创建 + 复制 + 删除 + 详情（后端无文档更新与分享端点）
  */
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Search, Document } from '@element-plus/icons-vue'
 import {
   getMyDocuments,
@@ -240,6 +242,7 @@ import {
 } from '@/api/office-document'
 import { PLATFORM_NAMES } from '@/api/office-platform'
 import { useUserStore } from '@/stores/user'
+import { showError } from '@/utils/request'
 
 /** ========== 弹窗与加载状态 ========== */
 
@@ -346,7 +349,7 @@ const loadDocuments = async () => {
   try {
     allDocuments.value = (await getMyDocuments(userId)) || []
   } catch (error: any) {
-    ElMessage.error(error.message || '查询失败')
+    showError(error, '查询失败')
   } finally {
     loading.value = false
   }
@@ -387,7 +390,7 @@ const handleCreateSubmit = async () => {
       createDialogVisible.value = false
       await loadDocuments()
     } catch (error: any) {
-      ElMessage.error(error.message || '创建失败')
+      showError(error, '创建失败')
     } finally {
       submitting.value = false
     }
@@ -417,7 +420,7 @@ const handleCopySubmit = async () => {
     copyDialogVisible.value = false
     await loadDocuments()
   } catch (error: any) {
-    ElMessage.error(error.message || '复制失败')
+    showError(error, '复制失败')
   } finally {
     submitting.value = false
   }
@@ -432,7 +435,7 @@ const handleView = async (row: DocumentInfo) => {
     currentDocument.value = await getDocument(row.id)
     detailVisible.value = true
   } catch (error: any) {
-    ElMessage.error(error.message || '获取详情失败')
+    showError(error, '获取详情失败')
   }
 }
 
@@ -450,7 +453,7 @@ const handleDelete = async (row: DocumentInfo) => {
     await loadDocuments()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '删除失败')
+      showError(error, '删除失败')
     }
   }
 }

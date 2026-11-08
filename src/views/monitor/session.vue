@@ -83,7 +83,8 @@
  * - 强制下线按会话唯一标识；批量下线按用户 ID
  */
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
 import {

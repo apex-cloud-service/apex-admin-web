@@ -80,7 +80,8 @@ import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import { rebuildIndex, search, type SearchResult } from '@/api/search'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { showError } from '@/utils/request'
 
 /** ========== 组件状态 ========== */
 
@@ -111,7 +112,7 @@ async function handleRebuildIndex(): Promise<void> {
     await rebuildIndex()
     ElMessage.success('索引重建任务已提交')
   } catch (error) {
-    ElMessage.error('索引重建提交失败')
+    showError(error, '索引重建提交失败')
   } finally {
     rebuilding.value = false
   }
@@ -151,7 +152,7 @@ async function handleSearch(): Promise<void> {
     results.value = res.list || []
     total.value = res.total || 0
   } catch (error) {
-    ElMessage.error('搜索失败')
+    showError(error, '搜索失败')
   } finally {
     loading.value = false
   }

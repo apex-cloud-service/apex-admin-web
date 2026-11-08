@@ -505,7 +505,9 @@
  */
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, Refresh, SwitchButton } from '@element-plus/icons-vue'
 import {
   getJwtConfig,
@@ -539,6 +541,7 @@ import {
   type SecurityPolicy,
 } from '@/api/auth-config'
 import type { PageQuery } from '@/types'
+import { showError } from '@/utils/request'
 
 // 当前激活的标签页
 const activeTab = ref('jwt')
@@ -721,7 +724,7 @@ async function loadJwtConfig() {
     const config = await getJwtConfig()
     Object.assign(jwtConfig, config, { secret: '' })
   } catch (error) {
-    ElMessage.error('加载JWT配置失败')
+    showError(error, '加载JWT配置失败')
   } finally {
     jwtLoading.value = false
   }
@@ -738,7 +741,7 @@ async function saveJwtConfig() {
     jwtConfig.secret = ''
     ElMessage.success('保存成功')
   } catch (error) {
-    ElMessage.error('保存失败')
+    showError(error, '保存失败')
   }
 }
 
@@ -760,7 +763,7 @@ async function handleJwtTest() {
     jwtTestResult.value = await testJwtConfig({ expiresIn: jwtTestExpiresIn.value })
     ElMessage.success('JWT 配置测试完成')
   } catch (error) {
-    ElMessage.error('JWT 配置测试失败')
+    showError(error, 'JWT 配置测试失败')
   } finally {
     jwtTestLoading.value = false
   }
@@ -772,7 +775,7 @@ async function loadOAuth2Clients() {
   try {
     oauth2Clients.value = await listOAuth2Clients()
   } catch (error) {
-    ElMessage.error('加载OAuth2客户端失败')
+    showError(error, '加载OAuth2客户端失败')
   } finally {
     oauth2Loading.value = false
   }
@@ -830,7 +833,7 @@ async function submitOAuth2Client() {
     oauth2DialogVisible.value = false
     await loadOAuth2Clients()
   } catch (error) {
-    ElMessage.error('操作失败')
+    showError(error, '操作失败')
   }
 }
 
@@ -844,7 +847,7 @@ async function handleDeleteOAuth2Client(row: OAuth2ClientConfig) {
     ElMessage.success('删除成功')
     await loadOAuth2Clients()
   } catch (error) {
-    ElMessage.error('删除失败')
+    showError(error, '删除失败')
   }
 }
 
@@ -856,7 +859,7 @@ async function loadPermissions() {
     permissions.value = result.list || []
     permissionTotal.value = result.total
   } catch (error) {
-    ElMessage.error('加载权限失败')
+    showError(error, '加载权限失败')
   } finally {
     permissionLoading.value = false
   }
@@ -875,7 +878,7 @@ async function handleSyncPermissions() {
     ElMessage.success(`扫描完成：发现 ${result.addedPermissions.length} 个新增权限、${result.removedPermissions.length} 个废弃权限（未执行增删）`)
     await loadPermissions()
   } catch (error) {
-    ElMessage.error('同步失败')
+    showError(error, '同步失败')
   }
 }
 
@@ -914,7 +917,7 @@ async function submitPermission() {
     permissionDialogVisible.value = false
     await loadPermissions()
   } catch (error) {
-    ElMessage.error('操作失败')
+    showError(error, '操作失败')
   }
 }
 
@@ -927,7 +930,7 @@ async function handleDeletePermission(row: Permission) {
     ElMessage.success('删除成功')
     await loadPermissions()
   } catch (error) {
-    ElMessage.error('删除失败')
+    showError(error, '删除失败')
   }
 }
 
@@ -940,7 +943,7 @@ async function loadOnlineUsers() {
     onlineUsers.value = result.list || []
     onlineTotal.value = result.total
   } catch (error) {
-    ElMessage.error('加载在线用户失败')
+    showError(error, '加载在线用户失败')
   } finally {
     onlineLoading.value = false
   }
@@ -959,7 +962,7 @@ async function handleForceLogout(row: OnlineUser) {
     ElMessage.success('强制下线成功')
     await loadOnlineUsers()
   } catch (error) {
-    ElMessage.error('强制下线失败')
+    showError(error, '强制下线失败')
   }
 }
 
@@ -971,7 +974,7 @@ async function handleBatchLogout() {
     ElMessage.success('批量强制下线成功')
     await loadOnlineUsers()
   } catch (error) {
-    ElMessage.error('批量强制下线失败')
+    showError(error, '批量强制下线失败')
   }
 }
 
@@ -982,7 +985,7 @@ async function loadSessionConfig() {
     const config = await getSessionConfig()
     Object.assign(sessionConfig, config)
   } catch (error) {
-    ElMessage.error('加载会话配置失败')
+    showError(error, '加载会话配置失败')
   } finally {
     sessionLoading.value = false
   }
@@ -996,7 +999,7 @@ async function saveSessionConfig() {
     await updateSessionConfig(sessionConfig as SessionConfig)
     ElMessage.success('保存成功')
   } catch (error) {
-    ElMessage.error('保存失败')
+    showError(error, '保存失败')
   }
 }
 
@@ -1007,7 +1010,7 @@ async function loadSecurityPolicy() {
     const policy = await getSecurityPolicy()
     Object.assign(securityPolicy, policy)
   } catch (error) {
-    ElMessage.error('加载安全策略失败')
+    showError(error, '加载安全策略失败')
   } finally {
     securityLoading.value = false
   }
@@ -1021,7 +1024,7 @@ async function saveSecurityPolicy() {
     await updateSecurityPolicy(securityPolicy as SecurityPolicy)
     ElMessage.success('保存成功')
   } catch (error) {
-    ElMessage.error('保存失败')
+    showError(error, '保存失败')
   }
 }
 
@@ -1033,7 +1036,7 @@ async function loadLoginAttempts() {
     loginAttempts.value = result.list || []
     attemptTotal.value = result.total
   } catch (error) {
-    ElMessage.error('加载登录记录失败')
+    showError(error, '加载登录记录失败')
   } finally {
     attemptLoading.value = false
   }

@@ -162,7 +162,7 @@
  * - enableChunk 开启时，超过单发上限的文件走分片上传（uploadByChunks，apex-file-service）
  */
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Plus, Upload, UploadFilled } from '@element-plus/icons-vue'
 import { getToken } from '@/utils/auth'
 import { MAX_UPLOAD_SIZE } from '@/settings'
@@ -170,6 +170,7 @@ import { initChunkUpload, mergeChunks, uploadChunk, type ChunkMergeResult } from
 import type { FileUploadResult } from '@/types'
 import type { UploadProps, UploadUserFile, UploadProgressEvent, UploadRawFile } from 'element-plus'
 import Cropper from 'cropperjs'
+import { showError } from '@/utils/request'
 import 'cropperjs/dist/cropper.css'
 
 /** 组件入参定义 */
@@ -456,7 +457,7 @@ const handleCropperConfirm = async (): Promise<void> => {
     await uploadProcessedFile(croppedFile)
   } catch (error) {
     console.error('裁剪失败：', error)
-    ElMessage.error('裁剪失败')
+    showError(error, '裁剪失败')
   } finally {
     cropping.value = false
     pendingFile = null
@@ -541,7 +542,7 @@ const uploadProcessedFile = async (file: File): Promise<void> => {
     uploadProgressText.value = '上传失败'
     setTimeout(() => {
       progressVisible.value = false
-      ElMessage.error('上传失败')
+      showError(error, '上传失败')
     }, 2000)
   }
 }
@@ -605,7 +606,7 @@ const uploadByChunks = async (file: File): Promise<void> => {
     uploadProgressText.value = '上传失败'
     setTimeout(() => {
       progressVisible.value = false
-      ElMessage.error('分片上传失败')
+      showError(error, '分片上传失败')
     }, 2000)
   }
 }
@@ -652,7 +653,7 @@ const beforeUpload: UploadProps['beforeUpload'] = async (rawFile: UploadRawFile)
     return processedFile
   } catch (error) {
     console.error('文件处理失败：', error)
-    ElMessage.error('文件处理失败')
+    showError(error, '文件处理失败')
     return false
   }
 }

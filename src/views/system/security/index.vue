@@ -322,7 +322,9 @@
  * - IP 访问控制：白名单/黑名单增删启停、清理过期、放行检查
  */
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { showError } from '@/utils/request'
 import {
   activateTotp,

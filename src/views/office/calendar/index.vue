@@ -257,7 +257,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import type { FormInstance, FormRules } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import {
   getCalendarEvents,
@@ -272,6 +274,7 @@ import {
 } from '@/api/office-calendar'
 import { PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
 import { listUsers } from '@/api/user'
+import { showError } from '@/utils/request'
 
 // ==================== 页面状态管理 ====================
 const loading = ref(false)
@@ -341,7 +344,7 @@ const handleQuery = async () => {
     // 同时加载所有事件用于日历显示
     await loadAllEvents()
   } catch (error: any) {
-    ElMessage.error(error.message || '查询失败')
+    showError(error, '查询失败')
   } finally {
     loading.value = false
   }
@@ -406,7 +409,7 @@ const handleEdit = async (row: CalendarEvent) => {
     currentEvent.value = event
     dialogVisible.value = true
   } catch (error: any) {
-    ElMessage.error(error.message || '加载事件详情失败')
+    showError(error, '加载事件详情失败')
   }
 }
 
@@ -417,7 +420,7 @@ const handleView = async (row: CalendarEvent) => {
     currentEvent.value = event
     detailVisible.value = true
   } catch (error: any) {
-    ElMessage.error(error.message || '加载事件详情失败')
+    showError(error, '加载事件详情失败')
   }
 }
 
@@ -434,7 +437,7 @@ const handleDelete = async (row: CalendarEvent) => {
     handleQuery()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '删除失败')
+      showError(error, '删除失败')
     }
   }
 }
@@ -470,7 +473,7 @@ const handleSubmit = async () => {
       dialogVisible.value = false
       handleQuery()
     } catch (error: any) {
-      ElMessage.error(error.message || '操作失败')
+      showError(error, '操作失败')
     } finally {
       submitting.value = false
     }
