@@ -1,6 +1,6 @@
 # API 接口目录
 
-> 本文依据当前前端源码、类型定义、页面调用和代理配置核对（2026-10-31）。它记录前端已封装的接口及已确认的页面接入状态；后端实现、生产网关和第三方服务行为仍需在对应环境中外部核验。新增/修改接口后必须同步更新本文，否则视为文档缺陷。
+> 本文依据当前前端源码、类型定义、页面调用和代理配置核对（2026-11-11）。它记录前端已封装的接口及已确认的页面接入状态；后端实现、生产网关和第三方服务行为仍需在对应环境中外部核验。新增/修改接口后必须同步更新本文，否则视为文档缺陷。
 
 ## 1. 通用约定
 
@@ -17,13 +17,16 @@
 
 | 前缀 | 用途 | 代理（开发/生产） |
 |------|------|-------------------|
-| `/api/v1/**` | 业务接口：认证、当前用户、文件、办公平台接入、站内信、工作流任务等 | Vite proxy `/api`、Nginx `/api/` |
-| `/api/v2/**` | 第二代接口：租户管理、工作流定义、运维健康、文件分享、办公会议室/同步向导 | 同 `/api` |
-| `/admin-api/v1/**` | 管理后台接口：系统管理、监控、日志、SSO、生成器、认证配置等 | Vite proxy `/admin-api`、Nginx `/admin-api/` |
+| `/api/v1/**` | 业务接口：认证、当前用户、文件、办公平台接入、站内信、通知中心、工作流任务等 | Vite proxy `/api`、Nginx `/api/` |
+| `/api/v2/**` | 第二代接口：租户管理、租户套餐、能力目录/用量、数据总览、工作流定义、运维健康、文件分享、办公会议室/同步向导/统一通知 | 同 `/api` |
+| `/admin-api/v1/**` | 管理后台接口：系统管理、监控、日志、SSO、生成器、认证配置、消息模板、组织同步等 | Vite proxy `/admin-api`、Nginx `/admin-api/` |
+| `/integration/v1/**` | 集成中心连接器/凭据与物联网设备/规则（`/internal/v1/**` 为集群内部端点，网关强制拒绝外部访问） | Vite proxy `/integration/v1`、Nginx `/integration/v1/` |
+| `/auth/v1/**` | 认证中心：MFA 登录二步验证（`/auth/v1/mfa/verify`）与在线会话管理（`/auth/v1/sessions/**`） | Vite proxy `/auth/v1`、Nginx `/auth/v1/` |
+| `/auth/v2/**` | 认证中心密码找回（`/auth/v2/password-recovery/**`） | Vite proxy `/auth/v2`、Nginx `/auth/v2/` |
 | `/api/workflow/**` | 工作流高级操作（回退/转办/委派/挂起/恢复） | 同 `/api` |
 | `/api/office/**` | 前端办公平台业务 API 使用的路径前缀（消息/审批/日历/文档）；仓库内仅能确认相关调用和开发代理配置 | 同 `/api` |
 | `/api/mfa/**`、`/api/ip-access-control/**` | 认证中心的 MFA 与 IP 访问控制（参数走 query） | 同 `/api` |
-| `/oauth2/token`、`/oauth2/authorize`、`/oauth2/userinfo` | OAuth2 标准端点 | Vite/Nginx 当前仅代理 `authorize` 与 `token`；`userinfo` 未配置专用代理 |
+| `/oauth2/authorize`、`/oauth2/token`、`/oauth2/consent` | OAuth2 标准端点与授权同意提交 | Vite/Nginx 代理 `authorize`、`token`（全方法）与 `consent`（仅 POST 反代，GET 回退 SPA 首页） |
 
 ### 1.3 分页口径（三套并存）
 
@@ -49,6 +52,7 @@
 | POST | `/api/v1/auth/login` | `login(payload)` | 账号密码登录（附带 deviceId/platform；可选 tenantId 租户匹配声明，`VITE_AUTH_TENANT_ENABLED` 控制登录页输入） |
 | POST | `/api/v1/auth/logout` | `logout()` | 登出 |
 | POST | `/api/v1/auth/refresh` | `refreshToken(rt)` | 刷新令牌（request.ts 401 时自动调用） |
+| POST | `/auth/v1/mfa/verify` | `verifyMfaChallenge(challengeToken, code)` | MFA 二步验证：登录响应 `mfaRequired=true` 时不签发令牌，用 `challengeToken` + 动态码换取正式令牌（挑战一次性消费；store `login()` 已按此分流） |
 | GET | `/api/v1/auth/roles/my` | `getMyRoles()` | 当前用户角色码 |
 | GET | `/api/v1/auth/permissions/my` | `getMyPermissions()` | 当前用户权限码 |
 | GET | `/api/v1/auth/roles` | `listSystemRoles()` | 系统角色列表（RoleDTO） |
@@ -74,7 +78,6 @@
 | PUT | `/admin-api/v1/users/{id}/roles` | `assignUserRoles(id, roleIds)` | 分配角色（整体替换） |
 | GET | `/admin-api/v1/staff-roles` | `listStaffRoles()` | 可分配角色列表 |
 | GET | `/admin-api/v1/export/users` | `exportUsers()` | 导出用户 Excel（Blob，固定前 100 条） |
-| DELETE | `/admin-api/v1/users/{id}` | `deleteUser(id)` | 删除用户（前端 API 已封装；页面接入和后端可用性需分别核验） |
 
 ### 2.3 系统管理 [src/api/system.ts](../../src/api/system.ts)
 
@@ -106,12 +109,13 @@
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
 | POST | `/api/v1/files/generic` | `uploadFile(file, sex)` | 通用上传（FormData；sex: 0=男/AM 1=女/AF） |
-| GET | `/api/v1/file/url` | `getFileUrl(bucketName, fileName)` | 获取文件访问 URL |
 | DELETE | `/api/v1/file/delete` | `deleteFile(bucketName, fileName)` | 删除文件 |
-| GET | `/api/v1/file/exists` | `checkFileExists(bucketName, fileName)` | 检查文件是否存在 |
-| GET | `/api/v1/file/content` | `getFileContent(fileName)` | 构造文件内容访问路径；具体响应语义由后端确认 |
+| POST | `/api/v1/file/chunk/init` | `initChunkUpload(payload)` | 初始化分片会话 |
+| POST | `/api/v1/file/chunk/upload?fileId=&chunkIndex=&chunkSize=[&md5=]` | `uploadChunk(params, chunk)` | 上传单个分片（⚠️ 请求体为原始字节流，参数走 query） |
+| POST | `/api/v1/file/chunk/merge` | `mergeChunks({fileId, fileName?})` | 合并分片（请求体 `{fileId, fileName?}`） |
+| GET | `/api/v1/file/chunk/status/{fileId}` | `getChunkStatus(fileId)` | 查询已上传分片（断点续传/秒传依据 uploaded 集合） |
 
-> 上传结果字段是 `objectName`（不是 `fileName`）。删除函数实际传递 `bucketName` + `fileName`；`objectName` 与删除参数 `fileName` 的后端映射关系需在目标服务中外部确认。
+> 上传结果字段是 `objectName`（不是 `fileName`）。删除函数实际传递 `bucketName` + `fileName`；`objectName` 与删除参数 `fileName` 的后端映射关系需在目标服务中外部确认。分片上传由 `FileUploadEnhanced` 组件 `enableChunk`（默认 false）在超过单发上限时启用；上传地址统一经 `utils/api-base.ts#apiUrl` 拼接，跨域部署自动携带 `VITE_API_BASE_URL`。
 
 ### 2.6 监控 [src/api/monitor.ts](../../src/api/monitor.ts)
 
@@ -164,7 +168,7 @@
 
 ### 2.10 图表管理 [src/api/chart.ts](../../src/api/chart.ts)
 
-`/admin-api/v1/charts`：`listCharts`（GET 分页）、`getChartDetail`、`getChartData`（GET `/{id}/data`）、`createChart`、`updateChart`、`deleteChart`、`updateChartStatus`（PUT `/{id}/status`）。
+`/admin-api/v1/charts`：`listCharts`（GET 分页）、`getChartDetail`、`getChartData`（GET `/{id}/data`）、`createChart`、`updateChart`、`deleteChart`。后端若提供图表状态端点（如 `PUT /{id}/status`），前端当前未封装也未调用，可用性需以后端契约为准。
 
 ### 2.11 全文搜索 [src/api/search.ts](../../src/api/search.ts)
 
@@ -178,13 +182,12 @@
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
 | — | — | `buildAuthUrl(config)` | 前端构建授权 URL（S256 PKCE + 一次性 state） |
-| POST | `/oauth2/token` | `exchangeToken(request)` | 表单编码换取令牌 |
+| POST | `/oauth2/token` | `exchangeToken(request)` | 表单编码换取令牌（PKCE 公共客户端，不发 clientSecret） |
 | — | — | `consumeAuthorization(state)` | 一次性取出授权上下文（取出即失效） |
-| GET | `/oauth2/userinfo` | `getUserInfo()` | API 已定义；当前未发现页面调用点，且 Vite/Nginx 未配置该端点的专用代理 |
-| POST | `/api/v1/auth/social/{provider}` | `socialLogin(request)` | API 已定义；当前未发现页面调用点，登录页 provider 按钮统一走标准 OAuth2 PKCE，不调用此接口 |
 | — | — | `verifyState(state)` | state 校验 |
+| POST | `/oauth2/consent` | `submitConsent(payload)` | 授权同意提交（form-urlencoded：client_id/scope/decision） |
 
-当前页面接入：登录页各 provider 按钮均调用 `buildAuthUrl()`，统一走标准 OAuth2 授权码 + S256 PKCE；回调处理页面为 `/oauth2/callback`（静态路由，public）。`getUserInfo()` 与 `socialLogin()` 仅保留 API 封装，当前没有页面调用点。
+当前页面接入：登录页各 provider 按钮均调用 `buildAuthUrl()`，统一走标准 OAuth2 授权码 + S256 PKCE；回调处理页面为 `/oauth2/callback`（静态路由，public）。授权同意页 `/oauth2/consent`（public 匿名页）调用 `submitConsent()`，同意提交须登录主体（后端要求认证），未登录先登录后回跳；代理仅对 `/oauth2/consent` 的 POST 反向代理，GET 回退 SPA。
 
 ### 2.13 认证配置管理 [src/api/auth-config.ts](../../src/api/auth-config.ts)（前缀 `/admin-api/v1/auth/config`）
 
@@ -202,22 +205,21 @@
 
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
-| GET/POST | `/providers` | `listSSOProviders` / `createSSOProvider` | 提供商 CRUD |
-| GET/PUT/DELETE | `/providers/{id}` | `getSSOProvider` / `updateSSOProvider` / `deleteSSOProvider` | |
+| GET/POST | `/providers` | `listSSOProviders` / `createSSOProvider` | 提供商列表（⚠️ 裸数组）/ 创建 |
+| GET/PUT/DELETE | `/providers/{id}` | `getSSOProvider` / `updateSSOProvider` / `deleteSSOProvider` | 提供商详情/更新/删除（更新为整体覆盖，须携带完整字段；启用切换也走整体 `PUT /providers/{id}`，无专用 toggle 端点） |
 | POST | `/providers/{id}/test` | `testSSOConnection` | 连接测试 |
-| PUT | `/providers/{id}/toggle` | `toggleSSOProvider(id, enabled)` | 启停 |
 | GET | `/providers/{id}/metadata` | `getSSOMetadata` | 元数据（SAML 等） |
-| GET | `/sessions` | `listSSOSessions` | SSO 会话分页 |
-| DELETE | `/sessions/{sessionId}` | `terminateSSOSession` | 强制终止 |
-| POST | `/sessions/batch-terminate` | `batchTerminateSSOSessions` | 批量终止 |
-| GET | `/audit-logs` | `listSSOAuditLogs` | 审计日志分页 |
-| GET | `/statistics` | `getSSOStatistics` | 统计信息 |
+| GET | `/sessions` | `listSSOSessions` | SSO 会话列表（⚠️ 裸数组） |
+| POST | `/sessions/{id}/revoke` | `terminateSSOSession(id)` | 强制终止（按数字主键） |
+| — | — | `batchTerminateSSOSessions(ids)` | 批量终止（⚠️ 后端无批量端点，前端并发循环单条撤销） |
+| GET | `/audit-logs` | `listSSOAuditLogs` | 审计日志（⚠️ 裸数组） |
+| GET | `/sessions/statistics` | `getSSOStatistics` | 统计信息（注意前缀含 `/sessions`） |
 
 支持协议：SAML 2.0 / CAS / LDAP / OAuth2 / OIDC。
 
 ### 2.15 代码生成器 [src/api/generator.ts](../../src/api/generator.ts)（前缀 `/admin-api/v1/generator`）
 
-> 本节仅记录当前前端已封装并被页面使用的生成器接口。数据源测试已由 `testDataSourceConnection(id)` 封装，并由代码生成器页面的“测试连接”操作调用；代码预览、模板管理和历史回滚当前没有对应的前端 API 封装或页面入口。后端是否提供这些未接入能力需在后端仓库或目标环境中核验。
+> 数据源测试由 `testDataSourceConnection(id)` 封装并由生成器页面调用；向导（模板目录/预检/预览）与异步任务（提交/进度/取消/产物清单/下载）已封装并被 `views/system/generator/` 页面调用。历史回滚当前没有前端入口，后端是否提供需在后端仓库或目标环境中核验。
 
 | 子域 | 路径 | 函数 |
 |------|------|------|
@@ -226,6 +228,8 @@
 | 生成配置 | GET/POST `/configs`、PUT/DELETE `/configs/{id}` | `listGeneratorConfigs` 等（统一分页口径） |
 | 代码生成 | POST `/configs/{id}/generate`（无请求体，返回 `GeneratedFile[]`） | `generateCode(configId)` |
 | 历史 | GET `/configs/{id}/history`（按配置分页，返回 `GenHistoryDTO` 分页） | `listGenerateHistory(configId, query)` |
+| 向导 | GET `/templates`（模板目录）、POST `/preflight`（预检，body `{configId}`）、POST `/preview`（预览，body `{configId}`） | `listGenTemplates` / `preflightGenerate` / `previewGenerate` |
+| 异步任务 | POST `/tasks`（提交）、GET `/tasks/{taskId}`（进度轮询）、POST `/tasks/{taskId}/cancel`（取消）、GET `/tasks/{taskId}/artifacts`（产物清单）、GET `/artifacts/{artifactId}/download`（产物下载，Blob） | `submitGenTask` / `getGenTaskProgress` / `cancelGenTask` / `listGenTaskArtifacts` / `downloadGenArtifact` |
 
 ### 2.16 办公平台与站内信（按页面引用的 API 模块并存）
 
@@ -306,18 +310,18 @@
 
 > 页面 `data/file-share/` 提供「我的分享」按文件 ID 查询与撤销；明文 token 仅创建响应返回一次。
 
-**分片上传契约（`/api/v1/file/chunk/**`，后端已加固；前端 src/ 无任何分片上传封装，以下为后端 file-service 契约描述）**：init 校验分片大小 ≤64MB（`file.upload.max-chunk-bytes`）、分片总数上限（`file.upload.max-total-chunks`）与 `chunkSize*totalChunks ≥ fileSize`；upload 校验单片不超过初始化 chunkSize 与剩余字节数，并计算/校验分片 MD5（32 位 hex）；merge 消费 `fileName/contentType/md5`，在上传流中计算最终 MD5，不匹配时删除最终对象并释放会话；`(file_id, chunk_index, deleted)` 唯一约束（file-service V7）+ 仓储 `saveIfAbsent` 保证并发幂等，败者删除临时对象后返回已保存分片；非法数字查询参数统一返回 400；Sentinel 限流规则已对齐实际 `/api/v1/file/chunk/**` 前缀。
+**分片上传契约（`/api/v1/file/chunk/**`；前端 [src/api/file.ts](../../src/api/file.ts) 已封装 `initChunkUpload`/`uploadChunk`/`mergeChunks`/`getChunkStatus` 四个函数，`FileUploadEnhanced` 组件 `enableChunk`（默认 false）超过单发上限时启用）**：init 校验分片大小 ≤64MB（`file.upload.max-chunk-bytes`）、分片总数上限（`file.upload.max-total-chunks`）与 `chunkSize*totalChunks ≥ fileSize`；upload 请求体为原始字节流、参数走 query（fileId/chunkIndex/chunkSize/可选 md5），校验单片不超过初始化 chunkSize 与剩余字节数，并计算/校验分片 MD5（32 位 hex）；merge 请求体为 `{fileId, fileName?}`，在上传流中计算最终 MD5，不匹配时删除最终对象并释放会话；status 为 `GET /chunk/status/{fileId}`，返回已上传分片集合（断点续传跳过已传分片、uploaded 齐全可秒传）。后端侧：`(file_id, chunk_index, deleted)` 唯一约束（file-service V7）+ 仓储 `saveIfAbsent` 保证并发幂等，败者删除临时对象后返回已保存分片；非法数字查询参数统一返回 400；Sentinel 限流规则已对齐实际 `/api/v1/file/chunk/**` 前缀。
 
 ### 2.16.2 会议室 [src/api/meeting-room.ts](../../src/api/meeting-room.ts)（前缀 `/api/v2/office/meeting-rooms`）
 
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
 | GET | `/api/v2/office/meeting-rooms` | `listMeetingRooms(query)` | 分页（pageNum/pageSize/status/keyword；列表元素 equipment 可能是 JSON 字符串） |
-| GET | `/api/v2/office/meeting-rooms/enabled` | `listEnabledMeetingRooms()` | 启用会议室 |
-| GET | `/api/v2/office/meeting-rooms/available` | `listAvailableMeetingRooms(startTime, endTime)` | 时间段可用 |
-| GET/POST/PUT/DELETE | `/api/v2/office/meeting-rooms[/{id}]` | `getMeetingRoom` / `createMeetingRoom` / `updateMeetingRoom` / `deleteMeetingRoom` | 台账 CRUD（写操作需 `office:meeting-room:manage`） |
+| GET | `/api/v2/office/meeting-rooms/available` | `listAvailableMeetingRooms(startTime, endTime)` | 时间段可用（返回数组） |
+| POST/PUT/DELETE | `/api/v2/office/meeting-rooms[/{id}]` | `createMeetingRoom` / `updateMeetingRoom` / `deleteMeetingRoom` | 台账创建/更新/删除（写操作需 `office:meeting-room:manage`） |
 | POST | `/api/v2/office/meeting-rooms/{id}/bookings` | `bookMeetingRoom(id, payload)` | 预订（需 `office:meeting-room:book`） |
-| DELETE | `/api/v2/office/meeting-rooms/{roomId}/bookings/{eventId}` | `cancelMeetingRoomBooking` | 取消预订 |
+
+> 前端仅封装上述 6 个函数；无 `/enabled`、`GET /{id}`、取消预订端点的封装，如后端提供需另行核验后接入。页面 `views/office/` 会议室管理。
 
 ### 2.16.3 组织同步向导 [src/api/office-sync-wizard.ts](../../src/api/office-sync-wizard.ts)（前缀 `/api/v2/office/sync`）
 
@@ -345,12 +349,11 @@
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
 | GET | `/api/v2/platform/tenants` | `listTenants(query)` | 租户分页（⚠️ pageNum/pageSize 必填；tenantCode/tenantName 模糊，status 精确） |
-| GET | `/api/v2/platform/tenants/{id}` | `getTenant(id)` | 租户详情 |
-| POST | `/api/v2/platform/tenants` | `createTenant(payload)` | 创建租户；编码唯一性和后续可变更性需以后端契约核验 |
+| POST | `/api/v2/platform/tenants` | `createTenant(payload)` | 创建租户（套餐必选；可同时提交 `adminUsername`/`adminPassword`，后端成对使用）；编码唯一性和后续可变更性需以后端契约核验 |
 | POST | `/api/v2/platform/tenants/{id}/actions` | `changeTenantStatus(id, {action, expectedVersion?})` | 生命周期（disable/enable/freeze/unfreeze/deactivate/archive，小写）；`expectedVersion` 可选，用于乐观锁校验 |
 | PUT | `/api/v2/platform/tenants/{id}/quota` | `updateTenantQuota(id, {maxUsers?, maxStorageMb?, expectedVersion?})` | 配额调整；`maxUsers`/`maxStorageMb` 可省略或传 `null`，`null` 表示不限；`expectedVersion` 可选，用于乐观锁校验 |
 
-> 权限码：`tenant:read` / `tenant:create` / `tenant:lifecycle` / `tenant:quota`。页面 `views/system/tenant/`。
+> 权限码：`tenant:read` / `tenant:create` / `tenant:lifecycle` / `tenant:quota`。页面 `views/system/tenant/`。详情端点（如 `GET /{id}`）未在前端封装与使用。
 
 ### 2.18 账号安全（MFA 与 IP 访问控制）[src/api/mfa.ts](../../src/api/mfa.ts)、[src/api/ip-access-control.ts](../../src/api/ip-access-control.ts)
 
@@ -402,7 +405,115 @@
 
 > 当前前端仅封装 health-report、snapshots、trend 等运维健康子路径，未封装 `GET /api/v2/operations` 根路径。页面位于 `views/monitor/operations/`；根路径是否提供由后端接口契约决定。
 
-### 2.20 自动生成接口
+### 2.20 通知中心 [src/api/notification.ts](../../src/api/notification.ts)（前缀 `/api/v1/notifications`，system 域）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/api/v1/notifications/inbox` | `listNotifications(query)` | 收件箱分页（PageResponse） |
+| GET | `/api/v1/notifications/unread-count` | `getNotificationUnreadCount()` | 未读数（60s 轮询 + SSE 推送触发刷新） |
+| POST | `/api/v1/notifications/{id}/read` | `markNotificationRead(id)` | 标记已读 |
+| POST | `/api/v1/notifications/read-all` | `markAllNotificationsRead()` | 全部已读（返回处理数） |
+
+> 实时推送由 [src/utils/notification-stream.ts](../../src/utils/notification-stream.ts) 以 fetch 流式消费 `GET /api/v1/notifications/stream`（SSE）：请求必须带 `Accept: text/event-stream`（后端据此豁免 30s 响应超时）与 `Authorization` 头（网关仅认 Authorization 头，EventSource 不可用），断线 5s→30s 退避；地址经 `utils/api-base.ts#apiUrl` 拼接。nginx 需 `= /api/v1/notifications/stream` 精确匹配 location（buffering off）。面板组件 `components/NotificationCenter/`；与 office 域站内信是两套独立通道。
+
+### 2.21 统一通知 [src/api/notify.ts](../../src/api/notify.ts)（前缀 `/api/v2/office/notify`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET/POST | `/api/v2/office/notify/templates` | `listNotifyTemplates(query)` / `createNotifyTemplate(payload)` | 模板分页（pageNum/pageSize）/ 创建 |
+| PUT/DELETE | `/api/v2/office/notify/templates/{templateId}` | `updateNotifyTemplate` / `deleteNotifyTemplate` | 模板更新 / 删除 |
+| GET | `/api/v2/office/notify/requests` | `listNotifyRecords(query)` | 投递留痕分页（pageNum/pageSize） |
+
+> 按模板投递走内部端点 `POST /internal/v1/notify`（网关拒绝外部访问），管理端无发送入口。页面 `views/office/notify/`。
+
+### 2.22 在线会话 [src/api/session.ts](../../src/api/session.ts)（前缀 `/auth/v1/sessions`；全部端点要求管理员角色）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/auth/v1/sessions/online` | `listOnlineSessions()` | 在线列表（⚠️ 裸数组不分页） |
+| GET | `/auth/v1/sessions/statistics` | `getOnlineStatistics()` | 在线统计 |
+| GET | `/auth/v1/sessions/user/{userId}` | `listUserSessions(userId, tenantId?)` | 用户会话列表（裸数组，tenantId 可选 query） |
+| DELETE | `/auth/v1/sessions/user/{userId}` | `terminateUserSessions(userId, tenantId?)` | 下线用户全部会话 |
+| DELETE | `/auth/v1/sessions/{sessionId}` | `terminateSession(sessionId)` | 终止单会话（⚠️ `sessionId` 为会话唯一标识字符串，非数字主键） |
+
+页面 `views/monitor/session.vue`；批量下线由前端并发单条调用。
+
+### 2.23 租户套餐 [src/api/tenant-package.ts](../../src/api/tenant-package.ts)（前缀 `/api/v2/tenant-packages`；权限码 `tenant:package:*`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/api/v2/tenant-packages` | `listTenantPackages()` | 套餐列表（⚠️ 裸数组） |
+| POST | `/api/v2/tenant-packages` | `createTenantPackage(payload)` | 创建套餐 |
+| PUT | `/api/v2/tenant-packages` | `updateTenantPackage(payload)` | 更新套餐（⚠️ 无路径参数，后端按请求体 `packageCode` 定位） |
+
+> `menuIds`/`permissionCodes` **空集合 = 该维度全量放行**；`features` **空集合 = 未订阅任何能力**（全量须显式提交能力目录全部编码）。提交前由 [src/utils/tenant-package.ts](../../src/utils/tenant-package.ts) `withParentChain` 补全菜单父链（防环，最多 32 层）。页面 `views/system/tenant-package/`。
+
+### 2.24 能力运营 [src/api/capability.ts](../../src/api/capability.ts)
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/api/v2/capabilities` | `listCapabilities()` | 能力目录（权限码 `tenant:read`） |
+| GET | `/api/v2/capabilities/subscribed` | `listSubscribedCapabilities()` | 当前租户已订阅能力（套餐 `features` 空集合 = 未订阅） |
+| GET | `/api/v2/capability-usage` | `queryCapabilityUsage(query)` | 按租户×能力的调用用量分页（`capability` 必填、区间 ≤92 天、只读不计费） |
+
+页面 `views/system/capability/`。
+
+### 2.25 开放平台 [src/api/open-app.ts](../../src/api/open-app.ts)（管理面 `/api/v1/open-apps`；迁移走 `/admin-api/v1/open-apps/migration`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/api/v1/open-apps` | `listOpenApps(query)` | 应用列表（⚠️ `page` 从 0 开始，返回数组无 total） |
+| POST | `/api/v1/open-apps` | `createOpenApp(payload)` | 注册应用（⚠️ 明文 `clientSecret` 仅本响应返回一次） |
+| PUT | `/api/v1/open-apps/{clientId}` | `updateOpenApp(clientId, payload)` | 更新应用 |
+| POST | `/api/v1/open-apps/{clientId}/reset-secret` | `resetOpenAppSecret(clientId)` | 重置密钥（明文仅返回一次） |
+| GET | `/api/v1/open-apps/scopes` | `listOpenAppScopes()` | scope 目录（与创建校验共用 OpenPlatformScopeRegistry） |
+| GET/POST | `/admin-api/v1/open-apps/migration/export`、`/import` | `exportOpenAppMigration` / `importOpenAppMigration` | 迁移导出（数组）/ 导入（返回摘要） |
+
+页面 `views/system/open-app/`。
+
+### 2.26 集成中心 [src/api/integration.ts](../../src/api/integration.ts)（前缀 `/integration/v1`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/integration/v1/connectors` | `listConnectors(query)` | 连接器分页（pageNum/pageSize） |
+| POST/PUT/DELETE | `/integration/v1/connectors[/{id}]` | `createConnector` / `updateConnector` / `deleteConnector` | 连接器 CRUD |
+| GET | `/integration/v1/credentials` | `listCredentials(credentialType?)` | 凭据列表（⚠️ 裸数组） |
+| POST | `/integration/v1/credentials` | `registerCredential(payload)` | 注册凭据（`secret` 仅上行，响应不回传） |
+| PUT | `/integration/v1/credentials/{id}/rotate` | `rotateCredential(id, secret)` | 轮换凭据（旧版本立即失效） |
+| DELETE | `/integration/v1/credentials/{id}` | `deleteCredential(id)` | 删除凭据 |
+
+页面 `views/integration/connector.vue`。
+
+### 2.27 物联网 [src/api/iot.ts](../../src/api/iot.ts)（前缀 `/integration/v1/iot`）
+
+**设备**（`/devices`）：`listDevices`（分页，pageNum/pageSize）、`getDevice(id)`、`registerDevice(payload)`（注册，注册时创建影子行）、`deregisterDevice(id)`、`listDeviceTelemetry(id, pageNum, pageSize, ...)`（遥测历史分页）、`getDeviceShadow(id)`（⚠️ 影子只读，desired 写接口后端未实现）、`listDeviceCommands(id, pageNum, pageSize, ...)`（命令历史分页）、`dispatchDeviceCommand(id, payload)`（命令下发，`commandId` 幂等）。
+
+**规则**（`/rules`）：`listIotRules(query)`（分页）、`createIotRule(payload)`、`getIotRule(id)`、`toggleIotRule(id, enabled)`（⚠️ `enabled` 以字符串传输）。
+
+页面 `views/iot/`（设备页 + 规则页）。MQTT 认证钩子 `/internal/v1/iot/**` 为集群内部端点，管理端不调用。
+
+### 2.28 认证审计 [src/api/auth-audit.ts](../../src/api/auth-audit.ts)（前缀 `/api/v1/auth/audit-logs`）
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/api/v1/auth/audit-logs/failed`、`/high-risk` | `listFailedAuthEvents` / `listHighRiskAuthEvents` | 失败/高风险事件（⚠️ `tenantId` 必填，裸数组无分页，前端截断 200 条） |
+| GET | `/user/{userId}`、`/event-type/{type}`、`/ip/{ip}` | `listAuthEventsByUser` 等 | 按用户/事件类型/IP 查询（tenantId 必填） |
+| GET | `/user/{userId}/login-failures` | `countUserLoginFailures(...)` | 用户登录失败计数（startTime/tenantId） |
+| POST | `/time-range`、`/count` | `listAuthEventsByTimeRange` / `countAuthEvents` | 时间范围查询 / 计数 |
+| GET | `/{id}` | `getAuthEventDetail(id)` | 事件详情 |
+| DELETE | `/cleanup?beforeTime=` | `cleanupAuthLogs(beforeTime)` | 清理历史日志（需管理员角色，返回数量） |
+
+页面 `views/system/security/` 第三 Tab。
+
+### 2.29 数据总览 [src/api/overview.ts](../../src/api/overview.ts)
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET | `/api/v2/overview` | `getCrossDomainOverview()` | D5 聚合总览（租户取可信上下文，权限码 `system:monitor:view`；单源降级返回 `sources.{file,workflow,integration}.status=DEGRADED`） |
+
+页面 `views/dashboard/index.vue`。内部端点 `/internal/v1/overview` 网关强制 403，浏览器不可直连。
+
+### 2.30 自动生成接口
 
 `npm run generate:api`（openapi-generator-cli 7.2.0，typescript-axios，配置见 [openapitools.json](../../openapitools.json)）依据 `glob: "openapi.json"` 从根目录 `openapi.json` 生成代码到 `src/api/generated/`。该 OpenAPI 规范文件由后端接口导出提供，当前仓库未内置（`.gitignore` 也未忽略），执行前须先将其放到根目录；`src/api/generated/` 亦为生成目录，当前仓库不存在。生成物为辅助参考，业务代码仍以手写 [src/api/](../../src/api/) 模块为准。
 
@@ -419,7 +530,7 @@ try {
 }
 ```
 
-- `ApiError` 携带 `code` 与 `traceId`；`showError()` 统一以 `ElMessage.error` 展示；
+- `ApiError` 携带 `code` 与 `traceId`；`showError()` 统一以 `ElMessage.error` 展示；对授权类 403（message 含「能力未开通」/「scope」）自动追加「可在能力运营页查看当前租户订阅」引导；
 - 401（刷新失败后）自动清会话跳登录并携带 redirect；
 - 表单校验失败由 Element Plus 自行提示，catch 中勿重复弹错。
 
@@ -433,4 +544,4 @@ try {
 
 ---
 
-**最后更新**：2026-10-31（依据前端源码、类型定义、页面调用和代理配置核对；后端及生产部署状态需外部核验）
+**最后更新**：2026-11-11（依据前端源码、类型定义、页面调用和代理配置核对；后端及生产部署状态需外部核验）

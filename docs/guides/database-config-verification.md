@@ -1,11 +1,13 @@
 # 数据库配置功能验证清单
 
-> 适用版本：1.2.0 ｜ 页面路径：`/system/database` ｜ 更新日期：2026-09-27
+> 适用版本：1.2.0 ｜ 页面路径：`/system/database` ｜ 更新日期：2026-11-11
 
 ## 1. 功能定位
 
-数据库配置页面（[src/views/system/database/index.vue](../../src/views/system/database/index.vue)）用于**部署配置采集与导出**：
-管理员填写目标数据库连接参数后，可测试连接并一键生成 YAML / env / docker-compose 三种格式的部署配置。
+数据库配置页面（[src/views/system/database/index.vue](../../src/views/system/database/index.vue)）含两个 Tab：
+
+- **配置采集**：管理员填写目标数据库连接参数后，可测试连接并一键生成 YAML / env / docker-compose 三种格式的部署配置；
+- **数据源管理**：数据源台账分页、新增、更新、删除与连接池指标查看（url/username 列表返回已脱敏）。
 
 > **注意**：该页面**不是**运行时数据库管理控制台，不提供库表浏览、SQL 执行等能力。
 
@@ -13,20 +15,25 @@
 
 | 项目 | 要求 |
 |------|------|
-| 后端服务 | `apex-scaffold` 已启动（接口模块 8080），且已实现 `/admin-api/v1/database/**` 三个接口 |
+| 后端服务 | `apex-scaffold` 已启动（接口模块 8080），且已实现 `/admin-api/v1/database/**` 八个接口 |
 | 登录态 | 管理员账号已登录，且角色拥有 `system:database:view` 权限 |
 | 菜单注册 | 已执行菜单 SQL（`scripts/database/menu-init.sql`），`sys_menu` 中存在数据库配置菜单 |
 | 前端构建 | `npm run dev`（开发）或构建产物已部署（生产） |
 
 ## 3. 接口清单
 
-接口封装见 [src/api/database.ts](../../src/api/database.ts)，类型定义见 [src/types/index.ts](../../src/types/index.ts)（`DatabaseConfig` / `DatabaseTestResult` / `DeploymentConfigResult` / `CurrentDatabaseInfo`）。
+接口封装见 [src/api/database.ts](../../src/api/database.ts)，类型定义见 [src/types/index.ts](../../src/types/index.ts)（`DatabaseConfig` / `DatabaseTestResult` / `DeploymentConfigResult` / `CurrentDatabaseInfo` 等）。
 
 | 接口 | 方法 | 路径 | 功能 |
 |------|------|------|------|
 | 连接测试 | POST | `/admin-api/v1/database/test` | 验证数据库连接参数，成功时返回数据库版本 |
 | 生成部署配置 | POST | `/admin-api/v1/database/generate-config` | 生成 YAML / env / docker-compose 配置 |
 | 当前库信息 | GET | `/admin-api/v1/database/current` | 只读查询当前运行数据库的类型与版本 |
+| 数据源分页 | GET | `/admin-api/v1/database/datasources` | 数据源列表（pageNum/pageSize；url/username 已脱敏） |
+| 创建数据源 | POST | `/admin-api/v1/database/datasources` | 新增数据源（密码必填） |
+| 更新数据源 | PUT | `/admin-api/v1/database/datasources/{id}` | 更新数据源 |
+| 删除数据源 | DELETE | `/admin-api/v1/database/datasources/{id}` | 删除数据源 |
+| 连接池指标 | GET | `/admin-api/v1/database/datasources/{id}/metrics` | 查看该数据源连接池指标 |
 
 ## 4. 验证步骤
 
@@ -65,12 +72,22 @@
 | 3 | 点击「一键复制」 | 剪贴板内容与展示一致 |
 | 4 | 检查生成内容 | 密码以占位符/环境变量形式出现，**不以明文回显到配置正文**（以后端实际实现为准） |
 
+### 4.5 数据源管理（/admin-api/v1/database/datasources）
+
+| 步骤 | 操作 | 预期结果 |
+|------|------|---------|
+| 1 | 切换到「数据源管理」Tab | 列表分页加载（pageNum/pageSize），url/username 列为脱敏展示 |
+| 2 | 新增数据源 | 必填校验（密码必填），创建成功后列表刷新 |
+| 3 | 更新数据源 | 修改备注/参数后保存成功 |
+| 4 | 查看连接池指标 | 「指标」入口弹出该数据源连接池指标数据 |
+| 5 | 删除数据源 | 确认后删除成功，列表刷新 |
+
 ## 5. 安全验证要点
 
 - [ ] **密码不落库、不持久化**：填写密码后刷新页面，表单不残留密码；localStorage / sessionStorage 中无密码明文
 - [ ] **密码仅一次性使用**：密码仅随单次「测试连接 / 生成配置」请求提交，前端状态在操作后不保留
 - [ ] **传输安全**：生产环境通过 HTTPS 传输（请求体含密码）
-- [ ] **权限控制**：后端对三个接口校验 `system:database:*` 权限，无权限账号调用返回 403
+- [ ] **权限控制**：后端对数据库接口校验 `system:database:*` 权限，无权限账号调用返回 403
 - [ ] **生成配置的安全建议**：页面安全提示明确说明密码应通过环境变量或密钥系统注入，而非硬编码
 
 ## 6. 常见问题
@@ -91,4 +108,5 @@
 | | | | 4.2 当前库信息 | | |
 | | | | 4.3 连接测试 | | |
 | | | | 4.4 生成配置 | | |
+| | | | 4.5 数据源管理 | | |
 | | | | 5. 安全要点 | | |

@@ -10,7 +10,7 @@
 | 构建 | Vite | ^6.0.7 | 开发代理 + 生产构建（terser 压缩、manualChunks 分包） |
 | 类型 | TypeScript | ~5.7.2 | `strict` 全开，`vue-tsc --noEmit` 前置于构建 |
 | 路由 | vue-router | ^4.5.0 | 静态路由 + 菜单驱动动态路由 |
-| 状态 | Pinia | ^2.3.0 | Setup Store 写法，localStorage 持久化走 `utils/storage.ts` |
+| 状态 | Pinia | ^2.3.0 | Setup Store 写法；会话类持久化（token/identity/tenantId）经 `utils/auth.ts` 直写 localStorage，UI 偏好走 `utils/storage.ts` |
 | UI | Element Plus | ^2.9.1 | 中文语言包 + 全量图标注册（[main.ts](../../src/main.ts)） |
 | 图表 | ECharts | ^5.6.0 | 监控大盘、图表管理页 |
 | HTTP | Axios | ^1.7.9 | 统一封装于 [src/utils/request.ts](../../src/utils/request.ts) |
@@ -32,43 +32,49 @@ flowchart TB
     end
 
     subgraph Gateway["开发代理 (Vite) / 生产反代 (Nginx)"]
-        P0["WS 升级 /api/v1/messages/ws"]
+        P0["WS 升级 = /api/v1/messages/ws<br/>SSE = /api/v1/notifications/stream"]
         P1["/api/**"]
         P2["/admin-api/**"]
-        P3["/oauth2/authorize、/oauth2/token"]
+        P3["/oauth2/authorize、/oauth2/token、<br/>/oauth2/consent（仅 POST）"]
+        P4["/auth/v1/**、/auth/v2/**"]
+        P5["/integration/v1/**"]
     end
 
     subgraph Backend["Apex Scaffold 后端 (Spring Boot 3 WebFlux, :8080)"]
-        B1["业务接口 /api/v1/**<br/>认证 · 当前用户 · 文件 · Office 接入 · 站内信"]
-        B2["管理接口 /admin-api/v1/**<br/>系统管理 · 监控 · 日志 · SSO · 代码生成器 · 认证配置 · 消息模板"]
+        B1["业务接口 /api/v1/**<br/>认证 · 当前用户 · 文件 · Office 接入 · 站内信 · 通知中心"]
+        B2["管理接口 /admin-api/v1/**<br/>系统管理 · 监控 · 日志 · SSO · 代码生成器 · 认证配置 · 消息模板 · 组织同步"]
         B3["办公业务 /api/office/**<br/>消息 · 审批 · 日历 · 文档操作"]
         B4["工作流高级操作 /api/workflow/**<br/>回退 · 转办 · 委派 · 挂起 · 恢复"]
-        B5["平台与新增域<br/>/api/v2/** 租户 · 工作流定义 · 运维健康<br/>/api/mfa/** · /api/ip-access-control/**"]
-        B6["全文搜索服务"]
-        B7["第三方: 飞书 / 钉钉 / 企微 · OAuth2 提供商"]
+        B5["平台与新增域<br/>/api/v2/** 租户 · 套餐 · 能力 · 总览 · 工作流定义 · 运维健康 · 会议室/同步向导/统一通知 · 文件分享<br/>/api/mfa/** · /api/ip-access-control/** · /api/v1/auth/audit-logs/**"]
+        B6["集成与物联网 /integration/v1/**<br/>连接器 · 凭据 · IoT 设备/规则（/internal/v1/** 内部端点网关 403）"]
+        B7["认证中心 /auth/v1|v2/**<br/>MFA 验证 · 在线会话 · 密码找回"]
+        B8["全文搜索服务"]
+        B9["第三方: 飞书 / 钉钉 / 企微 · OAuth2 提供商"]
     end
 
-    SPA --> P0 & P1 & P2 & P3
+    SPA --> P0 & P1 & P2 & P3 & P4 & P5
     P0 --> B1
-    P1 --> B1 & B3 & B4 & B7
-    P2 --> B2 & B5 & B6
-    P3 --> B7
+    P1 --> B1 & B3 & B4 & B5 & B9
+    P2 --> B2 & B5 & B8
+    P3 --> B9
+    P4 --> B7
+    P5 --> B6
 ```
 
-站内信 WebSocket 需要专用代理：Vite 开发代理 `/api` 已设 `ws: true`；Nginx 必须为 `= /api/v1/messages/ws` 单独配置 `Upgrade`/`Connection` 且置于 `/api/` 之前，否则实时推送会退化为 60 秒轮询兜底。详见 [部署指南](../guides/deployment.md) §6.2/§6.3。
+站内信 WebSocket 与通知 SSE 都需要专用代理：Vite 开发代理 `/api` 已设 `ws: true`；Nginx 必须为 `= /api/v1/messages/ws` 单独配置 `Upgrade`/`Connection`（置于 `/api/` 之前），为 `= /api/v1/notifications/stream` 配置 SSE 精确匹配（buffering off），否则实时推送分别退化为 60 秒轮询兜底或被响应超时掐断。详见 [部署指南](../guides/deployment.md) §6.2/§6.3。
 
 ## 3. 前端分层架构
 
 ```mermaid
 flowchart TB
     subgraph Views["视图层 src/views"]
-        V1["system / monitor / data / office / workflow<br/>(动态路由，VIEW_REGISTRY 解析)"]
+        V1["system / monitor / data / office / workflow<br/>integration / iot<br/>(动态路由，VIEW_REGISTRY 解析)"]
         V2["login / dashboard / oauth2 / office-callback<br/>(静态路由)"]
     end
 
     subgraph Layout["布局与通用组件"]
-        L1["layouts/AdminLayout.vue<br/>侧边栏 · 顶栏 · 面包屑 · 主题切换"]
-        L2["components/<br/>Pagination · FileUpload(Enhanced)<br/>GlobalSearch · EmptyState"]
+        L1["layouts/AdminLayout.vue<br/>侧边栏 · 顶栏 · 面包屑 · 主题切换 · 权限码告警"]
+        L2["components/<br/>Pagination · FileUpload(Enhanced)<br/>GlobalSearch · NotificationCenter · EmptyState"]
     end
 
     subgraph State["状态层"]
@@ -155,11 +161,11 @@ sequenceDiagram
 | 配置项 | 值 | 出处 |
 |--------|-----|------|
 | 产物目录 | `dist/`，按 js/css/images/fonts/media 分目录 | vite.config.ts |
-| 分包策略 | manualChunks：vue/pinia、element-plus、@element-plus/icons-vue（独立 `element-icons` chunk）、echarts、axios、@vueuse、其余 vendor | vite.config.ts:60 |
-| 压缩 | terser，生产移除 `console`/`debugger` | vite.config.ts:120-127 |
-| Chunk 警告阈值 | 1000 KB | vite.config.ts:118 |
-| 产物分析 | rollup-plugin-visualizer → `dist/stats.html`（`npm run analyze` 打开） | vite.config.ts:20-27 |
-| 路径别名 | `@` → `src/` | vite.config.ts:31 |
+| 分包策略 | manualChunks：vue/pinia、element-plus、@element-plus/icons-vue（独立 `element-icons` chunk）、echarts、axios、@vueuse、其余 vendor | vite.config.ts:133 |
+| 压缩 | terser，生产移除 `console`/`debugger` | vite.config.ts:193-200 |
+| Chunk 警告阈值 | 1000 KB | vite.config.ts:191 |
+| 产物分析 | rollup-plugin-visualizer → `dist/stats.html`（`npm run analyze` 打开） | vite.config.ts:71-77 |
+| 路径别名 | `@` → `src/` | vite.config.ts:80 |
 
 ## 6. 部署架构
 
@@ -168,15 +174,16 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     subgraph Dev["开发环境 npm run dev (:5173)"]
-        V["Vite Dev Server<br/>host 0.0.0.0"] -->|proxy /api /admin-api /oauth2| D["VITE_API_PROXY_TARGET<br/>(默认 http://127.0.0.1:8080)"]
+        V["Vite Dev Server<br/>host 0.0.0.0"] -->|proxy /api /admin-api /auth/v1\|v2 /integration/v1 /oauth2| D["VITE_API_PROXY_TARGET<br/>(默认 http://127.0.0.1:8080)"]
     end
 
     subgraph Prod["生产环境（同域部署，推荐）"]
         U["用户浏览器"] --> N["Nginx (前端静态资源 + 反代)"]
         N -->|/ try_files → index.html| SPA["SPA 静态产物"]
-        N -->|/api/ /admin-api/ ^/oauth2/(authorize\|token)| BE2["API_PROXY_PASS<br/>(默认 http://apex-scaffold:8080)"]
+        N -->|/api/ /admin-api/ /auth/v1\|v2/ /integration/v1/ ^/oauth2/(authorize\|token)<br/>= /oauth2/consent 仅 POST| BE2["API_PROXY_PASS<br/>(默认 http://apex-scaffold:8080)"]
         N -->|= /api/v1/messages/ws<br/>Upgrade + 3600s| BE2
-        N -->|/assets/ 30 天 immutable| U
+        N -->|= /api/v1/notifications/stream<br/>SSE buffering off| BE2
+        N -->|/assets/ 等产物目录 30 天 immutable| U
     end
 
     subgraph Docker["Docker 部署"]
@@ -197,10 +204,11 @@ flowchart LR
 | 手段 | 命令/位置 | 说明 |
 |------|-----------|------|
 | 类型检查 | `vue-tsc --noEmit`（build 前置） | tsconfig `strict` + `noUnusedLocals` + `noUnusedParameters` |
-| 单元测试 | `npm run test`（Vitest + happy-dom） | 用例分布于 `src/utils/__tests__/`（工具/契约）与 `src/api/`（业务 API 契约），详见 [测试指南](../reference/testing.md) |
+| 单元测试 | `npm run test`（Vitest + happy-dom） | 27 个测试文件（2026-11-10 实测 214 用例全绿）：`src/utils/__tests__/`（11）、`src/api/*.test.ts`（7）、`stores/__tests__`（3）、`composables/__tests__`（2）、`components/__tests__`（2）、`directives`/`router`（各 1），详见 [测试指南](../reference/testing.md) |
 | 产物分析 | `npm run analyze` | rollup-plugin-visualizer |
 | 性能审计 | `scripts/performance/lighthouse-test.sh` | Lighthouse desktop preset，报告输出 `./reports/lighthouse` |
-| 依赖安全 | `scripts/security/security-scan.sh`、`npm run audit` | npm audit（JSON + HTML 报告输出 `./reports/audit.html`），脚本内的 npm-check-updates / snyk 为可选步骤 |
+| 依赖安全 | `scripts/security/security-scan.sh`、`npm run audit` | `npm run audit` 输出 JSON + HTML 到 `./reports/audit.html`；security-scan.sh 控制台输出 npm audit 结果，其中仅 snyk 为可选步骤（未安装自动跳过），npm-check-updates 经 npx 无条件执行 |
+| 上线验证 | `npm run verify:deploy` | `scripts/verify/post-deploy-check.sh`（C1–C13 检查项，需 `BASE_URL`） |
 | API 契约 | `npm run generate:api` | openapi-generator-cli（typescript-axios）；当前 `src/api/*.ts` 为手写封装，生成目录不参与运行时 |
 
 > 仓库当前**未配置** ESLint/Prettier/Husky/CI 流水线；代码风格靠 [AGENTS.md](../../AGENTS.md) 约定与 `.editorconfig` 约束。
@@ -214,4 +222,4 @@ flowchart LR
 
 ---
 
-**最后更新**：2026-10-30（依据 src/ 与 package.json 当前实现核对：技术栈补 E2E 边界、系统图补 WS 与新增业务域、部署图补 WS location 与静态缓存、质量保障表按实际 script 改写）
+**最后更新**：2026-11-11（依据 src/ 与 package.json 当前实现核对：系统图/部署图补 /auth、/integration、consent POST、通知 SSE 与新增业务域，构建表行号刷新，质量保障表按实际 script 改写）

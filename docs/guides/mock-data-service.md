@@ -58,7 +58,7 @@ npm run dev
 - 文档查询：`http://localhost:5173/data/document`
 - 图表查询：`http://localhost:5173/data/chart`
 
-所有 API 请求会被 Mock 服务拦截，返回模拟数据。
+Mock 仅拦截 `/admin-api/v1/documents*` 与 `/admin-api/v1/charts*` 的文档/图表接口并返回模拟数据；这两个页面是由后端菜单驱动的动态路由，**菜单树 `/admin-api/v1/menus`、登录与令牌接口不在 Mock 覆盖范围内**，需要后端（或网关）可用才能进入页面。
 
 ## 📊 Mock 数据说明
 

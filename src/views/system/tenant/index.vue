@@ -339,7 +339,7 @@ function openCreateDialog(): void {
         packageOptions.value = packages || []
       })
       .catch(() => {
-        // 套餐列表失败不阻塞开通（编码仍可手输）
+        // 套餐列表失败不阻塞打开向导（提交时套餐为必选，可重开向导重试加载）
       })
   }
 }

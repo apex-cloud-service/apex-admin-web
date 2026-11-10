@@ -70,7 +70,7 @@ flowchart LR
 
 | 组件 | 版本要求 | 说明 |
 |------|---------|------|
-| Node.js | ≥ 18（构建）；开发/测试实际需 ≥ 22.12 | package.json 顶层 `engines.node >= 18`；已安装依赖（如 Vitest 5）实际要求 Node `^22.12.0 || >=24`，Node 18 仅能支撑 `npm run build` |
+| Node.js | ≥ 18（构建）；开发/测试实际需 ≥ 22.12 | package.json 顶层 `engines.node >= 18`；已安装依赖（如 Vitest 5）实际要求 Node `^22.12.0 \|\| ^24.0.0 \|\| >=26.0.0`，Node 18 仅能支撑 `npm run build` |
 | npm | ≥ 9（推荐） | 依赖安装与脚本执行（推荐值，仓库未声明 npm engines） |
 | Nginx | 任意主流版本 | 推荐生产独立部署用；也可使用任意静态服务器 |
 
@@ -119,7 +119,7 @@ dist/
 | `VITE_AUTH_TENANT_ENABLED` | 构建期 | 是否在登录页显示租户标识输入（多租户部署设为 `true`，默认关闭）。关闭时登录请求不带 `tenantId` |
 | `VITE_OAUTH2_CLIENT_ID` | 构建期 | OAuth2 授权码登录使用的 `client_id`，必须与后端 OAuth2 注册值一致（默认 `apex-admin-web`）。浏览器端为 PKCE 公共客户端，不携带 `clientSecret` |
 
-以上四项取自 `.env.example`，其中前三项在 `src/env.d.ts` 中有类型声明；`VITE_OAUTH2_CLIENT_ID` 由登录页通过 `import.meta.env` 读取。OAuth2 的 `redirect_uri` 由前端按当前 Origin 拼出，需与后端注册值一致。
+以上四项取自 `.env.example`，均已在 `src/env.d.ts` 中有类型声明；`VITE_OAUTH2_CLIENT_ID` 由登录页通过 `import.meta.env` 读取。OAuth2 的 `redirect_uri` 由前端按当前 Origin 拼出，需与后端注册值一致。
 
 运行期变量（`docker run` / `docker-compose.yml` 的 `environment`，不进入构建产物）：
 
@@ -620,7 +620,8 @@ npm run dev
 ```
 
 - 默认访问 `http://localhost:5173`。
-- Vite dev server 已将 `/api`、`/admin-api` 及 OAuth2 端点（`/oauth2/authorize`、`/oauth2/token`）
+- Vite dev server 已将 `/api`、`/admin-api`、`/auth/v1`、`/auth/v2`、`/integration/v1` 及 OAuth2 端点
+  （`/oauth2/authorize`、`/oauth2/token` 全方法，`/oauth2/consent` 仅 POST、GET 回退 SPA）
   代理到 `http://127.0.0.1:8080`（可通过 `.env.development` 的 `VITE_API_PROXY_TARGET` 调整代理目标）。
 - `/api` 代理已开启 `ws: true`，开发环境站内信 WebSocket（`/api/v1/messages/ws`）可直接联调。
 - 登录流程：`GET /api/v1/auth/captcha`（拉取验证码）→ 提交账号密码 + 验证码 → 获取 `accessToken`
@@ -631,7 +632,15 @@ npm run dev
 
 ## 10. 部署验证清单（迁移回归）
 
-部署完成后按下列顺序冒烟，确认迁移不影响任何功能：
+部署完成后可先执行自动化核验（覆盖下表 1/2/14/19 等项，检查项 C1–C13 含安全头、缓存、History 回退、20m 请求体边界、SSE/WS、鉴权类端点、consent 分流与版本前缀路由）：
+
+```bash
+BASE_URL=https://<站点地址> npm run verify:deploy
+# 可选：API_BASE=<后端网关> TOKEN=<Bearer 令牌> TENANT_ID=<租户> INSECURE=1 SKIP_UPLOAD=1 SKIP_WS=1
+# 退出码：0 通过或仅告警；1 存在失败项；2 缺少 BASE_URL
+```
+
+再按下列顺序冒烟，确认迁移不影响任何功能：
 
 | # | 校验项 | 通过标准 |
 |---|--------|---------|
@@ -664,7 +673,7 @@ npm run dev
 
 ```bash
 # 1. 拉取新版本前端代码
-cd /Users/work/apex-admin-web && git pull
+cd /path/to/apex-admin-web && git pull
 
 # 2. 重新构建
 npm install
@@ -742,3 +751,4 @@ MFA 与 IP 规则走 `/api/mfa/**`、`/api/ip-access-control/**`；运维健康�
 | `docker run -d -p 80:80 -e API_PROXY_PASS=http://172.17.0.1:8080 apex-admin-web:latest` | 独立运行容器 |
 | `docker compose up -d --build` | Compose 一键构建启动 |
 | `docker exec apex-admin-web nginx -t` | 容器内校验 Nginx 配置 |
+| `BASE_URL=<站点> npm run verify:deploy` | 上线后自动化核验（`scripts/verify/post-deploy-check.sh`，C1–C13；可选 `API_BASE`/`TOKEN`/`TENANT_ID`/`INSECURE`/`SKIP_UPLOAD`/`SKIP_WS`；退出码 0 通过/1 失败/2 缺参） |

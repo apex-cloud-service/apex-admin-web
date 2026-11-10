@@ -27,14 +27,14 @@
 
 - ✅ 文件上传（POST /api/v1/files/generic）
 - ✅ 文件删除（DELETE /api/v1/file/delete）
-- ✅ 获取文件URL（GET /api/v1/file/url）
-- ✅ 检查文件存在（GET /api/v1/file/exists）
 - ✅ 文件大小校验（10MB限制）
 - ✅ 文件类型校验（图片格式）
 - ✅ 自动携带认证Token
 - ✅ 上传进度展示
-- ✅ 图片预览功能
+- ✅ 图片预览功能（使用上传响应中的 `url` 字段）
 - ✅ 支持单文件/多文件上传
+
+> 文件访问直接使用上传响应返回的 `url`（有效期 `expiresIn` 秒）；`api/file.ts` 未封装「获取 URL / 检查存在 / 读取内容」类端点。
 
 ---
 
@@ -157,16 +157,7 @@ console.log('存储桶：', result.bucketName)
 console.log('有效期：', result.expiresIn)
 ```
 
-### 3.2 获取文件URL
-
-```typescript
-import { getFileUrl } from '@/api/file'
-
-const url = await getFileUrl('apex', 'AF/abc123.jpg')
-console.log('预签名URL：', url)
-```
-
-### 3.3 删除文件
+### 3.2 删除文件
 
 ```typescript
 import { deleteFile } from '@/api/file'
@@ -177,29 +168,22 @@ if (success) {
 }
 ```
 
-### 3.4 检查文件存在
+### 3.3 图片预览
 
-```typescript
-import { checkFileExists } from '@/api/file'
-
-const exists = await checkFileExists('apex', 'AF/abc123.jpg')
-console.log('文件存在：', exists)
-```
-
-### 3.5 获取文件内容
-
-```typescript
-import { getFileContent } from '@/api/file'
-
-// 返回可直接用于 <img> src 的 URL
-const contentUrl = getFileContent('AF/abc123.jpg')
-```
+文件访问直接使用上传响应中的 `url` 字段（预签名 URL，有效期见 `expiresIn`）：
 
 ```vue
+<script setup lang="ts">
+import type { FileUploadResult } from '@/types'
+const uploaded = ref<FileUploadResult | null>(null)
+</script>
+
 <template>
-  <img :src="getFileContent(objectName)" alt="图片" />
+  <img v-if="uploaded" :src="uploaded.url" alt="图片" />
 </template>
 ```
+
+> 组件的 remove 事件只是从前端列表移除文件项，不会调用后端删除接口。
 
 ---
 
@@ -384,10 +368,12 @@ const handleSubmit = async () => {
 import { computed } from 'vue'
 import { Upload } from '@element-plus/icons-vue'
 import { getToken } from '@/utils/auth'
+import { apiUrl } from '@/utils/api-base'
 import { MAX_UPLOAD_SIZE } from '@/settings'
 import { ElMessage } from 'element-plus'
 
-const uploadUrl = '/api/v1/files/generic'
+// 上传地址统一经 apiUrl 拼接：跨域部署自动携带 VITE_API_BASE_URL
+const uploadUrl = apiUrl('/api/v1/files/generic')
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${getToken()}`
 }))
@@ -468,7 +454,7 @@ const handleCrop = async () => {
 
 ### 7.3 拖拽上传
 
-Element Plus 的 `el-upload` 已内置拖拽上传功能：
+Element Plus 的 `el-upload` 已内置拖拽上传功能（`uploadUrl` 同样按 §7.1 用 `apiUrl('/api/v1/files/generic')` 拼接）：
 
 ```vue
 <template>
@@ -517,7 +503,7 @@ Element Plus 的 `el-upload` 已内置拖拽上传功能：
 
 ## 九、后续优化建议
 
-当前基础版为 MVP 方案。下表中多项能力（图片预览放大、进度条美化、视频上传、裁剪、压缩、粘贴上传）已在增强版组件落地，见 [file-upload-enhanced.md](file-upload-enhanced.md)；分片/断点续传等仍未封装，如需增强可考虑：
+当前基础版为 MVP 方案。下表中多项能力（图片预览放大、进度条美化、裁剪、压缩、粘贴上传）已在增强版组件落地，见 [file-upload-enhanced.md](file-upload-enhanced.md)；分片/断点续传/秒传已由 `api/file.ts` 的 `/api/v1/file/chunk/**` 封装与增强组件 `enableChunk`（默认关闭）支持，此处仅剩未实现项：
 
 ### 9.1 组件增强（P1）
 
@@ -535,9 +521,9 @@ Element Plus 的 `el-upload` 已内置拖拽上传功能：
 
 ### 9.3 高级功能（P2）
 
-- [ ] 断点续传
-- [ ] 分片上传（大文件）
-- [ ] 秒传（MD5去重）
+- [x] 断点续传（分片 status 已上传集合跳过，组件 `enableChunk` 启用）
+- [x] 分片上传（大文件，`/api/v1/file/chunk/**`）
+- [x] 秒传（uploaded 齐全跳过上传；MD5 去重合并由后端实现）
 - [ ] 批量上传队列管理
 
 ### 9.4 文件管理页面（P2）

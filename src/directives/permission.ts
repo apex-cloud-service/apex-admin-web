@@ -16,7 +16,7 @@ import { usePermissionStore } from '@/stores/permission'
 function checkPermission(el: HTMLElement, binding: DirectiveBinding<string>): void {
   const { hasPermission } = usePermissionStore()
   if (!binding.value || hasPermission(binding.value)) return
-  // 无权限：从 DOM 移除（移除前记录父节点与注释锚点以便恢复）
+  // 无权限：从 DOM 移除（permChecked 防重复处理；无恢复锚点，权限变化不会恢复元素）
   if (!el.dataset.permChecked) {
     el.dataset.permChecked = '1'
     el.parentNode?.removeChild(el)

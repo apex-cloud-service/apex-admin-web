@@ -1,6 +1,6 @@
 # 测试指南
 
-> 依据 [vitest.config.ts](../../vitest.config.ts)、[package.json](../../package.json) 与 `src/**/__tests__/`、`src/api/*.test.ts` 当前实现核对（2026-11-05）。最近一次全量执行结果见[测试报告（2026-11-05）](../archived/project-reports/test-report-2026-11-05.md)。
+> 依据 [vitest.config.ts](../../vitest.config.ts)、[package.json](../../package.json) 与 `src/**/__tests__/`、`src/api/*.test.ts` 当前实现核对（2026-11-11）。2026-11-05 的历史全量执行结果见[测试报告（2026-11-05）](../archived/project-reports/test-report-2026-11-05.md)。
 
 ## 1. 技术选型与现状
 
@@ -12,7 +12,7 @@
 | 全局准备 | [src/test/setup.ts](../../src/test/setup.ts)：mock `ResizeObserver` 与 `window.matchMedia`（Element Plus / ECharts 依赖） |
 | E2E | @playwright/test ^1.63.0 已安装，**尚无配置文件与用例** |
 | 覆盖率 | v8 provider（`@vitest/coverage-v8`），报告 text/json/html/lcov（`npm run test:coverage`） |
-| 报告产物 | `npm run test:report` 输出 JUnit XML + JSON + 覆盖率到 `reports/`；脚本末尾调用 `scripts/quality/normalize-test-report.mjs` 归一化路径与主机名；机器可读结果入库，HTML/lcov 不入库 |
+| 报告产物 | `npm run test:report` 输出 JUnit XML + JSON + 覆盖率（text/html/lcov + `coverage-summary.json` 摘要）到 `reports/`；脚本末尾调用 `scripts/quality/normalize-test-report.mjs` 归一化路径与主机名；机器可读结果入库，HTML/lcov 不入库 |
 | CI | 无（本地执行） |
 
 ## 2. 常用命令
@@ -30,11 +30,11 @@ npx vitest run src/utils/__tests__/request.spec.ts   # 指定文件
 
 ## 3. 现有用例清单
 
-共 22 个测试文件、185 个用例（2026-11-05 实测 `npx vitest run` 全绿），分布于 `src/**/__tests__/`（工具、Store、组件、路由）与 `src/api/`（业务 API 契约）：
+共 27 个测试文件、214 个用例（2026-11-11 实测 `npx vitest run` 全绿），分布于 `src/**/__tests__/`（工具、Store、组件、指令、路由）与 `src/api/`（业务 API 契约）：
 
 | 用例文件 | 用例数 | 覆盖内容 |
 |----------|-------|---------|
-| `src/utils/__tests__/request.spec.ts` | 8 | 401 刷新后单次重放；认证端点排除；非 401 状态码在重放中如实保留；并发多个 401 共享同一次刷新（refreshPromise 单飞）；会话租户记录与 `X-Tenant-Id` 头 |
+| `src/utils/__tests__/request.spec.ts` | 12 | 401 刷新后单次重放；认证端点排除；非 401 状态码在重放中如实保留；并发多个 401 共享同一次刷新（refreshPromise 单飞）；会话租户记录与 `X-Tenant-Id` 头；`showError` 授权类 403 提示引导（命中/非命中关键字、非 403） |
 | `src/utils/__tests__/oauth2.spec.ts` | 4 | S256 PKCE 授权 URL 生成；表单编码换取令牌与字段映射；授权上下文一次性消费（state 防重放） |
 | `src/utils/__tests__/auth-config.spec.ts` | 6 | 认证配置 API 契约：权限筛选/分页参数、写接口路径、掩码密钥不回写、PKCE 不可关闭 |
 | `src/utils/__tests__/auth.spec.ts` | 4 | 会话存取：token/refreshToken/identity 读写与 `clearSession` 清理 |
@@ -42,7 +42,11 @@ npx vitest run src/utils/__tests__/request.spec.ts   # 指定文件
 | `src/utils/__tests__/mask.spec.ts` | 23 | 手机/邮箱/身份证/银行卡/姓名/地址/IP/护照/车牌/通用脱敏与 `maskBatch` 的边界行为 |
 | `src/utils/__tests__/xss-protection.spec.ts` | 31 | 转义/反转义、标签剥离、危险协议拦截、HTML 白名单清理、JSON 与分类输入清理、XSS 特征检测、CSP Nonce |
 | `src/utils/__tests__/storage.spec.ts` | 6 | 原始/JSON 读写、缺失与损坏数据兜底、写入异常返回 false、循环引用序列化失败 |
+| `src/utils/__tests__/notification-stream.spec.ts` | 9 | SSE 通知流：地址经 `apiUrl` 拼接、`Accept: text/event-stream` 头、事件解析与断线 5s→30s 退避 |
+| `src/utils/__tests__/api-base.spec.ts` | 5 | `apiBaseUrl`/`apiUrl` 拼接：跨域携带 `VITE_API_BASE_URL`、同域相对路径、尾斜杠归一化 |
+| `src/utils/__tests__/tenant-package.spec.ts` | 5 | 套餐载荷构造：菜单父链补全、features 空集合=未订阅语义的三开关翻译 |
 | `src/api/auth.test.ts` | 6 | 登录固定 `loginType=PASSWORD`；MFA 二步路径；我的角色/权限兼容对象数组；刷新令牌参数 |
+| `src/api/notification.test.ts` | 4 | 通知中心 API 契约：收件箱分页、未读数、已读/全部已读路径 |
 | `src/api/office-platform.test.ts` | 4 | 办公平台基础设施 API 契约：应用更新乐观锁 version 随 body 回传；解绑 version 走 query；绑定分页 platform/status/分页参数 |
 | `src/api/message.test.ts` | 7 | 站内信接口契约：收件箱/已发送返回纯数组、分页参数、标记已读路径；消息模板管理（创建/更新/删除路径） |
 | `src/api/workflow.test.ts` | 1 | 工作流实例详情路由契约（`/admin-api/v1/workflows/instances/{id}`） |
@@ -55,6 +59,7 @@ npx vitest run src/utils/__tests__/request.spec.ts   # 指定文件
 | `src/composables/__tests__/useCrud.spec.ts` | 12 | 分页查询透传、增删改刷新、删除确认取消、末页回退、批量删除 |
 | `src/composables/__tests__/useTableConfig.spec.ts` | 9 | 列配置/分页/筛选/排序持久化、默认列合并、导入导出与重置 |
 | `src/components/__tests__/Pagination.spec.ts` | 4 | `change` 事件、每页条数重置首页、total 收缩时页码回退 |
+| `src/components/__tests__/FileUpload.spec.ts` | 2 | 上传地址经 `apiUrl` 拼接契约 |
 | `src/router/__tests__/dynamic.spec.ts` | 7 | 菜单树转换：按钮/空目录/未登记组件跳过、`visible=0` 隐藏、`status` 不参与过滤 |
 
 ## 4. 编写规范
@@ -106,7 +111,7 @@ npm run test:report      # 输出到 reports/（JUnit + JSON + HTML/lcov）
 - Provider：v8（依赖 `@vitest/coverage-v8`，须与 `vitest` 主版本一致）；
 - 报告输出 text/json/html/lcov；
 - 排除：`node_modules`、`src/test`、`**/*.spec.ts`、`**/*.test.ts`、`dist`、`*.config.ts`（见 vitest.config.ts `coverage.exclude`）；
-- **默认不设 `coverage.include`，只统计被用例加载过的模块**。2026-11-05 实测：默认口径行覆盖 73.12%（585/800），强制统计 `src/**` 的全量口径行覆盖 6.04%（585/9676）——两者差异来自 62 个页面组件与大量未测 API/工具模块。引用覆盖率数字时必须注明口径，不能只用默认口径宣称整体覆盖水平。
+- **默认不设 `coverage.include`，只统计被用例加载过的模块**。2026-11-11 实测：默认口径行覆盖 74.11%，强制统计 `src/**` 的全量口径行覆盖 6.87%——两者差异来自 62 个页面组件与大量未测 API/工具模块。引用覆盖率数字时必须注明口径，不能只用默认口径宣称整体覆盖水平。
 - 当前未设覆盖率门槛（thresholds），引入 CI 时建议对 `src/utils`、`src/stores`、`src/composables` 设定下限，并单独跟踪 `src/views`。
 
 ## 6. 测试环境注意事项
@@ -122,4 +127,4 @@ npm run test:report      # 输出到 reports/（JUnit + JSON + HTML/lcov）
 
 ---
 
-**最后更新**：2026-11-05
+**最后更新**：2026-11-11

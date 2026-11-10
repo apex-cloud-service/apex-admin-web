@@ -4,22 +4,24 @@ Apex Scaffold 管理后台前端（**前后端分离独立工程**）。
 
 基于 **Vue 3.5 + Vite 6 + TypeScript + Pinia + Element Plus + ECharts**，与后端
 [Apex Scaffold](https://github.com/your-org/apex-scaffold)（Spring Boot 3 WebFlux 函数式端点）通过
-`/api/v1`、`/api/v2`（业务）、`/admin-api/v1`（管理后台）、`/api/workflow`（工作流高级操作）与
-`/oauth2/*`（授权码登录）对接。
+`/api/v1`、`/api/v2`（业务）、`/admin-api/v1`（管理后台）、`/integration/v1`（集成与物联网）、
+`/auth/v1|v2`（认证中心会话/MFA/密码找回）、`/api/workflow`（工作流高级操作）、`/api/office/**`（办公业务）
+与 `/oauth2/*`（授权码登录与授权同意）对接。
 
 ## 功能清单
 
 | 模块 | 页面 | 后端接口前缀 |
 |------|------|-------------|
-| 认证 | 登录（账号密码 + 图形验证码，可选租户标识）、登出、标准 OAuth2（PKCE）、办公平台回调 | `/api/v1/auth`、`/oauth2/*` |
-| 工作台 | 仪表盘（指标卡片 + 趋势图） | 身份派生 / 监控大盘接口 |
+| 认证 | 登录（账号密码 + 图形验证码，可选租户标识与 MFA 二步验证）、登出、标准 OAuth2（PKCE）、授权同意页、密码找回、办公平台回调 | `/api/v1/auth`、`/auth/v1/mfa`、`/auth/v2/password-recovery`、`/oauth2/*` |
+| 工作台 | 数据总览仪表盘（多源聚合 + 降级提示）、顶栏通知中心（SSE 实时推送） | `/api/v2/overview`、`/api/v1/notifications/*` |
 | 系统管理 | 用户 / 角色 / 菜单（树）/ 部门（树）/ 字典（两级）/ 参数 / 定时任务 | `/admin-api/v1/*` |
-| 系统管理 | 租户台账（分页/生命周期/配额）、MFA 与 IP 访问控制、数据脱敏、认证管理与 SSO | `/api/v2/platform/tenants`、`/api/mfa`、`/api/ip-access-control`、`/api/v1/masking` |
-| 监控 | 登录日志 / 操作审计日志 / API 调用日志 / 在线用户（强退）/ 运维健康 | `/admin-api/v1/*`、`/api/v2/operations/*` |
+| 系统管理 | 租户台账（分页/生命周期/配额）、租户套餐、能力目录与用量、MFA 与 IP 访问控制、数据脱敏、认证管理与 SSO、认证审计、开放平台应用 | `/api/v2/platform/tenants`、`/api/v2/tenant-packages`、`/api/v2/capabilities`、`/api/mfa`、`/api/ip-access-control`、`/api/v1/masking`、`/admin-api/v1/auth/*`、`/api/v1/open-apps/*` |
+| 监控 | 登录日志 / 操作审计日志 / API 调用日志 / 在线用户（强退）/ 运维健康 / 在线会话（认证中心） | `/admin-api/v1/*`、`/api/v2/operations/*`、`/auth/v1/sessions/*` |
 | 数据管理 | 文档 / 图表 CRUD 与数据查询 | `/admin-api/v1/*` |
-| 办公平台 | 站内信（含 WebSocket 实时推送）、消息模板、平台绑定审批、组织同步、会议室 | `/api/v1/messages`、`/admin-api/v1/office/*`、`/api/v2/*` |
+| 办公平台 | 站内信（含 WebSocket 实时推送）、消息模板、统一通知模板与留痕、平台绑定审批、组织同步、会议室 | `/api/v1/messages`、`/admin-api/v1/office/*`、`/api/v2/office/notify/*`、`/api/v2/*` |
 | 工作流 | 实例监控与详情、待办任务办理、流程定义管理、发起流程 | `/admin-api/v1/workflows/*`、`/api/v1/workflows/*`、`/api/v2/workflow-definitions`、`/api/workflow/*` |
-| 代码生成器 | 数据源、表扫描、生成配置与生成 | `/admin-api/v1/*` |
+| 集成与物联网 | 集成中心（连接器/凭据）、IoT 设备（遥测/影子/命令）与规则 | `/integration/v1/*` |
+| 代码生成器 | 数据源、表扫描、生成配置、向导（模板/预检/预览）与异步生成任务 | `/admin-api/v1/*` |
 | 个人中心 | 当前用户信息、我的角色与权限明细 | `/api/v1/user/info`、`/api/v1/auth/*/my` |
 
 完整接口清单见 [`docs/api/README.md`](docs/api/README.md)。
@@ -41,7 +43,7 @@ npm install
 # 2. 配置环境变量（首次运行必须）
 cp .env.example .env.development
 
-# 3. 启动开发服务器（默认 http://localhost:5173，代理 /oauth2、/api、/admin-api 到后端 8080）
+# 3. 启动开发服务器（默认 http://localhost:5173，代理 /api、/admin-api、/auth/v1|v2、/integration/v1 及 OAuth2 端点到后端 8080）
 npm run dev
 
 # 4. 生产构建（输出 dist/）
@@ -97,7 +99,7 @@ npm run build
 
 | 变量名 | 说明 | 默认值 | 必填 |
 |--------|------|--------|------|
-| `VITE_API_PROXY_TARGET` | 开发环境后端代理目标地址（代理 `/api`、`/admin-api`、`/oauth2`，`/api` 已开启 WS） | `http://127.0.0.1:8080` | 可选（缺省 127.0.0.1:8080） |
+| `VITE_API_PROXY_TARGET` | 开发环境后端代理目标地址（代理 `/api`、`/admin-api`、`/auth/v1\|v2`、`/integration/v1` 及 OAuth2 端点；`/api` 已开启 WS） | `http://127.0.0.1:8080` | 可选（缺省 127.0.0.1:8080） |
 | `VITE_API_BASE_URL` | 生产环境后端网关地址，同域部署留空 | `''` | 生产环境可选 |
 | `VITE_OAUTH2_CLIENT_ID` | OAuth2 客户端 ID，须与后端注册值一致（浏览器端 PKCE，不含 clientSecret） | `apex-admin-web` | 可选 |
 | `VITE_AUTH_TENANT_ENABLED` | 是否在登录页显示租户标识输入（多租户部署设为 `true`） | 空（关闭） | 可选 |
@@ -127,12 +129,12 @@ apex-admin-web/
 │   ├── router/         # 静态路由 + 菜单驱动动态路由
 │   ├── directives/     # v-permission 按钮权限指令
 │   ├── layouts/        # 管理后台主布局（侧边栏/顶栏/面包屑）
-│   ├── components/     # 通用组件（Pagination/FileUpload/GlobalSearch 等）
+│   ├── components/     # 通用组件（Pagination/FileUpload/NotificationCenter/GlobalSearch 等）
 │   ├── mock/           # Mock 数据服务（仅开发环境加载）
 │   ├── test/           # 测试全局准备（setup.ts）
-│   └── views/          # 页面（登录/工作台/系统管理/监控/数据/办公/工作流/个人中心）
-├── docker/             # Nginx 模板与入口脚本（生产反代 /assets、/oauth2、/api、/admin-api，含站内信 WS）
-├── scripts/            # 构建（build/）/ 数据库（database/ 与 database/archive/）/ 性能 / 质量（quality/）/ 安全（security/）
+│   └── views/          # 页面（登录/工作台/系统管理/监控/数据/办公/工作流/集成/物联网/个人中心）
+├── docker/             # Nginx 模板与入口脚本（生产反代 /assets、/api、/admin-api、/auth/v1|v2、/integration/v1、OAuth2 与通知 SSE/站内信 WS 精确匹配）
+├── scripts/            # 构建（build/）/ 数据库（database/ 与 database/archive/）/ 性能 / 质量（quality/）/ 安全（security/）/ 上线验证（verify/）
 ├── docs/               # 文档中心（架构/API/指南/功能/参考，见 docs/README.md）
 ├── vite.config.ts      # 构建与开发代理配置
 ├── vitest.config.ts    # 单元测试配置
@@ -231,9 +233,9 @@ flowchart LR
 
 > 本仓库是独立前端工程，生产构建产物为 `dist/`，应访问实际配置的前端源站。后端是否仍托管 `static/admin/`、是否提供 `/admin` 短入口重定向，需以后端工程和目标环境核验。完整构建与部署说明见 **[`docs/guides/deployment.md`](docs/guides/deployment.md)**。
 
-- **独立部署（推荐生产）**：`npm run build` 后将 `dist/` 交给 Nginx/静态服务器，反向代理 `/oauth2`、`/api`、`/admin-api` 到后端，并为 `/api/v1/messages/ws` 单独配置 WebSocket 转发（详见 [`docs/guides/deployment.md`](docs/guides/deployment.md) §6）。
+- **独立部署（推荐生产）**：`npm run build` 后将 `dist/` 交给 Nginx/静态服务器，反向代理 `/api`、`/admin-api`、`/auth/v1|v2`、`/integration/v1` 与 OAuth2 端点（`/oauth2/consent` 仅 POST）到后端，并为 `/api/v1/messages/ws`（WebSocket 升级）与 `/api/v1/notifications/stream`（SSE）单独配置转发；上线后可用 `npm run verify:deploy` 做端到端核验（详见 [`docs/guides/deployment.md`](docs/guides/deployment.md) §6、§10）。
 - **Docker 容器部署**：`docker compose up -d --build`（配置使用外部网络 `apex-scaffold_apex-network`，`API_PROXY_PASS` 默认 `http://apex-scaffold:8080`；网络是否已创建、`apex-scaffold` 服务名是否可解析，需在目标 Docker 环境核验），详见 deployment.md §7。
-- **与后端网关同域**：前端走相对路径（`VITE_API_BASE_URL` 留空），由 Nginx 按 `/oauth2/`、`/api/`、`/admin-api/` 前缀分流到后端（详见 deployment.md §8）。
+- **与后端网关同域**：前端走相对路径（`VITE_API_BASE_URL` 留空），由 Nginx 按 `/api/`、`/admin-api/`、`/auth/`、`/integration/`、`/oauth2/` 前缀分流到后端（详见 deployment.md §8）。
 
 ## 代码注释
 

@@ -2,7 +2,7 @@
 
 set -e
 
-# 无论从何处调用，统一以仓库根为工作目录（报告输出 ./reports/）
+# 无论从何处调用，统一以仓库根为工作目录（结果输出到控制台；HTML 报告由 `npm run audit` 生成到 reports/audit.html）
 cd "$(dirname "$0")/../.."
 
 echo "运行 npm 安全审计..."

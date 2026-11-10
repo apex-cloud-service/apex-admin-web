@@ -95,7 +95,7 @@ src/
 | `/admin-api/v1/charts` | POST | 创建图表 | `data:chart:create` |
 | `/admin-api/v1/charts/{id}` | PUT | 更新图表 | `data:chart:edit` |
 | `/admin-api/v1/charts/{id}` | DELETE | 删除图表 | `data:chart:delete` |
-| `/admin-api/v1/charts/{id}/status` | PUT | 更新图表状态 | `data:chart:edit` |
+| `/admin-api/v1/charts/{id}/status` | PUT | 更新图表状态（⚠️ 后端契约；**前端未封装也未调用**，可用性需以后端为准） | `data:chart:edit` |
 
 ## 📊 类型定义
 
@@ -258,7 +258,7 @@ onBeforeUnmount(() => {
 - [x] 图表查询页面实现（含 ECharts 渲染）
 - [x] 路由注册（VIEW_REGISTRY）
 - [x] 权限控制（v-permission）
-- [x] 实现中的接口、路由、权限和文档描述已核对一致
+- [x] 实现中的接口、路由、权限和文档描述已核对一致（图表 `PUT /{id}/status` 为后端契约描述，前端未封装）
 - [x] 构建验证通过（`npm run build`）
 
 ## 📝 后续扩展

@@ -38,7 +38,16 @@ sequenceDiagram
     U->>L: 提交表单
     L->>S: login({username, password, captchaId, captchaCode, tenantId?})
     S->>B: POST /api/v1/auth/login<br/>(附带 deviceId='apex-admin-web', platform='web'，<br/>tenantId 仅作租户匹配声明，缺省由后端使用 default)
-    B-->>S: LoginResult{accessToken, refreshToken, tenantId?}
+    B-->>S: LoginResult
+    alt mfaRequired=true（账号已启用 MFA，不签发令牌）
+        S-->>L: 返回 {mfaRequired, challengeToken}
+        L->>L: 展示 MFA 动态码输入
+        L->>S: verifyMfaChallenge(challengeToken, code)
+        S->>B: POST /auth/v1/mfa/verify<br/>(挑战一次性消费，成功返回正式令牌)
+        B-->>S: LoginResult{accessToken, refreshToken, tenantId?}
+    else 直接登录成功
+        B-->>S: LoginResult{accessToken, refreshToken, tenantId?}
+    end
     S->>S: setToken + setRefreshToken（utils/auth.ts）
     S->>S: removeTenantId 清残留后，<br/>响应含 tenantId 时 setTenantId 记录
     S->>B: 并行拉取三个接口：<br/>GET /api/v1/user/info<br/>GET /api/v1/auth/roles/my<br/>GET /api/v1/auth/permissions/my
@@ -48,7 +57,7 @@ sequenceDiagram
     L->>L: 跳转 redirect 参数页或 /dashboard
 ```
 
-登录后请求层（`utils/request.ts`）在会话存在租户 ID 时附带 `X-Tenant-Id` 请求头，仅作匹配声明：租户作用域始终由后端从令牌解析，网关会剥离并重建该头。租户适配的完整评审结论见 [统一权限认证与多租户适配](../guides/auth-tenant-adaptation.md)。
+登录后请求层（`utils/request.ts`）在会话存在租户 ID 时附带 `X-Tenant-Id` 请求头，仅作匹配声明：租户作用域始终由后端从令牌解析，网关会剥离并重建该头。租户适配的完整评审结论见 [统一权限认证与多租户适配](../guides/auth-tenant-adaptation.md)。MFA 二步分支中 `mfaRequired=true` 时 store 不写会话直接返回挑战信息，由登录页引导输入动态码后调 `POST /auth/v1/mfa/verify` 换取正式令牌。
 
 ## 3. 路由守卫流程
 
@@ -150,6 +159,8 @@ sequenceDiagram
 - 授权码一次性，后端校验；PKCE（S256）防授权码拦截。
 - Token 只入 localStorage，不出现在 URL。
 
+授权同意：`/oauth2/consent` 为 public 匿名静态页，调用 `submitConsent()`（`POST /oauth2/consent`，form-urlencoded）；同意提交须登录主体，未登录先登录后回跳。代理仅对 consent 的 POST 反代，GET 回退 SPA。
+
 ## 6. 办公平台接口与独立授权回调（飞书/钉钉/企微）
 
 当前登录页的社交入口实际调用 [src/api/oauth2.ts](../../src/api/oauth2.ts) 并进入 `/oauth2/callback`，不调用办公平台状态或登录接口。办公平台能力由 [src/api/office-platform.ts](../../src/api/office-platform.ts) 提供，`/office/callback` 是独立的公开回调入口；是否由外部系统或其他页面触发，需结合目标部署和调用方核验。
@@ -202,15 +213,17 @@ flowchart TD
 | `status` | 0=停用 / 1=正常 | **不受影响** | **不受影响** | 历史种子数据取值与后端枚举不一致，路由生成刻意不按 status 过滤，避免全量菜单丢失 |
 | `visible` | 0=隐藏 / 1=显示 | 仍注册、可直接访问 | 仅 `visible=1` 显示 | 隐藏只写 `meta.hidden` |
 
-### VIEW_REGISTRY 全量清单（与 dynamic.ts:21-61 一致）
+### VIEW_REGISTRY 全量清单（与 dynamic.ts:21-69 一致）
 
-系统管理：`system/user/index`、`system/role/index`、`system/menu/index`、`system/dept/index`、`system/dict/index`、`system/config/index`、`system/database/index`、`system/job/index`、`system/job/query`、`system/generator/index`、`system/auth/index`、`system/sso/index`、`system/masking/index`、`system/tenant/index`、`system/security/index`
+系统管理：`system/user/index`、`system/role/index`、`system/menu/index`、`system/dept/index`、`system/dict/index`、`system/config/index`、`system/database/index`、`system/job/index`、`system/job/query`、`system/generator/index`、`system/auth/index`、`system/sso/index`、`system/masking/index`、`system/tenant/index`、`system/tenant-package/index`、`system/capability/index`、`system/open-app/index`、`system/security/index`
 
-监控：`monitor/loginlog/index`、`monitor/audit/index`、`monitor/api-call-log/index`、`monitor/online/index`、`monitor/dashboard/index`、`monitor/runtime-log/index`、`monitor/operations/index`、`monitor/business-log/index`
+监控：`monitor/loginlog/index`、`monitor/audit/index`、`monitor/api-call-log/index`、`monitor/online/index`、`monitor/dashboard/index`、`monitor/runtime-log/index`、`monitor/operations/index`、`monitor/business-log/index`、`monitor/session/index`
 
 数据管理：`data/document/index`、`data/chart/index`、`data/file-share/index`
 
-办公平台：`office/message/index`、`office/approval/index`、`office/config/index`、`office/bindings/index`、`office/console/index`、`office/organization/index`、`office/calendar/index`、`office/document/index`、`office/meeting-room/index`
+办公平台：`office/message/index`、`office/approval/index`、`office/config/index`、`office/bindings/index`、`office/console/index`、`office/organization/index`、`office/calendar/index`、`office/document/index`、`office/meeting-room/index`、`office/notify/index`
+
+集成与物联网：`integration/connector/index`、`iot/device/index`、`iot/device-rule/index`
 
 工作流：`workflow/monitor/index`、`workflow/definition/index`
 
@@ -224,6 +237,7 @@ flowchart TD
 |------|------|------|------|
 | `/login` | login/index.vue | `public: true` | 登录页 |
 | `/oauth2/callback` | oauth2/callback.vue | `public: true, hidden: true` | OAuth2 回调 |
+| `/oauth2/consent` | oauth2/consent.vue | `public: true, hidden: true` | 授权同意匿名页（同意提交 `POST /oauth2/consent` 须登录，未登录先登录后回跳） |
 | `/office/callback` | office/callback.vue | `public: true, hidden: true` | 办公平台（飞书/钉钉/企微）授权回调：用 code/state 调 `GET /api/v1/office/callback` 换会话，未绑定账号时提示等待管理员审批 |
 | `/dashboard` | dashboard/index.vue | `title: 工作台` | 工作台 |
 | `/password-recovery` | public/password-recovery.vue | `title: 密码找回, public: true` | 密码找回页（`/auth/v2/password-recovery/**` 契约，与登录页找回弹窗共用） |
@@ -256,4 +270,4 @@ flowchart TD
 
 ---
 
-**最后更新**：2026-10-31（依据 src/ 当前实现核对：路由守卫失败分支、VIEW_REGISTRY 全量清单含脱敏/租户/账号安全/运维健康/工作流定义、静态路由补 password-recovery 与 share、OAuth2 client_id 建议值标注）
+**最后更新**：2026-11-11（依据 src/ 当前实现核对：登录时序补 MFA 二步分支、OAuth2 节补 consent 公开页与提交通道、VIEW_REGISTRY 清单补套餐/能力/开放平台/在线会话/统一通知/集成/IoT 并对齐 dynamic.ts:21-69、静态路由补 /oauth2/consent）

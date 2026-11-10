@@ -1,8 +1,8 @@
 # 记忆卡 · apex-admin-web（管理后台前端）
 
 > **用法**：接手前端或需要改页面时先读本卡（约 3 分钟），细节按文末指针进入 `AGENTS.md` 与 `docs/`。
-> **基线**：2026-11-08 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`c1d5ae7` 已提交）
-> **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-10-30）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
+> **基线**：2026-11-10 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`696dd00` 已提交）
+> **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-11-10）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
 
 ## 1. 一句话
 
@@ -31,7 +31,7 @@ src/
 ├── router/       index.ts 静态路由 + dynamic.ts 菜单转路由 + VIEW_REGISTRY
 ├── views/        62 个 .vue 页面，14 个业务目录
 ├── stores/       user / permission / app / office
-├── layouts/      AdminLayout（菜单、顶栏、面包屑、未读角标）
+├── layouts/      AdminLayout（菜单、顶栏、面包屑、未读角标、权限码告警）
 ├── composables/  useCrud / useTableConfig / useFormDraft / useBreakpoint
 ├── directives/   permission
 ├── utils/        request.ts（统一 Axios）、auth.ts（会话）、storage、校验、XSS
@@ -39,7 +39,7 @@ src/
 └── test/         Vitest 全局准备
 ```
 
-业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `oauth2` `profile` `public` `login` `demo` `error`。测试文件 **24 个**：`src/api/` 7 个业务 API 契约（认证/消息/工作流/办公平台/平台模块/生成器/通知），其余 17 个为 `*.spec.ts` 单测（`utils/__tests__` 9、`stores/__tests__` 3、`composables/__tests__` 2、`components`/`directives`/`router` 各 1）。
+业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `oauth2` `profile` `public` `login` `demo` `error`。测试文件 **27 个**（2026-11-10 实测 214 用例全绿）：`src/api/` 7 个业务 API 契约（认证/消息/通知/工作流/办公平台/平台模块/生成器），其余 20 个为 `*.spec.ts` 单测（`utils/__tests__` 11、`stores/__tests__` 3、`composables/__tests__` 2、`components/__tests__` 2、`directives`/`router` 各 1）。
 
 ## 4. 契约前缀（后端改路径必查这里）
 
@@ -49,7 +49,7 @@ src/
 | `/api/v2/**` | 租户管理与套餐、能力目录/用量、工作流定义、运维健康、文件分享、会议室与同步向导、统一通知 |
 | `/admin-api/v1/**` | 管理接口（角色/权限/菜单、消息模板、组织同步、开放应用 scope 目录） |
 | `/integration/v1/**` | 集成中心连接器/凭据与物联网设备/规则（`/internal/v1/**` 为内部端点，网关拒绝外部访问） |
-| `/auth/v1/sessions/**` | 认证中心在线会话管理 |
+| `/auth/v1/**`、`/auth/v2/**` | 认证中心：MFA 登录二步验证、在线会话管理（`/auth/v1/sessions`）、密码找回（`/auth/v2/password-recovery`） |
 | `/api/workflow/**` | 工作流高级操作 |
 | `/api/office/**` | 办公业务接口 |
 | `/api/mfa/**`、`/api/ip-access-control/**` | 认证中心安全能力 |
@@ -65,7 +65,6 @@ src/
 4. 分页口径**按接口而定**：常规 `page/size` + `list/total`；工作流实例 `pageNum/pageSize` + `records/total`；工作流待办 `pageNum/pageSize` 但响应 `PageResponse` 读 `list/total`；租户分页 `pageNum/pageSize` 且**必填**。不可全局替换。
 5. 菜单可见、按钮可见、后端鉴权是三层：前端隐藏**不是**安全边界。
 6. `VITE_*` 会进前端产物，**不得**放客户端密钥、数据库口令。
-7. 不修改 `src/router/dynamic.ts.bak`，不以其为依据。
 
 ## 6. 高频陷阱
 
@@ -87,15 +86,16 @@ src/
 | 组织部门保存后无 ID | createDepartment 响应不含生成 id（需刷新列表）；`deptLevel/deptPath` 后端照抄不计算 |
 | 授权同意提交 401 | consent 页是 public 匿名页（方案口径），但同意提交须登录主体——页面已做「未登录先登录后回跳」 |
 | 登录报缺 accessToken | 登录响应 `mfaRequired=true` 时不签发令牌，须 `POST /auth/v1/mfa/verify` 二步交换 |
-| 套餐保存后菜单缺父级 | `menuIds` 须含父链；空集合 = **全量放行**（不是无权限） |
+| 套餐保存后菜单缺父级 | `menuIds` 须含父链；`menuIds`/`permissionCodes` 空集合 = 该维度**全量放行**（不是无权限），`features` 空集合 = **未订阅**（全量须显式提交能力目录全部编码） |
 | 套餐/能力/集成页 404 | 网关已显式覆盖（dev/prod/Nacos + 契约测试）；仍 404 核验目标环境配置是否滚动 |
 | 数据总览无数据 | 页面走 `GET /api/v2/overview`（权限 `system:monitor:view`）；单源 DEGRADED 属正常，勿改调内部端点 |
 | IoT 规则 404 / 影子空 | 规则分页与影子查询端点已补（V85/V86 种子）；存量环境需执行迁移；未上报过遥测的设备影子为空属正常 |
 | 集成/IoT/在线会话/密码找回页 404 或返回 HTML | 代理须覆盖 `/integration/v1`、`/auth/v1\|v2`（带版本前缀，勿用裸 `/integration` 撞菜单路由）；`/oauth2/consent` 仅 POST 反代 |
 | 站内信模板编辑/删除 404 | 网关 office 路由须含 `/admin-api/v1/message-templates/**`（后端已修，环境需滚动新配置） |
 
-## 7. 当前状态（2026-11-08）
+## 7. 当前状态（2026-11-10）
 
+- 11-10（`696dd00` 中台整改与上线前校验）：**套餐 features 空集合改「未订阅」语义**（全量须显式提交目录全部编码，租户开通套餐必选、去掉手输编码）；**上传组件与通知 SSE 统一经 `api-base.ts#apiUrl` 拼接**（跨域部署正确指向网关）；`showError` 对授权类 403 追加能力运营页引导、AdminLayout 顶栏加「未获得权限码」告警；Nginx 补 20m 请求体上限、产物目录缓存与安全头、consent 仅 POST 反代、SSE/WS 精确匹配；新增 `scripts/verify/post-deploy-check.sh`（C1–C13，`npm run verify:deploy`）。详见 [上线检查清单](docs/archived/project-reports/frontend-middle-platform-go-live-checklist-2026-11-10.md)。
 - 11-08（二批）：**通知中心 SSE 接入**（api/notification.ts + utils/notification-stream.ts fetch 流式客户端 + NotificationCenter 面板）；E2E 拉起真实环境验证并修复后端三处 SSE 阻断（Sinks autoCancel、网关 notification-stream 路由、NettyConfig 读超时边界，均 apex-scaffold）；`nginx -t` 容器内通过。SSE 请求必须带 `Accept: text/event-stream`。
 - 11-08：前后端路由端点评审落地——修复代理缺口（vite/nginx 补 `/auth/v1|v2`、`/integration/v1`、`/oauth2/consent` POST）与后端网关死角（`/admin-api/v1/message-templates/**`，apex-scaffold）；构建优化：EP 按需引入 + ECharts 按需注册（JS 2988→2236 KB，-25%）、79 处错误提示统一 `showError`。详见 [评审报告](docs/archived/project-reports/frontend-backend-review-2026-11-08.md)。
 - 11-07：`d381de0` 修正分片状态查询路径，落地前后端对照评审文档。

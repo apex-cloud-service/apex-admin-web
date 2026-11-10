@@ -1,6 +1,6 @@
 # 工具库与组合式函数参考
 
-> 依据 [src/utils/](../../src/utils/) 与 [src/composables/](../../src/composables/) 当前实现核对（2026-10-31 复核）。核心工具（request/auth/validate）在 [AGENTS.md](../../AGENTS.md) 已有专章，本文覆盖其余模块。
+> 依据 [src/utils/](../../src/utils/) 与 [src/composables/](../../src/composables/) 当前实现核对（2026-11-11 复核）。核心工具（request/auth/validate）在 [AGENTS.md](../../AGENTS.md) 已有专章，本文覆盖其余模块。
 
 ## 1. utils 总览
 
@@ -16,6 +16,9 @@
 | [xss-protection.ts](../../src/utils/xss-protection.ts) | XSS 防护与输入净化（当前仓库无页面调用点） | `escapeHtml` `unescapeHtml` `stripHtmlTags` `sanitizeUrl` `sanitizeHtml` `sanitizeJson` `sanitizeInput` `generateCSPNonce` `detectXSS` |
 | [request-cache.ts](../../src/utils/request-cache.ts) | 请求结果缓存（TTL/去重）；当前仓库无调用点 | `cachedRequest` `prefetchRequest` `clearCache(key)` `clearAllCache()` `getCacheStats()`、`CACHE_KEYS` 常量 |
 | [echarts-theme.ts](../../src/utils/echarts-theme.ts) | ECharts 明暗主题（当前仓库无页面调用点） | `lightTheme` `darkTheme` `setTheme` `getTheme` `getBaseChartOption` `mergeChartOption`、`presetCharts` 预设 |
+| [api-base.ts](../../src/utils/api-base.ts) | 接口地址拼接（与 request.ts 同源取 `VITE_API_BASE_URL`），供不走 Axios 的 fetch/XHR 使用；已接入两个上传组件与通知 SSE | `apiBaseUrl()` `apiUrl(path)` |
+| [notification-stream.ts](../../src/utils/notification-stream.ts) | 站内通知 SSE 流客户端（fetch 流式 + `Accept: text/event-stream`，断线 5s→30s 退避）；已接入 AdminLayout 通知中心 | `createSseParser` `subscribeNotificationPush`、类型 `NotificationPushListener` |
+| [tenant-package.ts](../../src/utils/tenant-package.ts) | 租户套餐载荷构造：菜单父链补全（防环 32 层）与三开关空集合语义翻译 | `withParentChain(ids, tree)` `buildPackagePayload(input)`、类型 `PackagePayloadInput` |
 | [message-socket.ts](../../src/utils/message-socket.ts) | 站内信 WebSocket 管理器：票据握手、20s ping/pong、1h 寿命、断线重连（5s→30s 退避）；已接入 AdminLayout 与站内信页 | `subscribeMessagePush` `subscribeMessageSocketState`、类型 `MessageSocketState` |
 
 ## 2. 两套校验工具如何选
@@ -68,4 +71,4 @@
 
 ---
 
-**最后更新**：2026-10-31
+**最后更新**：2026-11-11

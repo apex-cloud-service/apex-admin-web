@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string
   /** 是否启用登录租户标识输入（多租户部署设为 true，默认关闭） */
   readonly VITE_AUTH_TENANT_ENABLED?: string
+  /** OAuth2 客户端 ID（须与后端注册值一致） */
+  readonly VITE_OAUTH2_CLIENT_ID?: string
 }
 
 interface ImportMeta {

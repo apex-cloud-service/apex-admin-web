@@ -2,7 +2,7 @@
 
 本文件是本仓库的开发入口，说明当前实现、模块边界、关键业务链路和变更约束。修改前先定位相关源码；文档与实现不一致时，以执行代码、类型定义和配置为依据，并同步修正文档。历史分析文档和文件头注释不能代替实现核对。
 
-**核对日期：2026-11-08。** 本次依据前端仓库（HEAD d381de0）与 apex-scaffold（HEAD 68e8cfe1）的前后端对照评审与代理链路修复核对（见 [评审报告](docs/archived/project-reports/frontend-backend-review-2026-11-08.md)）；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
+**核对日期：2026-11-10。** 本次依据前端仓库（HEAD 696dd00）对全部文档、脚本、配置与代码实现的对照核对（中台整改与上线校验背景见 [上线检查清单](docs/archived/project-reports/frontend-middle-platform-go-live-checklist-2026-11-10.md)，前次前后端评审见 [评审报告](docs/archived/project-reports/frontend-backend-review-2026-11-08.md)）；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
 
 ## 1. 开发入口与关键约束
 
@@ -10,10 +10,10 @@
 - 技术栈：Vue 3.5、Vite 6、TypeScript ~5.7、Vue Router 4、Pinia 2、Element Plus 2、Axios、ECharts 5、CropperJS 1。
 - 页面使用 `<script setup lang="ts">`；路径别名 `@` 指向 `src/`。
 - 常规接口在 `src/api/` 按业务域封装，复用 `src/utils/request.ts` 的 `request/get/post/put/del`，页面不新建 Axios 实例。
-- 新增菜单驱动页面必须同步 `src/router/dynamic.ts` 的 `VIEW_REGISTRY` 与后端菜单 `component` 字段；文件存在不等于路由已注册。后端菜单/权限种子脚本位于 `apex-system/src/main/resources/db/migration/{mysql,postgresql}/`（菜单 `path` 约定：目录用绝对路径如 `/platform`，子菜单用相对段如 `tenant`，由前端 `resolvePath` 与 Vue Router 共同拼接）。
+- 新增菜单驱动页面必须同步 `src/router/dynamic.ts` 的 `VIEW_REGISTRY` 与后端菜单 `component` 字段；文件存在不等于路由已注册。后端菜单/权限种子脚本位于 `apex-system/src/main/resources/db/migration/{mysql,postgresql}/`（菜单 `path` 约定：目录用绝对路径如 `/platform`，子菜单用相对段如 `tenant`，由前端 `resolvePath` 与 Vue Router 共同拼接）；本仓库 `scripts/database/menu-init.sql` 仅是数据库配置页的手动菜单补充，不是后端正式种子。
 - 普通列表通常用 `page/size` 和 `list/total`；工作流实例列表用 `pageNum/pageSize` 和 `records/total`，工作流待办任务用 `pageNum/pageSize` 但响应为 `PageResponse`，页面读 `list/total`。以具体 API 类型为准，不能全局替换。
 - 会话读写使用 `src/utils/auth.ts`，不可自行引入 `access_token` 等存储键。
-- 租户作用域由后端从令牌解析；前端仅在登录响应返回 `tenantId` 时记录（`apex.admin.tenant-id`）并附带 `X-Tenant-Id` 请求头，详见 `docs/guides/auth-tenant-adaptation.md`。平台运维侧的租户台账已提供 HTTP 端点 `/api/v2/platform/tenants`（分页/详情/创建/生命周期/配额），管理页见 `views/system/tenant/`；但**业务侧仍无租户切换器**，登录态绑定单一租户。后端开启 `apex.features.auth-center-permission` 时权限改由认证中心统一授权（带 ≤30s 短期缓存），前端权限码消费方式不变。
+- 租户作用域由后端从令牌解析；前端仅在登录响应返回 `tenantId` 时记录（`apex.admin.tenant-id`）并附带 `X-Tenant-Id` 请求头，详见 `docs/guides/auth-tenant-adaptation.md`。平台运维侧的租户台账已提供 HTTP 端点 `/api/v2/platform/tenants`（前端封装了分页/创建/生命周期/配额，详情端点未在前端封装与使用），管理页见 `views/system/tenant/`；但**业务侧仍无租户切换器**，登录态绑定单一租户。后端开启 `apex.features.auth-center-permission` 时权限改由认证中心统一授权（带 ≤30s 短期缓存），前端权限码消费方式不变。
 - 菜单展示、按钮展示和后端接口鉴权是三个不同层次。前端隐藏元素不能替代后端权限校验。
 - 不在浏览器配置中保存客户端密钥、数据库密码等秘密；`VITE_*` 会进入前端产物。
 - 优先复用现有组件、类型和工具；不把未接入的工具描述成全局机制。
@@ -31,7 +31,7 @@
 | 站内信 | `api/message.ts`、`utils/message-socket.ts`、`views/office/message/`、`layouts/AdminLayout.vue` | 收件箱/模板契约、WebSocket 推送（ticket/pong/1h 重连）、数组响应口径；AdminLayout 未读角标 = 60s 轮询 + WS 推送触发刷新 |
 | 通知中心 | `api/notification.ts`、`utils/notification-stream.ts`、`components/NotificationCenter/` | system 域 `/api/v1/notifications/**`；SSE（`/notifications/stream`）用 fetch 流式实现（网关仅认 Authorization 头，EventSource 不可用），请求必须带 `Accept: text/event-stream`（后端据此豁免 30s 响应超时）；断线 5s→30s 退避 |
 | 数据脱敏 | `api/masking.ts`、`views/system/masking/` | 规则只读（启动配置）、批量试算；本仓库可确认前端路径与开发代理，目标网关路由需外部核验 |
-| 租户管理 | `api/tenant.ts`、`views/system/tenant/` | `/api/v2/platform/tenants`、pageNum/pageSize 必填、生命周期动作小写枚举、配额 null=不限、version 乐观锁；开通向导可同时提交 `adminUsername`/`adminPassword`（后端成对使用） |
+| 租户管理 | `api/tenant.ts`、`views/system/tenant/` | `/api/v2/platform/tenants`、pageNum/pageSize 必填、生命周期动作小写枚举、配额 null=不限、version 乐观锁；开通向导套餐必选（不可手输编码），可同时提交 `adminUsername`/`adminPassword`（后端成对使用） |
 | 租户套餐 | `api/tenant-package.ts`、`views/system/tenant-package/` | `/api/v2/tenant-packages`；列表为裸数组、更新走无路径参数的 `PUT`（后端按请求体 `packageCode` 定位）；`menuIds`/`permissionCodes` **空集合 = 该维度全量放行**，`features` **空集合 = 未订阅**（全量须显式提交能力目录全部编码）；提交前补全菜单父链 |
 | 能力运营 | `api/capability.ts`、`views/system/capability/` | `/api/v2/capabilities`（权限码 `tenant:read`）、`/capabilities/subscribed`、`/api/v2/capability-usage`（`capability` 必填、区间 ≤92 天、只读不计费） |
 | 开放平台 | `api/open-app.ts`、`views/system/open-app/` | 管理面与 scope 目录同源 `/api/v1/open-apps/**`（`GET /scopes` 与创建校验共用 OpenPlatformScopeRegistry）；`page` 从 0 开始、返回数组无 total；明文 `clientSecret` 仅创建/重置响应返回一次 |
@@ -57,7 +57,7 @@ src/
 ├── router/                静态路由、守卫、菜单转换和组件注册表
 ├── layouts/               AdminLayout：菜单、顶栏、面包屑、主视图
 ├── views/                 login、oauth2、public（匿名分享/找回页）、dashboard、profile、error、demo
-│                          system、monitor、data、office、workflow
+│                          system、monitor、data、office、workflow、integration、iot
 ├── components/            Pagination、GlobalSearch、NotificationCenter、EmptyState、上传组件
 ├── composables/           useCrud、useTableConfig、useFormDraft、useBreakpoint
 ├── stores/                user、permission、app、office
@@ -172,7 +172,7 @@ flowchart LR
     PROXY --> BE[配置的后端 upstream]
 ```
 
-开发服务器默认 `0.0.0.0:5173`，代理目标取 `VITE_API_PROXY_TARGET`，缺省 `http://127.0.0.1:8080`。Vite 对 `/api`、`/admin-api`、`/auth/v1|v2`、`/integration/v1` 及 OAuth2 授权/令牌/consent（仅 POST，GET 回退 SPA）路径配置代理，nginx 同域反代口径一致。构建包含 vendor 分包，生产移除 console/debugger，分析报告为 `dist/stats.html`。
+开发服务器默认 `0.0.0.0:5173`，代理目标取 `VITE_API_PROXY_TARGET`，缺省 `http://127.0.0.1:8080`。Vite 对 `/api`、`/admin-api`、`/auth/v1|v2`、`/integration/v1` 及 OAuth2 授权/令牌/consent（仅 POST，GET 回退 SPA）路径配置代理，nginx 同域反代口径一致，另配 20m 请求体上限、产物目录 30 天缓存与安全头、SSE（`/api/v1/notifications/stream`）与 WS（`/api/v1/messages/ws`）精确匹配 location。构建包含 vendor 分包，生产移除 console/debugger，分析报告为 `dist/stats.html`。
 
 Docker 使用 Node 18 Alpine 构建和 Nginx 运行两个阶段；当前安装命令是 `npm install`。`VITE_API_BASE_URL` 在构建时注入，运行时修改不能重写已打包的 JavaScript；`API_PROXY_PASS` 只影响 Nginx upstream。Compose 依赖外部网络 `apex-scaffold_apex-network`；首页健康检查仅证明静态服务可访问。
 
@@ -301,7 +301,7 @@ flowchart TD
 
 `v-permission="'system:user:create'"` 使用 `permission` Store 检查权限。逗号分隔的多个权限码满足任意一个即可；**权限列表为空时当前实现直接放行**。角色和权限接口失败会降级为空数组，因此前端不是严格拒绝的安全边界。
 
-指令在 mounted/updated 执行，无权限时移除 DOM；没有恢复锚点，后续权限变化不能可靠恢复被移除元素。路由 meta.perms 不能被描述为已实现全路由权限拦截。新增权限控制应同时核对后端鉴权，不能因按钮隐藏就省略服务端校验。
+指令在 mounted/updated 执行，无权限时移除 DOM；没有恢复锚点，后续权限变化不能可靠恢复被移除元素。AdminLayout 顶栏在身份已初始化但权限码列表为空时显示「未获得权限码」警告标签，提示按钮仍会展示但操作可能被后端拒绝。路由 meta.perms 不能被描述为已实现全路由权限拦截。新增权限控制应同时核对后端鉴权，不能因按钮隐藏就省略服务端校验。
 
 后端 `@RequirePermission` 为**权限码精确匹配**（逗号分隔多码按 `Logical.OR`/`AND` 组合，无通配符），权限来源为「用户 → 角色 → 权限」RBAC 查询；开启 `apex.features.auth-center-permission` 后改由认证中心统一授权（含 ≤30s 短期缓存），权限码语义不变。前端 `v-permission` 的任一满足语义与后端 OR 一致，但前端放行不代表后端放行——核对权限码时以「我的权限明细」（个人中心按模块分组展示）为准。
 
@@ -333,7 +333,7 @@ flowchart TD
     FAIL --> UI
 ```
 
-自动刷新由 HTTP 401 触发，不是所有业务 `Result.code` 都会进入刷新分支。统一请求层解包后，页面拿到的是 `data`，不要再访问 `response.data.data`。对于不含数字 code 的响应，请求层保留原始数据。
+自动刷新由 HTTP 401 触发，不是所有业务 `Result.code` 都会进入刷新分支。统一请求层解包后，页面拿到的是 `data`，不要再访问 `response.data.data`。对于不含数字 code 的响应，请求层保留原始数据。`showError` 对授权类 403（`code===403` 且 message 含「能力未开通」或「scope」）会在错误信息与 traceId 后追加「可在能力运营页查看当前租户订阅」的定位引导；其余错误不追加。
 
 ### 5.2 并发 401 单飞刷新时序
 
@@ -594,7 +594,7 @@ flowchart TD
 - 查询、提交与删除分别管理 loading，异常分支须结束加载；取消确认不应显示成接口失败。
 - 数字 ID 与字符串 ID 必须显式转换；日期、枚举和分页字段不可按 UI 文案推断。
 - Tree 菜单、部门与普通列表不同；复制页面时核对递归 children 和节点字段。
-- 错误提示优先使用现有 `showError` 或模块既有处理，保留 traceId 排查能力，避免重复弹窗。
+- 错误提示优先使用现有 `showError` 或模块既有处理，保留 traceId 排查能力，避免重复弹窗；授权类 403 会被 `showError` 追加能力运营定位引导（见 §5.1），调用方无需重复提示。
 - 图表随容器与主题变化调整，并在卸载时释放实例/监听；优先查看已有 ECharts 页面和主题工具。
 - 对缓存、脱敏、XSS 工具和性能监控的描述须能找到调用点；不宣称已全局启用。
 - Mock 只在 `import.meta.env.DEV` 时动态加载，不应作为生产业务数据来源。
@@ -611,7 +611,7 @@ flowchart TD
 | `npx vitest run` | 单次测试 |
 | `npm run test` | Vitest 默认交互/监听入口 |
 | `npm run test:coverage` | 覆盖率检查（`@vitest/coverage-v8` 已安装，输出 `coverage/`） |
-| `npm run test:report` | 单次运行并输出 JUnit XML + JSON + HTML/lcov 到 `reports/`（机器可读结果入库，HTML/lcov 不入库） |
+| `npm run test:report` | 单次运行并输出 JUnit XML + JSON + 覆盖率（text/HTML/lcov + `coverage-summary.json` 摘要）到 `reports/`（机器可读结果入库，HTML/lcov 不入库） |
 | `npm run test:ui` | Vitest 浏览器 UI 交互界面 |
 | `npm run check:comments` | 注释规范检查（`scripts/quality/check-comments.mjs`，仅检查注释存在性，查不出注释与实现的一致性） |
 | `npm run generate:api` | openapi-generator-cli 生成 API 客户端（依赖 OpenAPI 描述源配置，当前非主链路） |
@@ -622,9 +622,9 @@ flowchart TD
 
 当前 package.json 没有 lint 或独立 typecheck 脚本；类型检查使用上述 vue-tsc 或 build 命令。不得记录不存在的 `npm run lint`。Vitest 使用 happy-dom 和 `src/test/setup.ts`，覆盖率配置没有阈值；Playwright 已安装但尚无配置及 E2E 用例，不应宣称已有浏览器端自动化覆盖。
 
-截至 2026-11-05，共 22 个测试文件、185 个用例（`npx vitest run` 全绿），详见 [测试报告](docs/archived/project-reports/test-report-2026-11-05.md)。请求刷新测试覆盖认证端点排除、单次重放、并发单飞及重放错误保留；另有 OAuth2 PKCE/state、认证配置 API、脱敏/XSS/存储工具、`v-permission` 指令、`useCrud`/`useTableConfig`、user/app/permission Store、动态路由菜单转换和 `Pagination` 组件测试。API 层还有 `api/auth.test.ts`、`api/message.test.ts`、`api/workflow.test.ts`、`api/office-platform.test.ts`、`api/platform.test.ts`、`api/generator.test.ts`，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status）。
+截至 2026-11-10，共 27 个测试文件、214 个用例（`npx vitest run` 全绿），2026-11-05 的历史基线见 [测试报告](docs/archived/project-reports/test-report-2026-11-05.md)。请求刷新测试覆盖认证端点排除、单次重放、并发单飞、重放错误保留与授权类 403 提示引导；另有 OAuth2 PKCE/state、认证配置 API、SSE 通知流、`api-base` 地址拼接、套餐父链补全与载荷构造、脱敏/XSS/存储工具、`v-permission` 指令、`useCrud`/`useTableConfig`、user/app/permission Store、动态路由菜单转换和 `Pagination`/`FileUpload` 组件测试。API 层还有 `api/auth.test.ts`、`api/message.test.ts`、`api/notification.test.ts`、`api/workflow.test.ts`、`api/office-platform.test.ts`、`api/platform.test.ts`、`api/generator.test.ts`，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status）。
 
-覆盖率存在两个口径：默认配置不设 `coverage.include`，只统计被用例加载的模块（2026-11-05 行覆盖 73.12%）；强制 `--coverage.include='src/**/*.{ts,vue}'` 的全量口径行覆盖为 6.04%，因 62 个页面组件与多数 API/工具模块无用例。引用覆盖率须注明口径，不得以默认口径宣称整体覆盖水平。DOM 模拟测试不能替代真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证。
+覆盖率存在两个口径：默认配置不设 `coverage.include`，只统计被用例加载的模块（2026-11-10 行覆盖 74.11%）；强制 `--coverage.include='src/**/*.{ts,vue}'` 的全量口径行覆盖为 6.87%，因 62 个页面组件与多数 API/工具模块无用例。引用覆盖率须注明口径，不得以默认口径宣称整体覆盖水平。DOM 模拟测试不能替代真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证。
 
 `VITE_API_PROXY_TARGET` 用于开发代理；`VITE_API_BASE_URL` 用于 Axios baseURL；OAuth2 客户端相关变量参照 `.env.example` 和 `env.d.ts`。不输出真实环境文件中的密钥，不把构建期与运行期配置混为一谈。
 
@@ -671,7 +671,7 @@ flowchart TD
 | 授权重试不生效 | 重试 authorize 要求 redirect_uri 与 PKCE（code_challenge/code_challenge_method=S256）齐全，缺失时页面提示从客户端重新发起 |
 | 登录后直接报缺 accessToken | 登录响应 `mfaRequired=true` 时后端不签发令牌，须走 `POST /auth/v1/mfa/verify` 二步；store 的 `login()` 已按此分流 |
 | 套餐保存后菜单少一层 | `menuIds` 须含父链；后端 `TenantPackageEntity.withParentChain` 与前端提交前补链都需生效，空集合 = 全量 |
-| 套餐选了「全量能力」但调用仍 403 能力未开通 | `features` 空集合 = 未订阅（并非全量）；页面全量开关会提交能力目录全部编码，能力目录新增后需重新保存套餐 |
+| 套餐选了「全量能力」但调用仍 403 能力未开通 | `features` 空集合 = 未订阅（并非全量）；页面全量开关会提交能力目录全部编码，能力目录新增后需重新保存套餐；前端 `showError` 会对含「能力未开通」/「scope」的 403 追加能力运营页引导 |
 | 套餐/能力/集成页 404 | 网关已显式覆盖 `/api/v2/tenant-packages|capabilities|capability-usage|overview` 与 `/integration/v1/**`（dev/prod/Nacos 三处 + `GatewayRouteProfileConfigTest` 契约）；仍 404 时核验目标环境是否滚动到新配置 |
 | 数据总览无数据 | 页面消费 `GET /api/v2/overview`（权限 `system:monitor:view`）；单源降级为 DEGRADED 属正常（网关内部端点 `/internal/v1/overview` 本就 403，勿改调） |
 | IoT 规则页 404 | 后端已补 `GET /integration/v1/iot/rules`（分页）与 `iot:rule:read` 权限码（V85/V86 种子）；存量环境需执行迁移 |

@@ -370,6 +370,8 @@ const handleSuccess = (result: FileUploadResult) => {
 | **compressQuality** | `number` | `0.8` | 压缩质量（0-1） |
 | **compressMaxWidth** | `number` | `1920` | 压缩最大宽度 |
 | **compressMaxHeight** | `number` | `1080` | 压缩最大高度 |
+| **enableChunk** | `boolean` | `false` | 分片上传开关：开启后超过单发上限的文件走 `/api/v1/file/chunk/**`（init/upload/merge/status，断点续传与秒传依据服务端已上传分片） |
+| **chunkMaxSizeMB** | `number` | `500` | 单发上限（MB），超过且 `enableChunk` 开启时改走分片；分片块大小固定 5MB |
 
 ### 5.2 事件
 
@@ -711,8 +713,8 @@ const addWatermark = (canvas: HTMLCanvasElement, text: string) => {
 
 ### 11.3 后续优化方向
 
-- [ ] 支持断点续传（大文件）
-- [ ] 支持分片上传（超大文件）
+- [x] 断点续传（大文件，`enableChunk` 开启后按服务端已上传分片续传）
+- [x] 分片上传（超大文件，`/api/v1/file/chunk/**`，组件默认关闭）
 - [ ] 支持 WebP 格式
 - [ ] 支持 EXIF 信息保留
 - [ ] 支持多种裁剪预设
@@ -730,6 +732,6 @@ const addWatermark = (canvas: HTMLCanvasElement, text: string) => {
 
 ---
 
-**文档版本：** v2.1  
-**最后更新：** 2026-10-31（校准：压缩/性能数据为编写示例、兼容性矩阵未经实测、视频预览由父组件实现）  
+**文档版本：** v2.2  
+**最后更新：** 2026-11-11（对齐实现：补 Props 表 enableChunk/chunkMaxSizeMB 分片参数、上传地址统一经 apiUrl 拼接、断点续传/分片从待办移入已实现）  
 **维护人员：** TRAE AI Assistant

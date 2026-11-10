@@ -22,8 +22,8 @@
 
 ### 开发指南
 
-- [部署指南](guides/deployment.md) - 生产环境部署配置
-- [前后端集成](guides/frontend-backend-integration.md) - 前后端联调和接口对接
+- [部署指南](guides/deployment.md) - 生产环境部署配置与上线验证
+- [数据库配置接口联调](guides/frontend-backend-integration.md) - 数据库配置采集与数据源管理的前后端接口对接（历史文件名，内容为数据库专用联调指南）
 - [统一权限认证与多租户适配](guides/auth-tenant-adaptation.md) - 后端统一权限认证/多租户评审结论与前端适配说明
 - [功能配置与数据维护覆盖](guides/config-maintenance-coverage.md) - 配置/维护能力清单、前端接入状态与外部核验项
 - [数据库配置验证](guides/database-config-verification.md) - 数据库配置功能说明
@@ -51,6 +51,11 @@
   - [AGENTS 补充建议](archived/project-reports/agents-supplements-2026-09-13.md)
   - [办公平台前端交付](archived/project-reports/office-frontend-delivery-2026-09-14.md)
   - [前端测试报告（2026-11-05）](archived/project-reports/test-report-2026-11-05.md)
+  - [前后端对照评审（2026-11-06）](archived/project-reports/frontend-backend-review-2026-11-06.md)
+  - [前后端对照评审（2026-11-08）](archived/project-reports/frontend-backend-review-2026-11-08.md)
+  - [前端中台评审（2026-11-10）](archived/project-reports/frontend-middle-platform-review-2026-11-10.md)
+  - [中台整改方案（2026-11-10）](archived/project-reports/frontend-middle-platform-adjustment-plan-2026-11-10.md)
+  - [上线检查清单（2026-11-10）](archived/project-reports/frontend-middle-platform-go-live-checklist-2026-11-10.md)
 - [前后端优化实施方案](archived/frontend-backend-optimization-plan-2026-10-01.md) - 前后端功能匹配评审与分级优化方案
 - [后端待实现功能清单](archived/backend-pending-features-2026-10-01.md) - 后端待实现功能清单与接口契约
 - [后端代码生成器实现](archived/backend-code-generator-implementation-2026-10-01.md) - 代码生成器模块后端完整实现代码
@@ -84,8 +89,9 @@ apex-admin-web/
 │   ├── build/                  # 构建脚本
 │   ├── database/               # 数据库脚本（archive/ 存历史增量菜单 SQL）
 │   ├── performance/            # 性能测试脚本
-│   ├── quality/                # 质量检查脚本（注释规范检查）
-│   └── security/               # 安全扫描脚本
+│   ├── quality/                # 质量检查脚本（注释规范检查、测试报告归一化）
+│   ├── security/               # 安全扫描脚本
+│   └── verify/                 # 上线后验证脚本（post-deploy-check.sh，npm run verify:deploy）
 └── src/                        # 源代码
 ```
 
@@ -95,7 +101,7 @@ apex-admin-web/
 1. 阅读[项目主文档](../README.md)了解项目概况
 2. 阅读[开发规范](../AGENTS.md)了解编码约定
 3. 参考[部署指南](guides/deployment.md)搭建开发环境
-4. 查看[前后端集成](guides/frontend-backend-integration.md)了解联调流程
+4. 查接口对接与联调约定 → [API 接口目录](api/README.md)与[数据库配置接口联调](guides/frontend-backend-integration.md)
 
 ### 功能开发
 - 需要文件上传功能 → [基础文件上传](features/file-upload-basic.md) 或 [增强文件上传](features/file-upload-enhanced.md)
@@ -108,7 +114,7 @@ apex-admin-web/
 ### 问题排查
 - 认证问题 → [认证与路由架构](architecture/auth-and-routing.md)
 - 部署问题 → [部署指南](guides/deployment.md)
-- 后端联调 → [前后端集成](guides/frontend-backend-integration.md)
+- 数据库配置联调 → [数据库配置接口联调](guides/frontend-backend-integration.md)
 
 ## 📝 文档规范
 
@@ -154,5 +160,5 @@ apex-admin-web/
 
 ---
 
-**最后更新**: 2026-10-31  
+**最后更新**: 2026-11-11  
 **维护者**: Apex Admin Web Team

@@ -1,14 +1,14 @@
 /**
  * Vitest 全局测试环境搭建
  * ------------------------------------------------------------------
- * 在所有用例执行前补充 jsdom 缺失的浏览器 API：
+ * 在所有用例执行前补充 happy-dom 缺失的浏览器 API：
  *   - ResizeObserver：ECharts/布局组件依赖
  *   - window.matchMedia：Element Plus 响应式断点依赖
  * 由 vitest.config.ts 的 setupFiles 引入。
  */
 import { vi } from 'vitest'
 
-// 模拟 ResizeObserver（jsdom 未实现，ECharts 等库初始化时依赖）
+// 模拟 ResizeObserver（happy-dom 未实现，ECharts 等库初始化时依赖）
 globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
