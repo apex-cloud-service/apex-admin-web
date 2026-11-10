@@ -13,6 +13,8 @@
  * 最后一个订阅者退订时中止连接并停止重连。
  */
 
+import { apiUrl } from '@/utils/api-base'
+
 /** 通知推送回调（收到 notification 事件时触发，携带通知正文） */
 export type NotificationPushListener = (content: string) => void
 
@@ -92,7 +94,7 @@ async function connect(): Promise<void> {
       // 未登录或已无人订阅：放弃本次建连，交由退避重试（登录后自动恢复）
       throw new Error('无可用令牌')
     }
-    const response = await fetch(`${window.location.origin}/api/v1/notifications/stream`, {
+    const response = await fetch(apiUrl('/api/v1/notifications/stream'), {
       // Accept 须携带 text/event-stream：后端按此头豁免 30s 全局响应超时
       headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
       signal: controller.signal,

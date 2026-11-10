@@ -7,7 +7,8 @@
  * - PUT  /                 - 更新套餐（按请求体 packageCode 定位）
  *
  * 权限码：tenant:package:read / create / update。
- * menuIds / permissionCodes / features 的空集合语义均为「全量放行」，不是「无权限」。
+ * menuIds / permissionCodes 的空集合语义为「该维度全量放行」；
+ * features 的空集合语义为「未订阅任何能力」，全量须显式提交能力目录全部编码。
  */
 import { get, post, put } from '@/utils/request'
 import type { TenantPackage, TenantPackagePayload } from '@/types'

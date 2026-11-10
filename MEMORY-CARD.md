@@ -60,7 +60,7 @@ src/
 ## 5. 硬约束
 
 1. 新增菜单驱动页面必须同步 `src/router/dynamic.ts` 的 `VIEW_REGISTRY` 与后端菜单 `component` 字段 —— **文件存在 ≠ 路由已注册**。
-2. 接口一律走 `src/api/` + `src/utils/request.ts`，页面**不新建 Axios 实例**；Element Plus 上传走 XHR，不经拦截器（401 行为不同属正常）。
+2. 接口一律走 `src/api/` + `src/utils/request.ts`，页面**不新建 Axios 实例**；Element Plus 上传走 XHR，不经拦截器（401 行为不同属正常）；原生 XHR/SSE 需拼基地址时用 `src/utils/api-base.ts` 的 `apiUrl()`，不要各自拼 `VITE_API_BASE_URL`。
 3. 会话读写只用 `src/utils/auth.ts`，不得自造 `access_token` 等存储键。
 4. 分页口径**按接口而定**：常规 `page/size` + `list/total`；工作流实例 `pageNum/pageSize` + `records/total`；工作流待办 `pageNum/pageSize` 但响应 `PageResponse` 读 `list/total`；租户分页 `pageNum/pageSize` 且**必填**。不可全局替换。
 5. 菜单可见、按钮可见、后端鉴权是三层：前端隐藏**不是**安全边界。

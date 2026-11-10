@@ -32,7 +32,7 @@
 | 通知中心 | `api/notification.ts`、`utils/notification-stream.ts`、`components/NotificationCenter/` | system 域 `/api/v1/notifications/**`；SSE（`/notifications/stream`）用 fetch 流式实现（网关仅认 Authorization 头，EventSource 不可用），请求必须带 `Accept: text/event-stream`（后端据此豁免 30s 响应超时）；断线 5s→30s 退避 |
 | 数据脱敏 | `api/masking.ts`、`views/system/masking/` | 规则只读（启动配置）、批量试算；本仓库可确认前端路径与开发代理，目标网关路由需外部核验 |
 | 租户管理 | `api/tenant.ts`、`views/system/tenant/` | `/api/v2/platform/tenants`、pageNum/pageSize 必填、生命周期动作小写枚举、配额 null=不限、version 乐观锁；开通向导可同时提交 `adminUsername`/`adminPassword`（后端成对使用） |
-| 租户套餐 | `api/tenant-package.ts`、`views/system/tenant-package/` | `/api/v2/tenant-packages`；列表为裸数组、更新走无路径参数的 `PUT`（后端按请求体 `packageCode` 定位）；`menuIds`/`permissionCodes`/`features` **空集合 = 全量放行**；提交前补全菜单父链 |
+| 租户套餐 | `api/tenant-package.ts`、`views/system/tenant-package/` | `/api/v2/tenant-packages`；列表为裸数组、更新走无路径参数的 `PUT`（后端按请求体 `packageCode` 定位）；`menuIds`/`permissionCodes` **空集合 = 该维度全量放行**，`features` **空集合 = 未订阅**（全量须显式提交能力目录全部编码）；提交前补全菜单父链 |
 | 能力运营 | `api/capability.ts`、`views/system/capability/` | `/api/v2/capabilities`（权限码 `tenant:read`）、`/capabilities/subscribed`、`/api/v2/capability-usage`（`capability` 必填、区间 ≤92 天、只读不计费） |
 | 开放平台 | `api/open-app.ts`、`views/system/open-app/` | 管理面与 scope 目录同源 `/api/v1/open-apps/**`（`GET /scopes` 与创建校验共用 OpenPlatformScopeRegistry）；`page` 从 0 开始、返回数组无 total；明文 `clientSecret` 仅创建/重置响应返回一次 |
 | 集成中心 | `api/integration.ts`、`views/integration/connector.vue` | `/integration/v1/connectors`（pageNum/pageSize）与 `/credentials`（**裸数组**）；凭据 `secret` 仅上行，轮换后旧版本立即失效 |
@@ -45,7 +45,7 @@
 | 授权同意 | `views/oauth2/consent.vue`、`api/oauth2.ts` | `POST /oauth2/consent`（form-urlencoded：client_id/scope/decision）；按方案 §12.3 登记 **public 匿名页**——页面可匿名打开，同意提交须登录（后端要求认证主体），未登录先登录后回跳 |
 | 运维健康 | `api/operations.ts`、`views/monitor/operations/` | 前端封装 health-report、snapshots、trend、租户摘要和导出相关子路径；快照分页为 page/size；页面含报告/快照/趋势/导出/租户摘要五个页签；未封装根路径与导出任务列表，端点是否存在需以目标后端契约为准 |
 | 办公平台 | `api/office-platform.ts`、`api/office-{approval,calendar,document}.ts`、`views/office/` | 平台标识与 `PLATFORM_NAMES` 唯一定义在 office-platform；业务接口按子域拆分、version、组织同步与部门 CRUD；绑定列表双接口并存（数组口径 / `/bindings/page` 真实分页） |
-| 文件上传 | `api/file.ts`、两个上传组件 | Element Plus/XHR 路径不经过 Axios 拦截器；增强组件 `enableChunk` 开启时超限文件走分片上传（`/api/v1/file/chunk/**`，upload 为原始字节流、参数走 query） |
+| 文件上传 | `api/file.ts`、两个上传组件 | Element Plus/XHR 路径不经过 Axios 拦截器，上传地址统一由 `utils/api-base.ts#apiUrl` 拼接（跨域部署自动带 `VITE_API_BASE_URL`）；增强组件 `enableChunk` 开启时超限文件走分片上传（`/api/v1/file/chunk/**`，upload 为原始字节流、参数走 query） |
 | 部署 | `vite.config.ts`、`Dockerfile`、`docker/nginx.conf` | 构建期变量与运行期反代变量 |
 
 ## 2. 项目结构与业务边界
@@ -617,6 +617,7 @@ flowchart TD
 | `npm run generate:api` | openapi-generator-cli 生成 API 客户端（依赖 OpenAPI 描述源配置，当前非主链路） |
 | `npm run audit` / `npm run audit:fix` | npm 依赖安全审计与自动修复 |
 | `npm run preview` | 本地预览构建产物 |
+| `npm run verify:deploy` | 上线后验证（`scripts/verify/post-deploy-check.sh`；需 `BASE_URL`，可选 `API_BASE`/`TOKEN`；失败退出码 1） |
 | `npm run analyze` | 构建并打开产物分析报告 |
 
 当前 package.json 没有 lint 或独立 typecheck 脚本；类型检查使用上述 vue-tsc 或 build 命令。不得记录不存在的 `npm run lint`。Vitest 使用 happy-dom 和 `src/test/setup.ts`，覆盖率配置没有阈值；Playwright 已安装但尚无配置及 E2E 用例，不应宣称已有浏览器端自动化覆盖。
@@ -670,6 +671,7 @@ flowchart TD
 | 授权重试不生效 | 重试 authorize 要求 redirect_uri 与 PKCE（code_challenge/code_challenge_method=S256）齐全，缺失时页面提示从客户端重新发起 |
 | 登录后直接报缺 accessToken | 登录响应 `mfaRequired=true` 时后端不签发令牌，须走 `POST /auth/v1/mfa/verify` 二步；store 的 `login()` 已按此分流 |
 | 套餐保存后菜单少一层 | `menuIds` 须含父链；后端 `TenantPackageEntity.withParentChain` 与前端提交前补链都需生效，空集合 = 全量 |
+| 套餐选了「全量能力」但调用仍 403 能力未开通 | `features` 空集合 = 未订阅（并非全量）；页面全量开关会提交能力目录全部编码，能力目录新增后需重新保存套餐 |
 | 套餐/能力/集成页 404 | 网关已显式覆盖 `/api/v2/tenant-packages|capabilities|capability-usage|overview` 与 `/integration/v1/**`（dev/prod/Nacos 三处 + `GatewayRouteProfileConfigTest` 契约）；仍 404 时核验目标环境是否滚动到新配置 |
 | 数据总览无数据 | 页面消费 `GET /api/v2/overview`（权限 `system:monitor:view`）；单源降级为 DEGRADED 属正常（网关内部端点 `/internal/v1/overview` 本就 403，勿改调） |
 | IoT 规则页 404 | 后端已补 `GET /integration/v1/iot/rules`（分页）与 `iot:rule:read` 权限码（V85/V86 种子）；存量环境需执行迁移 |

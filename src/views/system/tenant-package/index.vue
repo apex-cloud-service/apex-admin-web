@@ -36,7 +36,7 @@
         <template #default="{ row }">{{ scopeText(row.permissionCodes) }}</template>
       </el-table-column>
       <el-table-column label="能力订阅" width="120">
-        <template #default="{ row }">{{ scopeText(row.features) }}</template>
+        <template #default="{ row }">{{ featureText(row.features) }}</template>
       </el-table-column>
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
@@ -116,7 +116,7 @@
         <el-divider content-position="left">能力订阅（features）</el-divider>
         <el-form-item label="全量能力">
           <el-switch v-model="allFeatures" />
-          <span class="form-hint">开启表示订阅全部能力（features 留空）</span>
+          <span class="form-hint">开启表示订阅能力目录全部编码（当前 {{ capabilities.length }} 项），新增能力后需重新保存</span>
         </el-form-item>
         <el-form-item v-if="!allFeatures" label="能力范围">
           <el-select
@@ -153,13 +153,15 @@
 /**
  * 租户套餐管理脚本
  * - 列表/新建/编辑（后端无删除端点，停用通过 status=0）
- * - 菜单、权限码、能力三类裁剪集合分别用「全量」开关表达空集合语义
+ * - 菜单与权限码用「全量」开关表达空集合语义（空集合 = 该维度全量）
+ * - 能力订阅空集合 = 未订阅任何能力，「全量」须显式提交能力目录全部编码
  */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import type { FormInstance, FormRules, TreeInstance } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
+import { buildPackagePayload } from '@/utils/tenant-package'
 import {
   createTenantPackage,
   listTenantPackages,
@@ -220,10 +222,18 @@ const rules: FormRules = {
   ],
 }
 
-/** 裁剪集合展示文案 */
+/** 菜单与权限码展示文案（空集合 = 该维度全量） */
 function scopeText(values?: Array<string | number>): string {
   if (!values || values.length === 0) return '全量'
   return `${values.length} 项`
+}
+
+/** 能力订阅展示文案（空集合 = 未订阅，等于目录长度 = 全量） */
+function featureText(values?: string[]): string {
+  const count = values?.length ?? 0
+  if (count === 0) return '未订阅'
+  if (capabilities.value.length > 0 && count >= capabilities.value.length) return `全部（${count} 项）`
+  return `${count} 项`
 }
 
 /** 加载套餐列表 */
@@ -250,35 +260,6 @@ async function loadOptions(): Promise<void> {
   capabilities.value = caps || []
 }
 
-/**
- * 递归收集菜单父链（后端 withParentChain 同语义）。
- * @param ids 选中菜单 ID
- * @param tree 菜单树
- */
-function withParentChain(ids: number[], tree: MenuNode[]): number[] {
-  const parentOf = new Map<number, number>()
-  const walk = (nodes: MenuNode[]): void => {
-    for (const node of nodes) {
-      if (node.children?.length) {
-        for (const child of node.children) parentOf.set(child.id, node.id)
-        walk(node.children)
-      }
-    }
-  }
-  walk(tree)
-  const result = new Set(ids)
-  for (const id of ids) {
-    let parent = parentOf.get(id)
-    let guard = 0
-    // 防脏数据成环：父链异常成环时最多回溯 32 层即跳出
-    while (parent !== undefined && parent > 0 && !result.has(parent) && guard++ < 32) {
-      result.add(parent)
-      parent = parentOf.get(parent)
-    }
-  }
-  return Array.from(result)
-}
-
 /** 打开弹窗（无参为新建） */
 function openDialog(row?: TenantPackage): void {
   isEdit.value = !!row
@@ -293,7 +274,10 @@ function openDialog(row?: TenantPackage): void {
   })
   allMenus.value = !row?.menuIds?.length
   allPermissions.value = !row?.permissionCodes?.length
-  allFeatures.value = !row?.features?.length
+  // 能力全量 = 已覆盖能力目录全部编码；空集合表示未订阅，不能回填为全量。新建默认全量。
+  allFeatures.value = row
+    ? capabilities.value.length > 0 && (row.features?.length ?? 0) >= capabilities.value.length
+    : true
   dialogVisible.value = true
   // 等树渲染完成后回填选中项
   requestAnimationFrame(() => menuTreeRef.value?.setCheckedKeys(row?.menuIds ?? []))
@@ -308,15 +292,24 @@ async function submit(): Promise<void> {
     return
   }
   const checked = (menuTreeRef.value?.getCheckedKeys(false) as number[]) || []
-  const payload: TenantPackagePayload = {
-    packageCode: form.packageCode.trim(),
-    packageName: form.packageName.trim(),
-    menuIds: allMenus.value ? [] : withParentChain(checked, menuTree.value),
-    permissionCodes: allPermissions.value ? [] : [...(form.permissionCodes ?? [])],
-    features: allFeatures.value ? [] : [...(form.features ?? [])],
+  if (allFeatures.value && capabilities.value.length === 0) {
+    ElMessage.warning('能力目录为空，无法提交全量能力')
+    return
+  }
+  const payload: TenantPackagePayload = buildPackagePayload({
+    packageCode: form.packageCode,
+    packageName: form.packageName,
     status: form.status,
     remark: form.remark,
-  }
+    allMenus: allMenus.value,
+    checkedMenuIds: checked,
+    menuTree: menuTree.value,
+    allPermissions: allPermissions.value,
+    permissionCodes: form.permissionCodes ?? [],
+    allFeatures: allFeatures.value,
+    features: form.features ?? [],
+    capabilityCodes: capabilities.value.map((capability) => capability.code),
+  })
   saving.value = true
   try {
     if (isEdit.value) {

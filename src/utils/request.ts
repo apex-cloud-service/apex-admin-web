@@ -167,15 +167,23 @@ export function del<T = unknown>(url: string, params?: Record<string, unknown>):
   return request<T>({ method: 'DELETE', url, params })
 }
 
+/** 授权类 403 的错误关键字：命中后追加套餐订阅的定位引导 */
+const AUTHORIZATION_ERROR_KEYWORDS = ['能力未开通', 'scope']
+
 /**
  * 统一错误提示（业务异常展示 traceId 便于排障）。
+ * 授权类 403（能力门禁 / scope 断言）额外提示可去能力运营页核对订阅。
  * @param error 捕获的异常对象
  * @param defaultMsg 自定义默认错误提示
  */
 export function showError(error: unknown, defaultMsg?: string): void {
   if (error instanceof ApiError) {
     const trace = error.traceId ? `（traceId: ${error.traceId}）` : ''
-    ElMessage.error(`${error.message}${trace}`)
+    const hint =
+      error.code === 403 && AUTHORIZATION_ERROR_KEYWORDS.some((keyword) => error.message.includes(keyword))
+        ? '；可在能力运营页查看当前租户订阅'
+        : ''
+    ElMessage.error(`${error.message}${trace}${hint}`)
   } else {
     ElMessage.error(defaultMsg || '操作失败，请稍后重试')
   }

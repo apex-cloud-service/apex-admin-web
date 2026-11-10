@@ -85,6 +85,7 @@ describe('subscribeNotificationPush', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
     fetchMock.mockReset()
   })
 
@@ -94,8 +95,18 @@ describe('subscribeNotificationPush', () => {
     const unsubscribe = subscribeNotificationPush(() => {})
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe(`${window.location.origin}/api/v1/notifications/stream`)
+    expect(url).toBe('/api/v1/notifications/stream')
     expect(init.headers.Authorization).toBe('Bearer token-1')
+    unsubscribe()
+  })
+
+  it('配置 VITE_API_BASE_URL 时按该基地址建连（去尾部斜杠）', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/')
+    fetchMock.mockResolvedValue(makeResponse([]))
+    const { subscribeNotificationPush } = await loadModule()
+    const unsubscribe = subscribeNotificationPush(() => {})
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/api/v1/notifications/stream')
     unsubscribe()
   })
 

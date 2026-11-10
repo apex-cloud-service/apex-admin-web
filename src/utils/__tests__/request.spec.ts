@@ -6,13 +6,16 @@
  * - 重放后的非 401 错误保留原状态码
  * - 认证端点自身不触发自动刷新
  * - 并发 401 共享同一次刷新
+ * - showError 对 403 授权类错误追加能力订阅引导
  */
 import { expect, it, vi } from 'vitest'
 import axios, { AxiosError } from 'axios'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { refreshToken } from '@/api/auth'
 import { getTenantId } from '@/utils/auth'
-import { request } from '@/utils/request'
+import { ApiError, request, showError } from '@/utils/request'
 vi.mock('@/api/auth', () => ({ refreshToken: vi.fn() }))
+vi.mock('element-plus/es/components/message/index.mjs', () => ({ ElMessage: { error: vi.fn() } }))
 vi.mock('@/utils/auth', () => ({ getToken: () => 'test-access', getRefreshToken: () => 'test-refresh', setToken: vi.fn(), setRefreshToken: vi.fn(), clearSession: vi.fn(), getTenantId: vi.fn(() => ''), setTenantId: vi.fn(), removeTenantId: vi.fn(), setIdentity: vi.fn(), getIdentity: vi.fn(() => null), removeIdentity: vi.fn(), removeToken: vi.fn(), removeRefreshToken: vi.fn() }))
 it('持续 401 时最多刷新一次并重放一次', async () => {
   vi.mocked(refreshToken).mockResolvedValue({ accessToken: 'test-new-access' })
@@ -81,4 +84,22 @@ it('未记录租户时不附带 X-Tenant-Id 请求头', async () => {
   })
   await request({ url: '/test', adapter })
   expect(captured?.['X-Tenant-Id']).toBeUndefined()
+})
+
+it.each(['能力未开通', 'scope 不足'])('403 授权类错误「%s」追加能力订阅引导', (message) => {
+  vi.mocked(ElMessage.error).mockClear()
+  showError(new ApiError(message, 403, 'trace-1'))
+  expect(ElMessage.error).toHaveBeenCalledWith(`${message}（traceId: trace-1）；可在能力运营页查看当前租户订阅`)
+})
+
+it('403 非授权类错误不追加引导', () => {
+  vi.mocked(ElMessage.error).mockClear()
+  showError(new ApiError('无权访问该资源', 403))
+  expect(ElMessage.error).toHaveBeenCalledWith('无权访问该资源')
+})
+
+it('非 403 命中关键字不追加引导', () => {
+  vi.mocked(ElMessage.error).mockClear()
+  showError(new ApiError('能力未开通', 500))
+  expect(ElMessage.error).toHaveBeenCalledWith('能力未开通')
 })

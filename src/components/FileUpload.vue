@@ -54,6 +54,7 @@ import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Plus, Upload } from '@element-plus/icons-vue'
 import { getToken } from '@/utils/auth'
+import { apiUrl } from '@/utils/api-base'
 import { MAX_UPLOAD_SIZE } from '@/settings'
 import type { FileUploadResult } from '@/types'
 import type { UploadProps, UploadUserFile } from 'element-plus'
@@ -90,8 +91,8 @@ const emit = defineEmits<{
 
 const fileList = ref<UploadUserFile[]>([])
 
-/** 上传接口地址 */
-const uploadUrl = computed(() => '/api/v1/files/generic')
+/** 上传接口地址（与请求层同源，跨域部署取 VITE_API_BASE_URL） */
+const uploadUrl = computed(() => apiUrl('/api/v1/files/generic'))
 
 /** 上传请求头（携带Token） */
 const uploadHeaders = computed(() => ({

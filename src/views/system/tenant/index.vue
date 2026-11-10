@@ -53,7 +53,12 @@
       <el-table-column label="最大存储(MB)" width="130">
         <template #default="{ row }">{{ row.maxStorageMb ?? '不限' }}</template>
       </el-table-column>
-      <el-table-column prop="packageCode" label="套餐" width="120" />
+      <el-table-column label="套餐" width="150">
+        <template #default="{ row }">
+          <el-tag v-if="row.packageCode" size="small">{{ row.packageCode }}</el-tag>
+          <el-tag v-else size="small" type="warning">未绑定（无授权）</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="有效期至" width="170">
         <template #default="{ row }">{{ row.expireTime || '-' }}</template>
       </el-table-column>
@@ -96,10 +101,9 @@
         <el-form-item label="套餐标识" prop="packageCode">
           <el-select
             v-model="createForm.packageCode"
-            placeholder="选择套餐（留空不裁剪）"
+            placeholder="选择套餐（必选：决定该租户的菜单、权限与能力范围）"
             clearable
             filterable
-            allow-create
             default-first-option
             style="width: 100%"
           >
@@ -228,6 +232,7 @@ const createRules: FormRules = {
     { required: true, message: '请输入租户名称', trigger: 'blur' },
     { max: 128, message: '最长 128 位', trigger: 'blur' },
   ],
+  packageCode: [{ required: true, message: '请选择租户套餐（未绑定套餐将拒绝全部授权）', trigger: 'change' }],
   // 管理员账号与密码需成对提供，长度按后端用户体系约束
   adminUsername: [
     {

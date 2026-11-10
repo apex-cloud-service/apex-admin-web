@@ -54,10 +54,10 @@ flowchart LR
     U <.->|WS 升级 /api/v1/messages/ws| N
     N -->|回退 index.html| U
     N -->|proxy_pass| B[Apex Scaffold 后端 :8080<br/>健康检查 /api/v1/health]
-    N -->|/assets/ 30d immutable| U
+    N -->|/js/ /css/ /assets/ 等 30d immutable| U
 ```
 
-- **前端页面/静态资源**：由静态服务器直接返回 `dist/` 内容，走同域相对路径。本仓库的 Nginx 配置为 `/assets/` 设置 30 天 `immutable` 缓存（该 location 不覆盖 `js/`、`css/` 等分目录的哈希资源）；其他静态服务器的缓存策略需单独配置。
+- **前端页面/静态资源**：由静态服务器直接返回 `dist/` 内容，走同域相对路径。本仓库的 Nginx 配置对实际产物目录（`js/`、`css/`、`images/`、`fonts/`、`media/`、`assets/`）统一设置 30 天 `immutable` 缓存；其他静态服务器的缓存策略需单独配置。
 - **前端动态数据**：浏览器请求 `/api/*`（业务）、`/admin-api/*`（管理）以及 OAuth2 授权码登录的 `/oauth2/authorize`、`/oauth2/token`，由 Nginx 反向代理到后端。
 - **站内信实时推送**：浏览器与 `/api/v1/messages/ws` 建立 WebSocket，需 Nginx 单独声明 `Upgrade`/`Connection` 转发（见 6.2 与 6.4）。
 - **后端接口**：`/admin-api/v1/menus` 返回菜单树并驱动前端动态路由；权限码控制按钮显隐。
@@ -104,7 +104,7 @@ dist/
 > - `minify: 'terser'` 且 `drop_console` / `drop_debugger`：生产产物移除 `console` 与调试语句。
 > - `manualChunks` 按 vue/pinia、element-plus、element-icons、echarts、vueuse、axios、其他 vendor 拆分 chunk。
 > - `rollup-plugin-visualizer` 构建后输出 `dist/stats.html`，可手动打开分析产物体积。
-> - 注意：Nginx 的 30d `immutable` 仅配置在 `location /assets/`，哈希 js/css 位于 `js/`、`css/` 等分目录，不在该 location 覆盖范围内。
+> - 注意：Nginx 的 30d `immutable` 覆盖 `js/`、`css/`、`images/`、`fonts/`、`media/`、`assets/` 六个产物目录（正则 location），新增输出目录时需同步该正则。
 
 ---
 
@@ -166,12 +166,22 @@ server {
     root /var/www/apex-admin;
     index index.html;
 
+    # 请求体上限：前端单文件上限 10MB（MAX_UPLOAD_SIZE）、分片块 5MB。
+    # Nginx 默认仅 1m，不设置时 1–10MB 的上传会在到达后端前直接 413。
+    # 调整须三处联动：本值、MAX_UPLOAD_SIZE、后端 FILE_MAX_SIZE_BYTES（默认 10MB）。
+    client_max_body_size 20m;
+
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
 
     # 带 hash 指纹的静态资源长缓存
-    location /assets/ {
-        expires 30d;
+    # 目录必须与 vite.config.ts 的 rollup 输出一致：js/、css/、images/、fonts/、
+    # media/ 为常规产物目录，assets/ 仅作兜底；只写 /assets/ 会让 js/css 无缓存。
+    location ~* ^/(assets|js|css|images|fonts|media)/ {
+        # 本块出现 add_header 后父级声明不再继承，故重复声明安全头；
+        # 不使用 expires，避免与下方 Cache-Control 重复输出。
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Cache-Control "public, max-age=2592000, immutable";
     }
 
@@ -190,13 +200,73 @@ server {
         proxy_set_header   X-Forwarded-Proto $scheme;
     }
 
-    # 站内信 WebSocket 握手：必须精确匹配并转发 Upgrade/Connection，
-    # 且声明在 /api/ 之前，否则会被普通 HTTP 反代吞掉导致握手失败
+    # 授权同意端点：同一路径两种语义
+    #   GET  /oauth2/consent 是前端同意页（vue-router 路由），须回退 index.html；
+    #   POST /oauth2/consent 是后端提交接口（form-urlencoded），须反代。
+    # 仅对 POST 反代，避免把页面请求打到后端。
+    location = /oauth2/consent {
+        if ($request_method = POST) {
+            proxy_pass         http://127.0.0.1:8080;
+        }
+        try_files /index.html =404;
+    }
+
+    # 认证中心前缀：/auth/v1（登录、MFA 二步、令牌刷新、在线会话）、
+    # /auth/v2（密码找回等新版端点）。用带版本前缀，避免撞前端 /auth 页面路由
+    location /auth/v1/ {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+    location /auth/v2/ {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
+    # 集成中心与物联网：只能写 /integration/v1/，
+    # 写成裸 /integration 会把前端菜单目录 SPA 页面也反代到后端
+    location /integration/v1/ {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
+    # 站内信 WebSocket 握手：用精确匹配（=）确保优先于 /api/ 前缀，
+    # 并转发 Upgrade/Connection；缺少这两个头会握手失败
     location = /api/v1/messages/ws {
         proxy_pass         http://127.0.0.1:8080;
         proxy_http_version 1.1;
         proxy_set_header   Upgrade $http_upgrade;
         proxy_set_header   Connection "upgrade";
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    # 通知中心 SSE 长连接：必须精确匹配，否则被 /api/ 前缀规则覆盖
+    #   proxy_buffering off：事件产生即下发，不被 Nginx 攒成整批；
+    #   proxy_cache off：SSE 不可缓存；
+    #   Connection ""：清除该头，保持 HTTP/1.1 长连接；
+    #   后端 30s 心跳，读写超时须远大于心跳间隔（取 3600s）。
+    location = /api/v1/notifications/stream {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_buffering    off;
+        proxy_cache        off;
+        proxy_set_header   Connection "";
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -234,11 +304,13 @@ nginx -t && systemctl reload nginx
 > **为什么需要 `try_files ... /index.html`**：前端使用 Vue Router「history 模式」，直接刷新
 > `/monitor/api-call-log` 等多级路径时需回退到 `index.html` 再让前端路由接管，否则返回 404。
 >
-> **为什么需要代理 OAuth2、`/api/` 与 `/admin-api/`**：前后端分离后前端动态数据请求使用 `/api/`、`/admin-api/`，授权码登录仅使用 `/oauth2/authorize` 与 `/oauth2/token`；静态资源与页面由 Nginx 直接返回。其他 OAuth2 端点（例如 `/oauth2/userinfo`）未在本工程的 Vite/Nginx 配置中声明专用代理。
+> **为什么需要代理这些前缀**：前后端分离后前端动态数据请求使用 `/api/`、`/admin-api/`、`/auth/v1/`、`/auth/v2/`、`/integration/v1/`，授权码登录仅使用 `/oauth2/authorize` 与 `/oauth2/token`；静态资源与页面由 Nginx 直接返回。`/auth/v1|v2/` 与 `/integration/v1/` 必须带版本前缀——写成裸 `/auth` 或 `/integration` 会把前端菜单目录的 SPA 页面一起反代到后端。其他 OAuth2 端点（例如 `/oauth2/userinfo`）未在本工程的 Vite/Nginx 配置中声明专用代理。
 >
 > **为什么 WebSocket 要单独配置**：站内信实时推送走 `/api/v1/messages/ws`，普通 `location /api/` 不转发
 > `Upgrade`/`Connection` 头，握手会失败（前端只能退回 60s 轮询未读数）。专用 location 同时把
 > `proxy_read_timeout` 提到 3600s，与服务端连接寿命上限（1h，票据 30s 一次性）对齐，避免被默认 60s 空闲超时切断。
+>
+> **为什么 SSE 也要单独配置**：通知中心流走 `/api/v1/notifications/stream`（fetch + ReadableStream，因 EventSource 无法携带 `Authorization` 头）。不关闭 `proxy_buffering` 时事件会被攒成整批下发，前端表现为「长时间无通知、随后一次性全到」；`proxy_cache off` 避免中间层缓存长连接响应；超时须远大于后端 30s 心跳。
 >
 > **`proxy_http_version 1.1` 的必要性**：Nginx 默认以 HTTP/1.0 反代且不发送 `Connection` 头，WebSocket 升级必须显式声明 1.1。
 
@@ -563,7 +635,7 @@ npm run dev
 
 | # | 校验项 | 通过标准 |
 |---|--------|---------|
-| 1 | 页面资源加载 | `GET /` 返回 `index.html`，`/assets/*` 返回 200 且响应头含 `Cache-Control: public, max-age=2592000, immutable`（该缓存仅覆盖 `/assets/`；哈希 js/css 位于 `js/`、`css/` 等目录，不在该 location 内） |
+| 1 | 页面资源加载 | `GET /` 返回 `index.html`，`/js/*`、`/css/*`（及 `images/`、`fonts/`、`media/`、`assets/`）返回 200 且响应头含 `Cache-Control: public, max-age=2592000, immutable` |
 | 2 | 安全响应头 | `GET /` 响应含 `X-Content-Type-Options: nosniff` 与 `X-Frame-Options: SAMEORIGIN` |
 | 3 | 登录 | 输入账号密码 + 验证码能成功登录跳转工作台；`POST /api/v1/auth/login` 经反代返回 `code:0` |
 | 4 | 令牌续期 | 令牌过期后普通请求返回 401 时自动刷新并重放成功，页面不跳登录；刷新令牌失效才回登录页 |

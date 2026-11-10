@@ -34,7 +34,7 @@ export function listCapabilities(): Promise<CapabilityInfo[]> {
 }
 
 /**
- * 查询当前租户已订阅能力（套餐 features 为空表示全量订阅）
+ * 查询当前租户已订阅能力（套餐 features 空集合 = 未订阅）
  */
 export function listSubscribedCapabilities(): Promise<CapabilityInfo[]> {
   return get<CapabilityInfo[]>('/api/v2/capabilities/subscribed')

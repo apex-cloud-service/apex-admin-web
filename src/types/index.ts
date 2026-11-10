@@ -1185,7 +1185,7 @@ export interface TenantPackage {
   menuIds?: number[]
   /** 可用权限码集合（空集合语义 = 全量放行） */
   permissionCodes?: string[]
-  /** 能力订阅编码集合（对应能力目录 code，空集合 = 全量订阅） */
+  /** 能力订阅编码集合（对应能力目录 code；空集合 = 未订阅，全量须列出目录全部编码） */
   features?: string[]
   /** 0=停用 1=正常 */
   status?: number

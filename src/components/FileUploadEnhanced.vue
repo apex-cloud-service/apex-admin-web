@@ -165,6 +165,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Plus, Upload, UploadFilled } from '@element-plus/icons-vue'
 import { getToken } from '@/utils/auth'
+import { apiUrl } from '@/utils/api-base'
 import { MAX_UPLOAD_SIZE } from '@/settings'
 import { initChunkUpload, mergeChunks, uploadChunk, type ChunkMergeResult } from '@/api/file'
 import type { FileUploadResult } from '@/types'
@@ -236,8 +237,8 @@ const emit = defineEmits<{
 
 /** 已上传/待上传的文件列表（与 el-upload 双向绑定） */
 const fileList = ref<UploadUserFile[]>([])
-/** 上传接口地址（通用文件上传） */
-const uploadUrl = computed(() => '/api/v1/files/generic')
+/** 上传接口地址（与请求层同源，跨域部署取 VITE_API_BASE_URL） */
+const uploadUrl = computed(() => apiUrl('/api/v1/files/generic'))
 /** 请求头（自动携带认证 Token） */
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${getToken()}`

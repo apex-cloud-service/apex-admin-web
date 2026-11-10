@@ -3,7 +3,7 @@
   ------------------------------------------------------------------
   契约：
   - GET /api/v2/capabilities            - 能力目录（权限码 tenant:read）
-  - GET /api/v2/capabilities/subscribed - 当前租户已订阅能力（套餐 features 为空=全量）
+  - GET /api/v2/capabilities/subscribed - 当前租户已订阅能力（套餐 features 空集合=未订阅）
   - GET /api/v2/capability-usage        - 按 租户 × 能力 的调用量分页（权限码 capability:usage:read）
   用量口径：基于操作审计日志聚合，只读不计费；时间区间缺省近 7 天、最大 92 天。
 -->
@@ -44,7 +44,7 @@
           <el-table-column prop="description" label="说明" min-width="240" show-overflow-tooltip />
         </el-table>
         <div class="catalog-hint">
-          说明：套餐 features 为空表示全量订阅；未订阅能力会被网关按路由→能力映射拒绝（403「能力未开通」）。
+          说明：套餐 features 空集合表示未订阅任何能力，全量须在套餐中显式列出能力目录全部编码；未订阅能力会被网关按路由→能力映射拒绝（403「能力未开通」）。
         </div>
       </el-tab-pane>
 
