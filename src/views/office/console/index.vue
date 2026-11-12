@@ -11,7 +11,7 @@
     <el-card class="header-card">
       <h2>办公平台控制台</h2>
       <p class="description">
-        集成飞书、钉钉、企业微信的办公能力（组织同步、消息、审批等功能将在后续版本提供）
+        集成飞书、钉钉、企业微信的办公能力（组织同步、消息、审批、日历等，可从下方入口进入）
       </p>
     </el-card>
 
@@ -34,10 +34,12 @@
                 </el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="绑定用户数">
-                <span>{{ getBindingCount(platform) }}</span>
+                <span v-if="bindingStats[platform].error">查询失败</span>
+                <span v-else>{{ bindingStats[platform].total ?? '-' }}</span>
               </el-descriptions-item>
               <el-descriptions-item label="待审批数">
-                <el-badge :value="getPendingCount(platform)" :max="99" class="badge">
+                <span v-if="bindingStats[platform].error">查询失败</span>
+                <el-badge v-else :value="bindingStats[platform].pending ?? 0" :max="99" class="badge">
                   <span>待审批</span>
                 </el-badge>
               </el-descriptions-item>
@@ -69,6 +71,7 @@
             </el-icon>
             <div class="feature-name">{{ feature.name }}</div>
             <div class="feature-desc">{{ feature.desc }}</div>
+            <el-button type="primary" link size="small" @click="router.push(feature.path)">进入</el-button>
           </div>
         </el-col>
       </el-row>
@@ -80,12 +83,12 @@
 /**
  * 办公平台控制台逻辑
  * - 三平台状态总览（配置状态/绑定数/待审批数）+ 快捷入口
- * - 绑定统计通过逐平台拉取绑定列表汇总（后端暂无统计接口）
+ * - 绑定统计通过逐平台分页查询 total 汇总（后端暂无统计接口）
  */
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Connection, ChatDotRound, Checked, Calendar } from '@element-plus/icons-vue'
-import { listApps, listBindings, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
+import { listApps, listBindingsPage, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
 import { showError } from '@/utils/request'
 
 /** ========== 状态定义 ========== */
@@ -95,11 +98,11 @@ const router = useRouter()
 const platforms: OfficePlatform[] = ['FEISHU', 'DINGTALK', 'WECOM']
 /** 各平台应用配置列表 */
 const apps = ref<any[]>([])
-/** 各平台绑定统计（总数 + 待审批数） */
-const bindingStats = ref<Record<OfficePlatform, { total: number; pending: number }>>({
-  FEISHU: { total: 0, pending: 0 },
-  DINGTALK: { total: 0, pending: 0 },
-  WECOM: { total: 0, pending: 0 },
+/** 各平台绑定统计（来自后端真实 total；null = 未取到，error = 该平台查询失败） */
+const bindingStats = ref<Record<OfficePlatform, { total: number | null; pending: number | null; error: boolean }>>({
+  FEISHU: { total: null, pending: null, error: false },
+  DINGTALK: { total: null, pending: null, error: false },
+  WECOM: { total: null, pending: null, error: false },
 })
 
 /** 即将上线的功能预告卡片数据 */
@@ -108,21 +111,25 @@ const upcomingFeatures = [
     name: '组织同步',
     desc: '同步部门和成员',
     icon: Connection,
+    path: '/office/organization',
   },
   {
     name: '消息推送',
     desc: '发送通知消息',
     icon: ChatDotRound,
+    path: '/office/message',
   },
   {
     name: '审批对接',
     desc: '对接审批流程',
     icon: Checked,
+    path: '/office/approval',
   },
   {
     name: '日历会议',
     desc: '管理日程安排',
     icon: Calendar,
+    path: '/office/calendar',
   },
 ]
 
@@ -151,24 +158,6 @@ const hasConfig = (platform: OfficePlatform) => {
   return apps.value.some((app) => app.platform === platform)
 }
 
-/**
- * 获取平台绑定用户总数
- * @param platform 平台类型
- * @returns 绑定总数（无统计时返回 0）
- */
-const getBindingCount = (platform: OfficePlatform) => {
-  return bindingStats.value[platform]?.total || 0
-}
-
-/**
- * 获取平台待审批绑定数
- * @param platform 平台类型
- * @returns 待审批数（无统计时返回 0）
- */
-const getPendingCount = (platform: OfficePlatform) => {
-  return bindingStats.value[platform]?.pending || 0
-}
-
 /** ========== 导航与数据加载 ========== */
 
 /**
@@ -180,37 +169,44 @@ const goToConfig = (_platform: OfficePlatform) => {
 }
 
 /**
- * 跳转绑定审批页
- * @param _platform 目标平台（当前绑定页为统一入口，未区分平台）
+ * 跳转绑定审批页（携带平台上下文，目标页预填平台筛选）
+ * @param platform 目标平台
  */
-const goToBindings = (_platform: OfficePlatform) => {
-  router.push('/office/bindings')
+const goToBindings = (platform: OfficePlatform) => {
+  router.push({ path: '/office/bindings', query: { platform } })
 }
 
 /**
- * 加载控制台数据：应用配置一次拉取；绑定统计逐平台查询后汇总
- * （单个平台查询失败不阻塞其他平台）
+ * 加载单平台绑定统计：两个计数请求（全部状态 / 待审批），读真实 total
+ */
+const loadPlatformStats = async (platform: OfficePlatform) => {
+  bindingStats.value[platform] = { total: null, pending: null, error: false }
+  try {
+    const [allPage, pendingPage] = await Promise.all([
+      listBindingsPage(platform, undefined, 1, 1),
+      listBindingsPage(platform, 'PENDING', 1, 1),
+    ])
+    bindingStats.value[platform] = {
+      total: allPage.total,
+      pending: pendingPage.total,
+      error: false,
+    }
+  } catch {
+    bindingStats.value[platform] = { total: null, pending: null, error: true }
+  }
+}
+
+/**
+ * 加载控制台数据：应用配置一次拉取（失败整体提示）；
+ * 绑定统计逐平台并行查询，单平台失败仅影响该平台卡片
  */
 const loadData = async () => {
   try {
-    // 加载应用配置
     apps.value = await listApps()
-
-    // 加载绑定统计（需要遍历每个平台）
-    for (const platform of platforms) {
-      try {
-        const bindings = await listBindings(platform, 1, 100)
-        bindingStats.value[platform] = {
-          total: bindings.length,
-          pending: bindings.filter((b) => b.status === 'PENDING').length,
-        }
-      } catch (error) {
-        // 忽略单个平台的错误
-      }
-    }
   } catch (error: any) {
     showError(error, '加载数据失败')
   }
+  await Promise.allSettled(platforms.map((platform) => loadPlatformStats(platform)))
 }
 
 // 挂载时加载控制台数据

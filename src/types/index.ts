@@ -1555,6 +1555,42 @@ export interface CrossDomainOverview {
   sources: Record<string, OverviewSourceResult>
 }
 
+/** 我的事项区块领域（工作流/办公审批/站内信/近期日程/系统通知） */
+export type AgendaDomain = 'workflow' | 'office-approval' | 'message' | 'calendar' | 'notification'
+
+/** 我的事项条目（原始字段透传展示，不做跨域语义归一化） */
+export interface AgendaItem {
+  domain: AgendaDomain
+  /** 原始类型（TASK / messageType / msgType / APPROVAL / EVENT） */
+  kind: string
+  title: string
+  subtitle?: string
+  /** 后端原值，不做时区换算 */
+  time?: string
+  unread?: boolean
+  /** 条目主键（通知为数字主键用于标记已读；日程为字符串事件 ID） */
+  id?: number | string
+  /** 条目级行内操作失败文案（如标记已读失败） */
+  actionError?: string
+  /** 无独立页面的区块（系统通知）留空，不跳转 */
+  href?: string
+  hrefLabel?: string
+}
+
+/** 我的事项区块状态 */
+export interface AgendaSection {
+  domain: AgendaDomain
+  label: string
+  items: AgendaItem[]
+  loading: boolean
+  /** 区块级错误文案，不弹全局提示 */
+  error: string | null
+  /** 「仅展示前 N 条」口径标注 */
+  truncated: boolean
+  /** 可信 total，或「总数未知（接口返回列表）」 */
+  totalHint?: string
+}
+
 /** 设备影子（后端 DeviceShadowResponse，desired/reported 为 JSON 节点） */
 export interface DeviceShadow {
   id: number

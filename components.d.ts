@@ -60,6 +60,7 @@ declare module 'vue' {
     ElRow: typeof import('element-plus/es/components/row/index')['ElRow']
     ElScrollbar: typeof import('element-plus/es/components/scrollbar/index')['ElScrollbar']
     ElSelect: typeof import('element-plus/es/components/select/index')['ElSelect']
+    ElSkeleton: typeof import('element-plus/es/components/skeleton/index')['ElSkeleton']
     ElSpace: typeof import('element-plus/es/components/space/index')['ElSpace']
     ElStatistic: typeof import('element-plus/es/components/statistic/index')['ElStatistic']
     ElStep: typeof import('element-plus/es/components/steps/index')['ElStep']

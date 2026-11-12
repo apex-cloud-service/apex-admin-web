@@ -38,13 +38,14 @@
 | 集成中心 | `api/integration.ts`、`views/integration/connector.vue` | `/integration/v1/connectors`（pageNum/pageSize）与 `/credentials`（**裸数组**）；凭据 `secret` 仅上行，轮换后旧版本立即失效 |
 | 物联网 | `api/iot.ts`、`views/iot/` | `/integration/v1/iot/devices`（pageNum/pageSize）、`/devices/{id}/telemetry|shadow|commands`（影子只读、命令下发 commandId 幂等）、`/rules`（分页）；启停 `enabled` 为字符串；MQTT 认证钩子为 `/internal/v1/iot/**` 内部端点，管理端不调用 |
 | 统一通知 | `api/notify.ts`、`views/office/notify/` | `/api/v2/office/notify/templates`（pageNum/pageSize）与 `/requests` 留痕；按模板投递走内部端点 `POST /internal/v1/notify`，管理端无发送入口 |
-| 数据总览 | `api/overview.ts`、`views/dashboard/index.vue` | D5 聚合 `GET /api/v2/overview`（租户取可信上下文、权限码 `system:monitor:view`）；单源降级返回 `sources.{file,workflow,integration}.status=DEGRADED`；内部端点 `/internal/v1/overview` 网关 403，浏览器不可直连 |
+| 数据总览 | `api/overview.ts`、`views/dashboard/index.vue` | D5 聚合 `GET /api/v2/overview`（租户取可信上下文、权限码 `system:monitor:view`）；单源降级返回 `sources.{file,workflow,integration}.status=DEGRADED`；内部端点 `/internal/v1/overview` 网关 403，浏览器不可直连；概览卡字段映射 `FIELD_LABELS`（三源字段已按 apex-scaffold 契约登记：storageUsageBytes/inProgressInstances/deviceCount，未登记 key 回退原字段名），聚合端点整体失败为区块级失败态 + 重试；图表为分类统计柱状图（累计值，非时序趋势） |
+| 我的事项 | `composables/useAgenda.ts`、`views/dashboard/components/AgendaPanel.vue` | 工作流待办/办公审批/站内信/近期日程/系统通知五域并行加载、失败隔离、区块级降级 + 单域重试与手动刷新；仅展示/跳转/通知标记已读，无轮询、无办理操作（办理均在原域页面）；站内信为裸数组（totalHint「总数未知」）；审批区块 approverId 取当前用户 `identity.id` |
 | 在线会话 | `api/session.ts`、`views/monitor/session.vue` | `/auth/v1/sessions/**`：`online` 为**裸数组不分页**；单会话终止按 `sessionId`（会话唯一标识），详情按数字主键；全部端点要求管理员角色 |
 | 账号安全 | `api/mfa.ts`、`api/ip-access-control.ts`、`api/auth-audit.ts`、`views/system/security/`、`views/system/role/` | MFA configs 与 IP 规则列表均为裸数组；IP 写操作走 query 参数（非 body）；认证审计（security 页第三 Tab）tenantId 必填、裸数组无分页、前端截断 200 条，清理需管理员角色；角色页权限 Tab 按钮挂 `system:permission:*`（V88） |
 | 登录 MFA | `views/login/index.vue`、`stores/user.ts`、`api/auth.ts` | 登录响应 `mfaRequired=true` 时不签发令牌，须用 `challengeToken` 调 `POST /auth/v1/mfa/verify` 换取正式令牌（挑战一次性消费） |
 | 授权同意 | `views/oauth2/consent.vue`、`api/oauth2.ts` | `POST /oauth2/consent`（form-urlencoded：client_id/scope/decision）；按方案 §12.3 登记 **public 匿名页**——页面可匿名打开，同意提交须登录（后端要求认证主体），未登录先登录后回跳 |
 | 运维健康 | `api/operations.ts`、`views/monitor/operations/` | 前端封装 health-report、snapshots、trend、租户摘要和导出相关子路径；快照分页为 page/size；页面含报告/快照/趋势/导出/租户摘要五个页签；未封装根路径与导出任务列表，端点是否存在需以目标后端契约为准 |
-| 办公平台 | `api/office-platform.ts`、`api/office-{approval,calendar,document}.ts`、`views/office/` | 平台标识与 `PLATFORM_NAMES` 唯一定义在 office-platform；业务接口按子域拆分、version、组织同步与部门 CRUD；绑定列表双接口并存（数组口径 / `/bindings/page` 真实分页） |
+| 办公平台 | `api/office-platform.ts`、`api/office-{approval,calendar,document}.ts`、`views/office/` | 平台标识与 `PLATFORM_NAMES` 唯一定义在 office-platform；业务接口按子域拆分、version、组织同步与部门 CRUD；绑定列表双接口并存（数组口径 / `/bindings/page` 真实分页）；控制台绑定统计走 `/bindings/page` 读真实 total（每平台两个计数请求，失败显式标注），跳转绑定审批页带 `platform` query 预填 |
 | 文件上传 | `api/file.ts`、两个上传组件 | Element Plus/XHR 路径不经过 Axios 拦截器，上传地址统一由 `utils/api-base.ts#apiUrl` 拼接（跨域部署自动带 `VITE_API_BASE_URL`）；增强组件 `enableChunk` 开启时超限文件走分片上传（`/api/v1/file/chunk/**`，upload 为原始字节流、参数走 query） |
 | 部署 | `vite.config.ts`、`Dockerfile`、`docker/nginx.conf` | 构建期变量与运行期反代变量 |
 
@@ -622,7 +623,7 @@ flowchart TD
 
 当前 package.json 没有 lint 或独立 typecheck 脚本；类型检查使用上述 vue-tsc 或 build 命令。不得记录不存在的 `npm run lint`。Vitest 使用 happy-dom 和 `src/test/setup.ts`，覆盖率配置没有阈值；Playwright 已安装但尚无配置及 E2E 用例，不应宣称已有浏览器端自动化覆盖。
 
-截至 2026-11-10，共 27 个测试文件、214 个用例（`npx vitest run` 全绿），2026-11-05 的历史基线见 [测试报告](docs/archived/project-reports/test-report-2026-11-05.md)。请求刷新测试覆盖认证端点排除、单次重放、并发单飞、重放错误保留与授权类 403 提示引导；另有 OAuth2 PKCE/state、认证配置 API、SSE 通知流、`api-base` 地址拼接、套餐父链补全与载荷构造、脱敏/XSS/存储工具、`v-permission` 指令、`useCrud`/`useTableConfig`、user/app/permission Store、动态路由菜单转换和 `Pagination`/`FileUpload` 组件测试。API 层还有 `api/auth.test.ts`、`api/message.test.ts`、`api/notification.test.ts`、`api/workflow.test.ts`、`api/office-platform.test.ts`、`api/platform.test.ts`、`api/generator.test.ts`，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status）。
+截至 2026-11-11，共 28 个测试文件、221 个用例（`npx vitest run` 全绿），2026-11-05 的历史基线见 [测试报告](docs/archived/project-reports/test-report-2026-11-05.md)。请求刷新测试覆盖认证端点排除、单次重放、并发单飞、重放错误保留与授权类 403 提示引导；另有 OAuth2 PKCE/state、认证配置 API、SSE 通知流、`api-base` 地址拼接、套餐父链补全与载荷构造、脱敏/XSS/存储工具、`v-permission` 指令、`useCrud`/`useTableConfig`/`useAgenda`、user/app/permission Store、动态路由菜单转换和 `Pagination`/`FileUpload` 组件测试。API 层还有 `api/auth.test.ts`、`api/message.test.ts`、`api/notification.test.ts`、`api/workflow.test.ts`、`api/office-platform.test.ts`、`api/platform.test.ts`、`api/generator.test.ts`，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status）。
 
 覆盖率存在两个口径：默认配置不设 `coverage.include`，只统计被用例加载的模块（2026-11-10 行覆盖 74.11%）；强制 `--coverage.include='src/**/*.{ts,vue}'` 的全量口径行覆盖为 6.87%，因 62 个页面组件与多数 API/工具模块无用例。引用覆盖率须注明口径，不得以默认口径宣称整体覆盖水平。DOM 模拟测试不能替代真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证。
 
@@ -674,6 +675,9 @@ flowchart TD
 | 套餐选了「全量能力」但调用仍 403 能力未开通 | `features` 空集合 = 未订阅（并非全量）；页面全量开关会提交能力目录全部编码，能力目录新增后需重新保存套餐；前端 `showError` 会对含「能力未开通」/「scope」的 403 追加能力运营页引导 |
 | 套餐/能力/集成页 404 | 网关已显式覆盖 `/api/v2/tenant-packages|capabilities|capability-usage|overview` 与 `/integration/v1/**`（dev/prod/Nacos 三处 + `GatewayRouteProfileConfigTest` 契约）；仍 404 时核验目标环境是否滚动到新配置 |
 | 数据总览无数据 | 页面消费 `GET /api/v2/overview`（权限 `system:monitor:view`）；单源降级为 DEGRADED 属正常（网关内部端点 `/internal/v1/overview` 本就 403，勿改调） |
+| 工作台概览卡显示原始英文字段名 | 该 key 不在 `FIELD_LABELS` 登记内（三源映射依据 apex-scaffold 契约登记：file→storageUsageBytes、workflow→inProgressInstances、integration→deviceCount），未登记 key 回退原名属预期行为；数组值显示「N 项」、嵌套对象不展示 |
+| 我的事项某区块加载失败或审批区块为空 | 区块级 error + 单域重试入口；审批区块需当前用户身份（`identity.id` 构造 `approverId`）；系统通知区块条目无跳转属设计（仅标记已读） |
+| 办公控制台绑定数显示「查询失败」 | 单平台 `/bindings/page` 计数请求失败时该平台卡片显式失败态（不再误显 0）；跳转绑定审批页平台预填依赖 `query.platform` |
 | IoT 规则页 404 | 后端已补 `GET /integration/v1/iot/rules`（分页）与 `iot:rule:read` 权限码（V85/V86 种子）；存量环境需执行迁移 |
 | IoT 设备影子不可用 | 设备注册时才会创建影子行；未上报过的设备影子字段为空属正常。desired 写接口后端未实现（API 文档 §10） |
 | Docker 首页正常但接口失败 | API_PROXY_PASS、外部网络、后端 DNS、代理 location |

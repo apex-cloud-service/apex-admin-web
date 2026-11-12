@@ -1,7 +1,7 @@
 # 记忆卡 · apex-admin-web（管理后台前端）
 
 > **用法**：接手前端或需要改页面时先读本卡（约 3 分钟），细节按文末指针进入 `AGENTS.md` 与 `docs/`。
-> **基线**：2026-11-10 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`696dd00` 已提交）
+> **基线**：2026-11-11 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`c75622b` 已提交）
 > **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-11-10）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
 
 ## 1. 一句话
@@ -93,8 +93,9 @@ src/
 | 集成/IoT/在线会话/密码找回页 404 或返回 HTML | 代理须覆盖 `/integration/v1`、`/auth/v1\|v2`（带版本前缀，勿用裸 `/integration` 撞菜单路由）；`/oauth2/consent` 仅 POST 反代 |
 | 站内信模板编辑/删除 404 | 网关 office 路由须含 `/admin-api/v1/message-templates/**`（后端已修，环境需滚动新配置） |
 
-## 7. 当前状态（2026-11-10）
+## 7. 当前状态（2026-11-11）
 
+- 11-11（`c75622b` 文档对齐）：以 `696dd00` 代码为基线，对齐全仓 `docs/`、脚本与配置；`docs/` Markdown 38→41（新增 11-10 中台整改调整方案、上线检查清单、评审报告三篇归档）。代码无功能变更。
 - 11-10（`696dd00` 中台整改与上线前校验）：**套餐 features 空集合改「未订阅」语义**（全量须显式提交目录全部编码，租户开通套餐必选、去掉手输编码）；**上传组件与通知 SSE 统一经 `api-base.ts#apiUrl` 拼接**（跨域部署正确指向网关）；`showError` 对授权类 403 追加能力运营页引导、AdminLayout 顶栏加「未获得权限码」告警；Nginx 补 20m 请求体上限、产物目录缓存与安全头、consent 仅 POST 反代、SSE/WS 精确匹配；新增 `scripts/verify/post-deploy-check.sh`（C1–C13，`npm run verify:deploy`）。详见 [上线检查清单](docs/archived/project-reports/frontend-middle-platform-go-live-checklist-2026-11-10.md)。
 - 11-08（二批）：**通知中心 SSE 接入**（api/notification.ts + utils/notification-stream.ts fetch 流式客户端 + NotificationCenter 面板）；E2E 拉起真实环境验证并修复后端三处 SSE 阻断（Sinks autoCancel、网关 notification-stream 路由、NettyConfig 读超时边界，均 apex-scaffold）；`nginx -t` 容器内通过。SSE 请求必须带 `Accept: text/event-stream`。
 - 11-08：前后端路由端点评审落地——修复代理缺口（vite/nginx 补 `/auth/v1|v2`、`/integration/v1`、`/oauth2/consent` POST）与后端网关死角（`/admin-api/v1/message-templates/**`，apex-scaffold）；构建优化：EP 按需引入 + ECharts 按需注册（JS 2988→2236 KB，-25%）、79 处错误提示统一 `showError`。详见 [评审报告](docs/archived/project-reports/frontend-backend-review-2026-11-08.md)。

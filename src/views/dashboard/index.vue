@@ -2,7 +2,7 @@
   工作台（仪表盘）
   ------------------------------------------------------------------
   欢迎信息 + 系统概览指标卡片（来自 /admin-api/v1/monitor/overview 真实数据）
-  + 接口调用趋势（基于网关/接口计数器）。
+  + 接口调用分类统计（基于网关/接口计数器累计值）。
 -->
 <template>
   <div class="dashboard">
@@ -38,9 +38,9 @@
       </el-col>
     </el-row>
 
-    <!-- 访问趋势图 -->
+    <!-- 接口调用分类统计 -->
     <el-card shadow="never" class="chart-card">
-      <template #header>接口调用趋势（进程启动以来，示例窗口）</template>
+      <template #header>接口调用分类统计（累计值，进程启动以来）</template>
       <div ref="chartRef" class="chart" />
     </el-card>
 
@@ -49,12 +49,26 @@
       <template #header>
         <div class="overview-header">
           <span>数据总览（跨域只读聚合）</span>
-          <el-tag v-if="crossOverview" :type="crossOverview.degraded ? 'warning' : 'success'" size="small">
-            {{ crossOverview.degraded ? '部分数据源降级' : '全部可用' }}
-          </el-tag>
+          <div class="overview-meta">
+            <span v-if="crossOverview?.generatedAt" class="meta-text">生成于 {{ crossOverview.generatedAt }}</span>
+            <span v-if="crossOverview?.tenantId" class="meta-text">租户 {{ crossOverview.tenantId }}</span>
+            <el-tag v-if="crossOverview" :type="crossOverview.degraded ? 'warning' : 'success'" size="small">
+              {{ crossOverview.degraded ? '部分数据源降级' : '全部可用' }}
+            </el-tag>
+            <el-button v-if="crossError" size="small" type="primary" plain @click="loadCrossOverview">重试</el-button>
+          </div>
         </div>
       </template>
-      <el-row v-loading="crossLoading" :gutter="16">
+      <el-alert
+        v-if="crossError"
+        type="warning"
+        :closable="false"
+        show-icon
+        title="聚合服务暂不可用"
+        :description="crossError"
+        class="overview-alert"
+      />
+      <el-row v-else v-loading="crossLoading" :gutter="16">
         <el-col v-for="source in overviewSources" :key="source.name" :xs="24" :sm="8">
           <el-card shadow="hover" class="source-card">
             <div class="source-title">
@@ -64,18 +78,20 @@
               </el-tag>
             </div>
             <div v-if="source.result?.status === 'UP'" class="source-body">
-              <div v-for="metric in flattenSource(source.result.data)" :key="metric.key" class="source-metric">
+              <div v-for="metric in flattenSource(source.name, source.result.data)" :key="metric.key" class="source-metric">
                 <span class="metric-key">{{ metric.key }}</span>
                 <span class="metric-value">{{ metric.value }}</span>
               </div>
-              <div v-if="flattenSource(source.result.data).length === 0" class="metric-empty">无统计字段</div>
+              <div v-if="flattenSource(source.name, source.result.data).length === 0" class="metric-empty">无统计字段</div>
             </div>
             <div v-else class="source-error">{{ source.result?.error || '数据源不可达' }}</div>
           </el-card>
         </el-col>
       </el-row>
-      <el-empty v-if="!crossLoading && !crossOverview" description="暂无聚合数据" :image-size="60" />
     </el-card>
+
+    <!-- 我的事项：五域聚合展示与跳转 -->
+    <AgendaPanel />
   </div>
 </template>
 
@@ -83,7 +99,7 @@
 /**
  * 工作台脚本
  * - 指标卡片：来自监控概览接口（真实数据，失败时回退占位符）
- * - 趋势图：ECharts 折线图（真实接口计数器聚合，演示窗口）
+ * - 分类统计图：ECharts 柱状图（接口计数器累计值，非时间序列）
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from '@/utils/echarts'
@@ -92,6 +108,7 @@ import { useUserStore } from '@/stores/user'
 import { getMonitorOverview } from '@/api/monitor'
 import { getCrossDomainOverview } from '@/api/overview'
 import { showError } from '@/utils/request'
+import AgendaPanel from '@/views/dashboard/components/AgendaPanel.vue'
 import type { CrossDomainOverview, MonitorOverview, OverviewSourceResult } from '@/types'
 
 const userStore = useUserStore()
@@ -106,12 +123,47 @@ let chart: echarts.ECharts | null = null
 const crossOverview = ref<CrossDomainOverview | null>(null)
 /** 跨域聚合加载中 */
 const crossLoading = ref(false)
+/** 跨域聚合整体失败文案（null = 未失败） */
+const crossError = ref<string | null>(null)
 
 /** 数据源展示名（后端 sources 键为 file/workflow/integration） */
 const SOURCE_LABELS: Record<string, string> = {
   file: '文件存储',
   workflow: '工作流',
   integration: '集成与设备',
+}
+
+/**
+ * 数据源字段业务名映射（未登记 key 回退原始 key）。
+ * 字段名依据后端聚合门面下游内部端点契约（apex-scaffold）：
+ *   file ← GET /internal/v1/file/stats        → { storageUsageBytes }
+ *   workflow ← GET /internal/v1/workflow/stats → { inProgressInstances }
+ *   integration ← GET /internal/v1/iot/devices/stats → { deviceCount }
+ */
+const FIELD_LABELS: Record<string, Record<string, string>> = {
+  file: { storageUsageBytes: '已用存储空间' },
+  workflow: { inProgressInstances: '进行中流程实例（个）' },
+  integration: { deviceCount: '设备总数（台）' },
+}
+
+/** 数据源字段值格式化器（仅登记需单位换算的字段，其余字段透传原值字符串） */
+const FIELD_FORMATTERS: Record<string, (value: unknown) => string> = {
+  storageUsageBytes: formatBytes,
+}
+
+/** 字节数转可读容量：1024 进制，一位小数并去除尾零；非有限数值回退原值字符串 */
+function formatBytes(value: unknown): string {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return String(value)
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let size = value
+  let unit = units[0]
+  for (const u of units) {
+    unit = u
+    if (size < 1024) break
+    size /= 1024
+  }
+  const text = unit === 'B' ? String(size) : size.toFixed(1).replace(/\.0$/, '')
+  return `${text} ${unit}`
 }
 
 /** 聚合数据源列表（固定顺序，缺失源按降级展示） */
@@ -125,28 +177,43 @@ const overviewSources = computed(() => {
   }))
 })
 
-/**
- * 扁平化数据源的统计字段（仅展示一层标量，嵌套对象折叠为 JSON 文本）。
- * @param data 数据源返回的业务数据
- */
-function flattenSource(data?: Record<string, unknown> | null): Array<{ key: string; value: string }> {
-  if (!data || typeof data !== 'object') return []
-  return Object.entries(data)
-    .filter(([, value]) => value !== null && value !== undefined)
-    .map(([key, value]) => ({
-      key,
-      value: typeof value === 'object' ? JSON.stringify(value) : String(value),
-    }))
+/** 格式化统计值：数组显示项数，对象不展示（仅保留可读标量） */
+function formatMetricValue(value: unknown): string | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) return `${value.length} 项`
+    return null
+  }
+  return String(value)
 }
 
-/** 加载跨域聚合概览（失败不阻塞工作台其他区块） */
+/**
+ * 扁平化数据源的统计字段：字段 key 映射为业务名，仅展示一层可读标量。
+ * @param source 数据源键（file/workflow/integration）
+ * @param data 数据源返回的业务数据
+ */
+function flattenSource(source: string, data?: Record<string, unknown> | null): Array<{ key: string; value: string }> {
+  if (!data || typeof data !== 'object') return []
+  const labels = FIELD_LABELS[source] ?? {}
+  return Object.entries(data)
+    .filter(([, value]) => value !== null && value !== undefined)
+    .map(([key, value]) => {
+      const formatter = FIELD_FORMATTERS[key]
+      const formatted = formatter ? formatter(value) : formatMetricValue(value)
+      return formatted === null ? null : { key: labels[key] ?? key, value: formatted }
+    })
+    .filter((item): item is { key: string; value: string } => item !== null)
+}
+
+/** 加载跨域聚合概览（整体失败记录失败态并可重试，不阻塞工作台其他区块） */
 async function loadCrossOverview(): Promise<void> {
   crossLoading.value = true
+  crossError.value = null
   try {
     crossOverview.value = await getCrossDomainOverview()
   } catch {
-    // 聚合端点不可用时保持空态，不弹错（工作台其余数据仍可用）
     crossOverview.value = null
+    crossError.value = '无法获取跨域聚合数据，请稍后重试'
   } finally {
     crossLoading.value = false
   }
@@ -203,7 +270,7 @@ function percentOf(value: number | string): number {
 }
 
 /**
- * 渲染接口调用趋势折线图（实例复用，仅首次 init）。
+ * 渲染接口调用分类统计柱状图（实例复用，仅首次 init）。
  */
 function renderChart(): void {
   if (!chartRef.value) return
@@ -328,6 +395,22 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.overview-meta {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-text {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.overview-alert {
+  margin-bottom: 8px;
 }
 
 .source-card {

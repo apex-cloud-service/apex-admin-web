@@ -56,6 +56,8 @@
   - [前端中台评审（2026-11-10）](archived/project-reports/frontend-middle-platform-review-2026-11-10.md)
   - [中台整改方案（2026-11-10）](archived/project-reports/frontend-middle-platform-adjustment-plan-2026-11-10.md)
   - [上线检查清单（2026-11-10）](archived/project-reports/frontend-middle-platform-go-live-checklist-2026-11-10.md)
+  - [聚合评审与事项发现方案（2026-11-11）](archived/project-reports/frontend-aggregation-review-2026-11-11.md) - 聚合能力分层评审结论与「我的事项」工作台区块实施方案（已实施）
+  - [聚合能力优化调整方案（2026-11-11）](archived/project-reports/frontend-aggregation-optimization-plan-2026-11-11.md) - P0/P1/P2 各项的详细执行步骤、代码设计、测试与验收标准（P0/P1 已实施，P2-1 另立项）
 - [前后端优化实施方案](archived/frontend-backend-optimization-plan-2026-10-01.md) - 前后端功能匹配评审与分级优化方案
 - [后端待实现功能清单](archived/backend-pending-features-2026-10-01.md) - 后端待实现功能清单与接口契约
 - [后端代码生成器实现](archived/backend-code-generator-implementation-2026-10-01.md) - 代码生成器模块后端完整实现代码

@@ -131,7 +131,8 @@
  * - 按平台+状态查询绑定申请，支持批准/拒绝（PENDING）与解绑（APPROVED）
  * - 审批与解绑均携带 version 乐观锁，冲突时后端拒绝
  */
-import { computed, ref, reactive } from 'vue'
+import { computed, ref, reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
@@ -147,6 +148,7 @@ import { showError } from '@/utils/request'
 
 /** ========== 状态定义 ========== */
 
+const route = useRoute()
 /** 可选平台列表（与后端枚举一致） */
 const platforms: OfficePlatform[] = ['FEISHU', 'DINGTALK', 'WECOM']
 /** 列表请求进行中 */
@@ -359,6 +361,17 @@ const handleUnbind = async (row: OfficeBindingResponse) => {
     }
   }
 }
+
+/** ========== 初始化 ========== */
+
+// 从控制台跳转携带 platform 时预填平台筛选并自动查询
+onMounted(() => {
+  const platform = route.query.platform
+  if (typeof platform === 'string' && platforms.includes(platform as OfficePlatform)) {
+    queryForm.platform = platform as OfficePlatform
+    loadBindings()
+  }
+})
 
 </script>
 
