@@ -1,126 +1,566 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="185" failures="0" errors="0" time="0.984403646">
-    <testsuite name="src/api/auth.test.ts" timestamp="2026-11-05T02:52:02.755Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.058339331">
-        <testcase classname="src/api/auth.test.ts" name="auth api &gt; 登录固定 PASSWORD 类型并透传参数" time="0.00570901">
+<testsuites name="vitest tests" tests="475" failures="0" errors="0" time="4.486089606">
+    <testsuite name="src/api/auth-audit.test.ts" timestamp="2026-11-12T16:57:37.822Z" hostname="localhost" tests="7" failures="0" errors="0" skipped="0" time="0.009114613">
+        <testcase classname="src/api/auth-audit.test.ts" name="认证审计日志 API &gt; 失败与高风险事件查询：tenantId 必填且为裸数组端点" time="0.004399187">
         </testcase>
-        <testcase classname="src/api/auth.test.ts" name="auth api &gt; MFA 二步验证路径与请求体正确" time="0.000902042">
+        <testcase classname="src/api/auth-audit.test.ts" name="认证审计日志 API &gt; 按用户/事件类型/IP 查询：路径参数与 tenantId 查询参数透传" time="0.000662864">
         </testcase>
-        <testcase classname="src/api/auth.test.ts" name="auth api &gt; 我的角色兼容对象数组与字符串数组" time="0.000665049">
+        <testcase classname="src/api/auth-audit.test.ts" name="认证审计日志 API &gt; IP 路径参数经 encodeURIComponent 编码（CIDR 斜杠转 %2F）" time="0.000235647">
         </testcase>
-        <testcase classname="src/api/auth.test.ts" name="auth api &gt; 我的权限兼容对象数组并过滤空码" time="0.000438949">
+        <testcase classname="src/api/auth-audit.test.ts" name="认证审计日志 API &gt; 登录失败计数：userId 进路径、startTime 与 tenantId 走查询参数" time="0.000306625">
         </testcase>
-        <testcase classname="src/api/auth.test.ts" name="auth api &gt; 角色/权限接口返回空值时降级为空数组" time="0.000304568">
+        <testcase classname="src/api/auth-audit.test.ts" name="认证审计日志 API &gt; 时间范围查询与计数走 POST，请求体仅含 tenantId/startTime/endTime 三字段" time="0.00061369">
         </testcase>
-        <testcase classname="src/api/auth.test.ts" name="auth api &gt; 刷新令牌携带 deviceId 与 platform" time="0.000333783">
+        <testcase classname="src/api/auth-audit.test.ts" name="认证审计日志 API &gt; 详情按数字主键查询" time="0.00029628">
         </testcase>
-    </testsuite>
-    <testsuite name="src/api/generator.test.ts" timestamp="2026-11-05T02:52:02.758Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.012435483">
-        <testcase classname="src/api/generator.test.ts" name="生成器基础端点 &gt; 数据源与表结构端点路径正确" time="0.004948121">
-        </testcase>
-        <testcase classname="src/api/generator.test.ts" name="生成向导 API &gt; 模板目录/预检/预览路径与请求体正确" time="0.001795865">
-        </testcase>
-        <testcase classname="src/api/generator.test.ts" name="异步任务 API &gt; 提交任务携带配置 ID 与预览令牌" time="0.000715482">
-        </testcase>
-        <testcase classname="src/api/generator.test.ts" name="异步任务 API &gt; 进度/取消/产物清单路径正确" time="0.001912688">
-        </testcase>
-        <testcase classname="src/api/generator.test.ts" name="异步任务 API &gt; 产物下载走二进制流请求" time="0.000369757">
+        <testcase classname="src/api/auth-audit.test.ts" name="认证审计日志 API &gt; 清理日志为 DELETE 端点且 beforeTime 走参数（管理员危险操作）" time="0.000251291">
         </testcase>
     </testsuite>
-    <testsuite name="src/api/message.test.ts" timestamp="2026-11-05T02:52:02.760Z" hostname="localhost" tests="7" failures="0" errors="0" skipped="0" time="0.009150647">
-        <testcase classname="src/api/message.test.ts" name="站内信 API &gt; sendMessage 以 recipientIds 数组请求体发送" time="0.004035915">
+    <testsuite name="src/api/auth.test.ts" timestamp="2026-11-12T16:57:37.824Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.008725744">
+        <testcase classname="src/api/auth.test.ts" name="auth api &gt; 登录固定 PASSWORD 类型并透传参数" time="0.004224827">
         </testcase>
-        <testcase classname="src/api/message.test.ts" name="站内信 API &gt; inbox/sent 使用 pageNum/pageSize 查询参数" time="0.000832814">
+        <testcase classname="src/api/auth.test.ts" name="auth api &gt; MFA 二步验证路径与请求体正确" time="0.00050451">
         </testcase>
-        <testcase classname="src/api/message.test.ts" name="站内信 API &gt; 已读/全部已读/未读数路径正确" time="0.000461444">
+        <testcase classname="src/api/auth.test.ts" name="auth api &gt; 我的角色兼容对象数组与字符串数组" time="0.000561907">
         </testcase>
-        <testcase classname="src/api/message.test.ts" name="站内信 API &gt; ws-ticket 走 POST 且无请求体" time="0.000266019">
+        <testcase classname="src/api/auth.test.ts" name="auth api &gt; 我的权限兼容对象数组并过滤空码" time="0.000410584">
         </testcase>
-        <testcase classname="src/api/message.test.ts" name="站内信 API &gt; 投递记录按消息 ID 查询" time="0.000248099">
+        <testcase classname="src/api/auth.test.ts" name="auth api &gt; 角色/权限接口返回空值时降级为空数组" time="0.00029408">
         </testcase>
-        <testcase classname="src/api/message.test.ts" name="消息模板 API &gt; 列表/创建路径正确" time="0.000416737">
-        </testcase>
-        <testcase classname="src/api/message.test.ts" name="消息模板 API &gt; 更新/删除使用 templateId 路径参数" time="0.000330122">
+        <testcase classname="src/api/auth.test.ts" name="auth api &gt; 刷新令牌携带 deviceId 与 platform" time="0.000317779">
         </testcase>
     </testsuite>
-    <testsuite name="src/api/office-platform.test.ts" timestamp="2026-11-05T02:52:02.766Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.01343233">
-        <testcase classname="src/api/office-platform.test.ts" name="updateApp &gt; sends the optimistic-lock version in the request body" time="0.006999578">
+    <testsuite name="src/api/chart.test.ts" timestamp="2026-11-12T16:57:37.826Z" hostname="localhost" tests="3" failures="0" errors="0" skipped="0" time="0.0071694">
+        <testcase classname="src/api/chart.test.ts" name="图表管理 API &gt; 列表分页使用 page/size 并透传关键词/类型/分类/状态筛选" time="0.003897869">
         </testcase>
-        <testcase classname="src/api/office-platform.test.ts" name="unbindBinding &gt; sends DELETE with the binding version as a query parameter" time="0.000849755">
+        <testcase classname="src/api/chart.test.ts" name="图表管理 API &gt; 详情与数据查询为两个不同端点（/data 返回 ECharts 数据）" time="0.00051266">
         </testcase>
-        <testcase classname="src/api/office-platform.test.ts" name="listBindingsPage &gt; sends GET with platform, status and pagination as query params" time="0.000435147">
-        </testcase>
-        <testcase classname="src/api/office-platform.test.ts" name="listBindingsPage &gt; omits status when not provided" time="0.002376253">
+        <testcase classname="src/api/chart.test.ts" name="图表管理 API &gt; 创建、更新与删除路径与请求体正确" time="0.000468131">
         </testcase>
     </testsuite>
-    <testsuite name="src/api/platform.test.ts" timestamp="2026-11-05T02:52:02.768Z" hostname="localhost" tests="22" failures="0" errors="0" skipped="0" time="0.071192285">
-        <testcase classname="src/api/platform.test.ts" name="租户套餐 API &gt; 列表路径正确" time="0.004035263">
+    <testsuite name="src/api/database.test.ts" timestamp="2026-11-12T16:57:37.826Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.007947488">
+        <testcase classname="src/api/database.test.ts" name="数据库配置 API &gt; 连接测试与部署配置生成以 POST 提交完整配置（含密码仅上行）" time="0.003938502">
         </testcase>
-        <testcase classname="src/api/platform.test.ts" name="租户套餐 API &gt; 更新走无路径参数的 PUT（后端按请求体 packageCode 定位）" time="0.000510785">
+        <testcase classname="src/api/database.test.ts" name="数据库配置 API &gt; 当前数据库信息为只读 GET" time="0.000384883">
         </testcase>
-        <testcase classname="src/api/platform.test.ts" name="租户套餐 API &gt; 创建以 POST 提交完整配置" time="0.000286668">
+        <testcase classname="src/api/database.test.ts" name="数据库配置 API &gt; 数据源分页使用 pageNum/pageSize" time="0.000483185">
         </testcase>
-        <testcase classname="src/api/platform.test.ts" name="能力目录与计量 API &gt; 目录与订阅端点分离" time="0.000422277">
+        <testcase classname="src/api/database.test.ts" name="数据库配置 API &gt; 数据源创建走 POST、更新走 PUT /{id}（密码随请求体上行）" time="0.0004023">
         </testcase>
-        <testcase classname="src/api/platform.test.ts" name="能力目录与计量 API &gt; 用量查询透传 capability/tenantId/时间区间与分页" time="0.040918419">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="开放应用 API &gt; 列表使用 page/size（page 从 0 开始）" time="0.000430122">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="开放应用 API &gt; 创建、更新与重置密钥路径正确" time="0.001233338">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="开放应用 API &gt; scope 目录走 system 的 /api/v1/open-apps/scopes（与创建校验同源注册表）" time="0.000335638">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="集成中心 API &gt; 连接器分页使用 pageNum/pageSize 与类型过滤" time="0.000666765">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="集成中心 API &gt; 连接器创建/删除路径与请求体正确" time="0.004731888">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="集成中心 API &gt; 凭据列表为裸数组、注册与轮换按契约提交" time="0.00057856">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="物联网 API &gt; 设备分页与遥测分页参数正确" time="0.001078481">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="物联网 API &gt; 注册设备提交标识与标签" time="0.000591421">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="物联网 API &gt; 规则启停把 enabled 序列化为字符串" time="0.000289496">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="物联网 API &gt; 规则分页使用 keyword/enabled 与 pageNum/pageSize" time="0.000257416">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="物联网 API &gt; 设备影子与命令端点路径正确" time="0.000423487">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="统一通知 API &gt; 模板分页使用 pageNum/pageSize" time="0.001353902">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="统一通知 API &gt; 模板创建/更新与留痕查询路径正确" time="0.000479624">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="在线会话 API &gt; 在线列表为裸数组端点" time="0.000254583">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="在线会话 API &gt; 用户会话查询与批量下线带 userId" time="0.000350069">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="在线会话 API &gt; 单会话终止使用会话唯一标识（非数字主键）" time="0.000250333">
-        </testcase>
-        <testcase classname="src/api/platform.test.ts" name="跨域聚合概览 API &gt; 走业务端 /api/v2/overview（非内部端点）" time="0.000209937">
+        <testcase classname="src/api/database.test.ts" name="数据库配置 API &gt; 数据源删除与连接池指标按数字 ID 拼路径" time="0.00034542">
         </testcase>
     </testsuite>
-    <testsuite name="src/api/workflow.test.ts" timestamp="2026-11-05T02:52:02.774Z" hostname="localhost" tests="1" failures="0" errors="0" skipped="0" time="0.009123777">
-        <testcase classname="src/api/workflow.test.ts" name="getWorkflowInstanceDetail &gt; requests the registered instance detail route" time="0.006318806">
+    <testsuite name="src/api/document.test.ts" timestamp="2026-11-12T16:57:37.827Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.014469623">
+        <testcase classname="src/api/document.test.ts" name="文档管理 API &gt; 列表分页使用 page/size 并透传关键词/类型/分类/状态/日期范围" time="0.004925531">
+        </testcase>
+        <testcase classname="src/api/document.test.ts" name="文档管理 API &gt; 详情/创建/更新/删除路径与请求体正确" time="0.000844203">
+        </testcase>
+        <testcase classname="src/api/document.test.ts" name="文档管理 API &gt; 状态操作为 PUT /{id}/status 且 status 数字放请求体" time="0.000533882">
+        </testcase>
+        <testcase classname="src/api/document.test.ts" name="文档管理 API &gt; 下载走独立 GET /{id}/download 端点" time="0.005091153">
         </testcase>
     </testsuite>
-    <testsuite name="src/components/__tests__/Pagination.spec.ts" timestamp="2026-11-05T02:52:02.774Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.059338498">
-        <testcase classname="src/components/__tests__/Pagination.spec.ts" name="Pagination 组件 &gt; 默认每页条数取 settings 中的 DEFAULT_PAGE_SIZE" time="0.027945934">
+    <testsuite name="src/api/file-share.test.ts" timestamp="2026-11-12T16:57:37.828Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.034669617">
+        <testcase classname="src/api/file-share.test.ts" name="文件分享 API &gt; 分享列表按文件 ID 查询（仅所有者）并透传状态与 page/size" time="0.029648785">
         </testcase>
-        <testcase classname="src/components/__tests__/Pagination.spec.ts" name="Pagination 组件 &gt; 页码变化抛出 change(page, size)" time="0.008660983">
+        <testcase classname="src/api/file-share.test.ts" name="文件分享 API &gt; 创建分享携带有效期秒数（token 仅在创建响应返回一次）" time="0.000643345">
         </testcase>
-        <testcase classname="src/components/__tests__/Pagination.spec.ts" name="Pagination 组件 &gt; 每页条数变化时重置到第一页" time="0.00273638">
+        <testcase classname="src/api/file-share.test.ts" name="文件分享 API &gt; 创建分享未传有效期时提交空对象（由服务端按配置收敛）" time="0.000586429">
         </testcase>
-        <testcase classname="src/components/__tests__/Pagination.spec.ts" name="Pagination 组件 &gt; total 变小导致当前页越界时回退到最后一页" time="0.016756865">
+        <testcase classname="src/api/file-share.test.ts" name="文件分享 API &gt; 撤销分享按 shareId 删除且幂等" time="0.000577394">
+        </testcase>
+        <testcase classname="src/api/file-share.test.ts" name="文件分享 API &gt; exchange 为匿名 POST，凭 token 换取元信息" time="0.000310534">
+        </testcase>
+        <testcase classname="src/api/file-share.test.ts" name="文件分享 API &gt; download 为匿名下载，走 request 原始配置并指定 responseType: blob" time="0.000560882">
         </testcase>
     </testsuite>
-    <testsuite name="src/composables/__tests__/useCrud.spec.ts" timestamp="2026-11-05T02:52:02.776Z" hostname="localhost" tests="12" failures="0" errors="0" skipped="0" time="0.042772395">
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 查询按默认分页参数调用并回填数据" time="0.01750257">
+    <testsuite name="src/api/file.test.ts" timestamp="2026-11-12T16:57:37.829Z" hostname="localhost" tests="7" failures="0" errors="0" skipped="0" time="0.056242435">
+        <testcase classname="src/api/file.test.ts" name="通用文件上传/删除 API &gt; 上传以 FormData 携带文件且 sex 序列化为字符串（经统一请求层）" time="0.005602719">
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 额外查询参数覆盖默认分页参数" time="0.000921363">
+        <testcase classname="src/api/file.test.ts" name="通用文件上传/删除 API &gt; 删除文件按桶名与对象名以 query 参数提交" time="0.00070472">
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 查询失败时结束 loading 并向外抛出" time="0.009356687">
+        <testcase classname="src/api/file.test.ts" name="分片上传 API &gt; 初始化提交文件名/大小/分片大小/分片总数" time="0.000377943">
+        </testcase>
+        <testcase classname="src/api/file.test.ts" name="分片上传 API &gt; 分片上传请求体为原始字节流、定位参数走 query 并带 octet-stream 头" time="0.000556931">
+        </testcase>
+        <testcase classname="src/api/file.test.ts" name="分片上传 API &gt; 分片可选 md5 追加在 query 末尾" time="0.000357594">
+        </testcase>
+        <testcase classname="src/api/file.test.ts" name="分片上传 API &gt; 合并分片提交 fileId 与缺省沿用初始化登记的 fileName" time="0.045801856">
+        </testcase>
+        <testcase classname="src/api/file.test.ts" name="分片上传 API &gt; 分片状态查询为 GET /{fileId}（断点续传读已上传分片列表）" time="0.000275085">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/generator.test.ts" timestamp="2026-11-12T16:57:37.829Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.008573894">
+        <testcase classname="src/api/generator.test.ts" name="生成器基础端点 &gt; 数据源与表结构端点路径正确" time="0.004465217">
+        </testcase>
+        <testcase classname="src/api/generator.test.ts" name="生成向导 API &gt; 模板目录/预检/预览路径与请求体正确" time="0.000655396">
+        </testcase>
+        <testcase classname="src/api/generator.test.ts" name="异步任务 API &gt; 提交任务携带配置 ID 与预览令牌" time="0.00034981">
+        </testcase>
+        <testcase classname="src/api/generator.test.ts" name="异步任务 API &gt; 进度/取消/产物清单路径正确" time="0.000426107">
+        </testcase>
+        <testcase classname="src/api/generator.test.ts" name="异步任务 API &gt; 产物下载走二进制流请求" time="0.000283592">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/ip-access-control.test.ts" timestamp="2026-11-12T16:57:37.830Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.011013823">
+        <testcase classname="src/api/ip-access-control.test.ts" name="IP 访问控制 API &gt; 白/黑名单列表为裸数组端点，路径按规则类型切换" time="0.005138219">
+        </testcase>
+        <testcase classname="src/api/ip-access-control.test.ts" name="IP 访问控制 API &gt; 新增规则：参数拼进 query string 而非请求体（黑名单含有效期分钟数）" time="0.001585362">
+        </testcase>
+        <testcase classname="src/api/ip-access-control.test.ts" name="IP 访问控制 API &gt; 新增规则省略可选参数时 query 仅含 ipAddress（不带空参数）" time="0.000282134">
+        </testcase>
+        <testcase classname="src/api/ip-access-control.test.ts" name="IP 访问控制 API &gt; 新增规则 CIDR 地址经 URLSearchParams 编码（斜杠转 %2F）" time="0.000229719">
+        </testcase>
+        <testcase classname="src/api/ip-access-control.test.ts" name="IP 访问控制 API &gt; 删除与启停按数字 ruleId，enable/disable 路径切换且无请求体" time="0.00072299">
+        </testcase>
+        <testcase classname="src/api/ip-access-control.test.ts" name="IP 访问控制 API &gt; 清理过期规则与 IP 放行检查端点正确，检查 IP 经 encodeURIComponent 拼入 query" time="0.000461145">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/log.test.ts" timestamp="2026-11-12T16:57:37.831Z" hostname="localhost" tests="3" failures="0" errors="0" skipped="0" time="0.007534238">
+        <testcase classname="src/api/log.test.ts" name="日志查询 API &gt; 运行时日志查询：level/logger/message 与 limit 上限透传" time="0.004340545">
+        </testcase>
+        <testcase classname="src/api/log.test.ts" name="日志查询 API &gt; 运行时日志计数仅消费 startTime/endTime/level（可省略 endTime）" time="0.000526419">
+        </testcase>
+        <testcase classname="src/api/log.test.ts" name="日志查询 API &gt; 业务日志分页走 page/size（非 pageNum/pageSize），logType 筛选透传" time="0.000348862">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/masking.test.ts" timestamp="2026-11-12T16:57:37.832Z" hostname="localhost" tests="3" failures="0" errors="0" skipped="0" time="0.008263071">
+        <testcase classname="src/api/masking.test.ts" name="数据脱敏 API &gt; 规则查询为只读 GET（启动配置，无 CRUD 端点）" time="0.004405092">
+        </testcase>
+        <testcase classname="src/api/masking.test.ts" name="数据脱敏 API &gt; 批量试算以 { version, documents } 提交且透传文档数组" time="0.000901243">
+        </testcase>
+        <testcase classname="src/api/masking.test.ts" name="数据脱敏 API &gt; 边界文档数（1 个与 100 个）直接透传，前端不做本地裁剪或抛错" time="0.000467966">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/meeting-room.test.ts" timestamp="2026-11-12T16:57:37.833Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.013890199">
+        <testcase classname="src/api/meeting-room.test.ts" name="办公会议室 API &gt; 分页查询透传 pageNum/pageSize 与状态/关键词" time="0.004057467">
+        </testcase>
+        <testcase classname="src/api/meeting-room.test.ts" name="办公会议室 API &gt; 可用会议室按时间段查询（startTime/endTime 走 query）" time="0.0061533">
+        </testcase>
+        <testcase classname="src/api/meeting-room.test.ts" name="办公会议室 API &gt; 创建与局部更新提交会议室配置（equipment 为数组上行）" time="0.000448736">
+        </testcase>
+        <testcase classname="src/api/meeting-room.test.ts" name="办公会议室 API &gt; 删除走 DELETE /{roomId}" time="0.000579647">
+        </testcase>
+        <testcase classname="src/api/meeting-room.test.ts" name="办公会议室 API &gt; 预订提交到 {roomId}/bookings（startTime/endTime 必填）" time="0.000309176">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/message.test.ts" timestamp="2026-11-12T16:57:37.833Z" hostname="localhost" tests="7" failures="0" errors="0" skipped="0" time="0.009109557">
+        <testcase classname="src/api/message.test.ts" name="站内信 API &gt; sendMessage 以 recipientIds 数组请求体发送" time="0.003919745">
+        </testcase>
+        <testcase classname="src/api/message.test.ts" name="站内信 API &gt; inbox/sent 使用 pageNum/pageSize 查询参数" time="0.000888359">
+        </testcase>
+        <testcase classname="src/api/message.test.ts" name="站内信 API &gt; 已读/全部已读/未读数路径正确" time="0.00048193">
+        </testcase>
+        <testcase classname="src/api/message.test.ts" name="站内信 API &gt; ws-ticket 走 POST 且无请求体" time="0.000268469">
+        </testcase>
+        <testcase classname="src/api/message.test.ts" name="站内信 API &gt; 投递记录按消息 ID 查询" time="0.000253198">
+        </testcase>
+        <testcase classname="src/api/message.test.ts" name="消息模板 API &gt; 列表/创建路径正确" time="0.000417249">
+        </testcase>
+        <testcase classname="src/api/message.test.ts" name="消息模板 API &gt; 更新/删除使用 templateId 路径参数" time="0.000323379">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/mfa.test.ts" timestamp="2026-11-12T16:57:37.834Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.027381953">
+        <testcase classname="src/api/mfa.test.ts" name="多因素认证 API &gt; TOTP 启用与激活：动态码经 encodeURIComponent 拼入 query（非请求体）" time="0.004455511">
+        </testcase>
+        <testcase classname="src/api/mfa.test.ts" name="多因素认证 API &gt; 短信与邮箱 MFA：联系方式走 query string 且编码 + 与 @" time="0.00050786">
+        </testcase>
+        <testcase classname="src/api/mfa.test.ts" name="多因素认证 API &gt; 关闭 MFA 为 DELETE /api/mfa/{type}，类型为大写枚举" time="0.00032597">
+        </testcase>
+        <testcase classname="src/api/mfa.test.ts" name="多因素认证 API &gt; 我的 MFA 配置为裸数组端点（/api/mfa/configs，无 Result 包装）并透传返回值" time="0.001612022">
+        </testcase>
+        <testcase classname="src/api/mfa.test.ts" name="多因素认证 API &gt; 备用码重新生成端点正确" time="0.000371128">
+        </testcase>
+        <testcase classname="src/api/mfa.test.ts" name="多因素认证 API &gt; 类型与状态映射包含后端全部枚举键" time="0.017042529">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/monitor.test.ts" timestamp="2026-11-12T16:57:37.835Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.011480544">
+        <testcase classname="src/api/monitor.test.ts" name="监控日志与在线用户 API &gt; 登录日志按 username 模糊 + status 精确分页查询" time="0.005898069">
+        </testcase>
+        <testcase classname="src/api/monitor.test.ts" name="监控日志与在线用户 API &gt; 审计日志按 module/operatorName 模糊分页查询" time="0.000445539">
+        </testcase>
+        <testcase classname="src/api/monitor.test.ts" name="监控日志与在线用户 API &gt; 在线用户分页查询透传 username 筛选" time="0.000260224">
+        </testcase>
+        <testcase classname="src/api/monitor.test.ts" name="监控日志与在线用户 API &gt; API 调用日志透传 serviceName/status/traceId/path 筛选" time="0.000510739">
+        </testcase>
+        <testcase classname="src/api/monitor.test.ts" name="监控大盘 API &gt; 概览/系统/中间件/治理/业务五个端点均为无参只读 GET" time="0.001521801">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/notification.test.ts" timestamp="2026-11-12T16:57:37.836Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.007195244">
+        <testcase classname="src/api/notification.test.ts" name="站内通知 API &gt; listNotifications 以 page/size/unreadOnly 查询收件箱" time="0.004044798">
+        </testcase>
+        <testcase classname="src/api/notification.test.ts" name="站内通知 API &gt; getNotificationUnreadCount 请求未读数端点" time="0.000411358">
+        </testcase>
+        <testcase classname="src/api/notification.test.ts" name="站内通知 API &gt; markNotificationRead 以数字主键请求已读端点" time="0.00024611">
+        </testcase>
+        <testcase classname="src/api/notification.test.ts" name="站内通知 API &gt; markAllNotificationsRead 请求全部已读端点" time="0.000257566">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/office-approval.test.ts" timestamp="2026-11-12T16:57:37.837Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.008091291">
+        <testcase classname="src/api/office-approval.test.ts" name="办公平台审批 API &gt; 发起审批以 POST 提交完整请求体" time="0.003865709">
+        </testcase>
+        <testcase classname="src/api/office-approval.test.ts" name="办公平台审批 API &gt; 详情与撤销按 processInstanceId 拼路径（非数字主键）" time="0.000488734">
+        </testcase>
+        <testcase classname="src/api/office-approval.test.ts" name="办公平台审批 API &gt; 执行审批提交 approverId + action（approverId 非空串必填契约）" time="0.000621316">
+        </testcase>
+        <testcase classname="src/api/office-approval.test.ts" name="办公平台审批 API &gt; 待审批列表携带 approverId 与 pageNum/pageSize" time="0.000336189">
+        </testcase>
+        <testcase classname="src/api/office-approval.test.ts" name="办公平台审批 API &gt; 我发起的列表声明参数为 ApprovalListQuery，透传分页与可选平台" time="0.000303398">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/office-calendar.test.ts" timestamp="2026-11-12T16:57:37.837Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.007781242">
+        <testcase classname="src/api/office-calendar.test.ts" name="办公平台日历事件 API &gt; 创建事件以 POST 提交完整请求体" time="0.004022608">
+        </testcase>
+        <testcase classname="src/api/office-calendar.test.ts" name="办公平台日历事件 API &gt; 详情与删除按字符串 eventId 拼路径" time="0.000497229">
+        </testcase>
+        <testcase classname="src/api/office-calendar.test.ts" name="办公平台日历事件 API &gt; 更新事件为 PUT 局部字段" time="0.000503661">
+        </testcase>
+        <testcase classname="src/api/office-calendar.test.ts" name="办公平台日历事件 API &gt; 列表查询透传筛选条件与 pageNum/pageSize" time="0.000363772">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/office-document.test.ts" timestamp="2026-11-12T16:57:37.838Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.00815546">
+        <testcase classname="src/api/office-document.test.ts" name="办公平台文档 API &gt; 创建文档必须携带 ownerId/ownerName 且 platform 为小写" time="0.004124856">
+        </testcase>
+        <testcase classname="src/api/office-document.test.ts" name="办公平台文档 API &gt; 详情与删除按文档 ID 拼路径（后端无更新端点）" time="0.000499895">
+        </testcase>
+        <testcase classname="src/api/office-document.test.ts" name="办公平台文档 API &gt; 复制文档 targetFolderId 走 query 参数" time="0.000287503">
+        </testcase>
+        <testcase classname="src/api/office-document.test.ts" name="办公平台文档 API &gt; 复制文档 targetFolderId 经过 encodeURIComponent（含特殊字符）" time="0.000230135">
+        </testcase>
+        <testcase classname="src/api/office-document.test.ts" name="办公平台文档 API &gt; 复制文档未传 targetFolderId 时 query 为空串占位" time="0.000207036">
+        </testcase>
+        <testcase classname="src/api/office-document.test.ts" name="办公平台文档 API &gt; 我的文档为裸数组查询，按 ownerId 过滤" time="0.000460827">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/office-platform.test.ts" timestamp="2026-11-12T16:57:37.839Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.00882655">
+        <testcase classname="src/api/office-platform.test.ts" name="updateApp &gt; sends the optimistic-lock version in the request body" time="0.004738893">
+        </testcase>
+        <testcase classname="src/api/office-platform.test.ts" name="unbindBinding &gt; sends DELETE with the binding version as a query parameter" time="0.000915601">
+        </testcase>
+        <testcase classname="src/api/office-platform.test.ts" name="listBindingsPage &gt; sends GET with platform, status and pagination as query params" time="0.000457581">
+        </testcase>
+        <testcase classname="src/api/office-platform.test.ts" name="listBindingsPage &gt; omits status when not provided" time="0.000268411">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/office-sync-wizard.test.ts" timestamp="2026-11-12T16:57:37.839Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.008023533">
+        <testcase classname="src/api/office-sync-wizard.test.ts" name="办公组织同步向导 API &gt; 预检以 POST 提交 { platform }" time="0.004279104">
+        </testcase>
+        <testcase classname="src/api/office-sync-wizard.test.ts" name="办公组织同步向导 API &gt; 预览以 POST 提交 { platform, syncType }" time="0.000475948">
+        </testcase>
+        <testcase classname="src/api/office-sync-wizard.test.ts" name="办公组织同步向导 API &gt; 执行同步以 POST 提交完整 OrgSyncRequest" time="0.000291753">
+        </testcase>
+        <testcase classname="src/api/office-sync-wizard.test.ts" name="办公组织同步向导 API &gt; 重试按数字 taskId 拼路径且无请求体" time="0.000500757">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/operations.test.ts" timestamp="2026-11-12T16:57:37.840Z" hostname="localhost" tests="9" failures="0" errors="0" skipped="0" time="0.036783196">
+        <testcase classname="src/api/operations.test.ts" name="运维健康 API &gt; 健康报告与租户汇总为只读 GET 子路径" time="0.004583861">
+        </testcase>
+        <testcase classname="src/api/operations.test.ts" name="运维健康 API &gt; 现场采集快照为 POST 且无请求体" time="0.000407616">
+        </testcase>
+        <testcase classname="src/api/operations.test.ts" name="运维健康 API &gt; 快照分页使用 page/size（非 pageNum/pageSize 口径）" time="0.000524228">
+        </testcase>
+        <testcase classname="src/api/operations.test.ts" name="运维健康 API &gt; 健康趋势透传 from/to/limit，缺省为空对象" time="0.000369372">
+        </testcase>
+        <testcase classname="src/api/operations.test.ts" name="运维健康 API &gt; 异步导出任务以 POST 提交，筛选条件拼入 query 串" time="0.000383018">
+        </testcase>
+        <testcase classname="src/api/operations.test.ts" name="运维健康 API &gt; 异步导出任务无筛选条件时 query 串为空（保留 ? 分隔符）" time="0.000207383">
+        </testcase>
+        <testcase classname="src/api/operations.test.ts" name="运维健康 API &gt; 导出任务状态查询按数字 ID 拼路径" time="0.000255017">
+        </testcase>
+        <testcase classname="src/api/operations.test.ts" name="运维健康 API &gt; 下载导出文件走通用 request 且 responseType=blob" time="0.000285267">
+        </testcase>
+        <testcase classname="src/api/operations.test.ts" name="运维健康 API &gt; 同步导出走通用 request，筛选条件作 params 且 responseType=blob" time="0.000395801">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/password-recovery.test.ts" timestamp="2026-11-12T16:57:37.841Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.008728204">
+        <testcase classname="src/api/password-recovery.test.ts" name="密码找回 API &gt; 第一步发起找回：POST /requests 携带 channel 与 contact（EMAIL/SMS 两种通道）" time="0.004208871">
+        </testcase>
+        <testcase classname="src/api/password-recovery.test.ts" name="密码找回 API &gt; 第二步校验验证码：POST /verifications 携带 recoveryId 与 code（换一次性 confirmToken）" time="0.000422277">
+        </testcase>
+        <testcase classname="src/api/password-recovery.test.ts" name="密码找回 API &gt; 第三步确认重设：POST /confirmations 携带 recoveryId/confirmToken/newPassword 三字段" time="0.00030188">
+        </testcase>
+        <testcase classname="src/api/password-recovery.test.ts" name="密码找回 API &gt; 确认结果透传 sessionRevocation 状态（PENDING 表示会话撤销未完成）" time="0.001483594">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/platform.test.ts" timestamp="2026-11-12T16:57:37.842Z" hostname="localhost" tests="22" failures="0" errors="0" skipped="0" time="0.015558653">
+        <testcase classname="src/api/platform.test.ts" name="租户套餐 API &gt; 列表路径正确" time="0.003958138">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="租户套餐 API &gt; 更新走无路径参数的 PUT（后端按请求体 packageCode 定位）" time="0.000564026">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="租户套餐 API &gt; 创建以 POST 提交完整配置" time="0.000285274">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="能力目录与计量 API &gt; 目录与订阅端点分离" time="0.000403791">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="能力目录与计量 API &gt; 用量查询透传 capability/tenantId/时间区间与分页" time="0.000522567">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="开放应用 API &gt; 列表使用 page/size（page 从 0 开始）" time="0.000309548">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="开放应用 API &gt; 创建、更新与重置密钥路径正确" time="0.001263096">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="开放应用 API &gt; scope 目录走 system 的 /api/v1/open-apps/scopes（与创建校验同源注册表）" time="0.000286302">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="集成中心 API &gt; 连接器分页使用 pageNum/pageSize 与类型过滤" time="0.000507149">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="集成中心 API &gt; 连接器创建/删除路径与请求体正确" time="0.000365965">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="集成中心 API &gt; 凭据列表为裸数组、注册与轮换按契约提交" time="0.000445569">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="物联网 API &gt; 设备分页与遥测分页参数正确" time="0.000387631">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="物联网 API &gt; 注册设备提交标识与标签" time="0.000293552">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="物联网 API &gt; 规则启停把 enabled 序列化为字符串" time="0.00026417">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="物联网 API &gt; 规则分页使用 keyword/enabled 与 pageNum/pageSize" time="0.000268028">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="物联网 API &gt; 设备影子与命令端点路径正确" time="0.000427355">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="统一通知 API &gt; 模板分页使用 pageNum/pageSize" time="0.000273187">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="统一通知 API &gt; 模板创建/更新与留痕查询路径正确" time="0.000384703">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="在线会话 API &gt; 在线列表为裸数组端点" time="0.000215426">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="在线会话 API &gt; 用户会话查询与批量下线带 userId" time="0.000300624">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="在线会话 API &gt; 单会话终止使用会话唯一标识（非数字主键）" time="0.000188848">
+        </testcase>
+        <testcase classname="src/api/platform.test.ts" name="跨域聚合概览 API &gt; 走业务端 /api/v2/overview（非内部端点）" time="0.000201">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/search.test.ts" timestamp="2026-11-12T16:57:37.845Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.007551081">
+        <testcase classname="src/api/search.test.ts" name="全文搜索 API &gt; 搜索透传关键词并串行化类型数组与分页参数" time="0.004269716">
+        </testcase>
+        <testcase classname="src/api/search.test.ts" name="全文搜索 API &gt; 未传类型与分页时缺省搜全部类型且 page/size 回落 1/20" time="0.000423747">
+        </testcase>
+        <testcase classname="src/api/search.test.ts" name="全文搜索 API &gt; 重建索引携带指定资源类型" time="0.000299314">
+        </testcase>
+        <testcase classname="src/api/search.test.ts" name="全文搜索 API &gt; 重建索引缺省类型时请求体为 undefined（重建全部）" time="0.000216169">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/sso.test.ts" timestamp="2026-11-12T16:57:37.845Z" hostname="localhost" tests="7" failures="0" errors="0" skipped="0" time="0.032299693">
+        <testcase classname="src/api/sso.test.ts" name="SSO 配置管理 API &gt; 提供商列表为裸数组端点，无参调用透传空对象筛选" time="0.004355399">
+        </testcase>
+        <testcase classname="src/api/sso.test.ts" name="SSO 配置管理 API &gt; 提供商 CRUD：创建 POST、更新为全量覆盖 PUT（携带完整字段）、删除按数字主键" time="0.000623072">
+        </testcase>
+        <testcase classname="src/api/sso.test.ts" name="SSO 配置管理 API &gt; 连接测试显式携带空对象请求体，元数据按 GET 子路径获取" time="0.000509467">
+        </testcase>
+        <testcase classname="src/api/sso.test.ts" name="SSO 配置管理 API &gt; 单会话撤销按数字主键 POST /sessions/{id}/revoke（非 DELETE）且无请求体" time="0.001529028">
+        </testcase>
+        <testcase classname="src/api/sso.test.ts" name="SSO 配置管理 API &gt; 批量终止为前端循环：逐个调用单条撤销端点（无批量接口）" time="0.000482012">
+        </testcase>
+        <testcase classname="src/api/sso.test.ts" name="SSO 配置管理 API &gt; 会话与审计日志列表为裸数组端点，分页 page/size 与筛选透传" time="0.022136437">
+        </testcase>
+        <testcase classname="src/api/sso.test.ts" name="SSO 配置管理 API &gt; 统计端点位于 /sessions/statistics（与会话列表路径区分）" time="0.00026358">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/system.test.ts" timestamp="2026-11-12T16:57:37.846Z" hostname="localhost" tests="11" failures="0" errors="0" skipped="0" time="0.012699188">
+        <testcase classname="src/api/system.test.ts" name="菜单管理 API &gt; 菜单树查询与创建路径正确" time="0.004060547">
+        </testcase>
+        <testcase classname="src/api/system.test.ts" name="菜单管理 API &gt; 菜单更新/删除/启停路径正确且启停提交 enabled 布尔" time="0.000744643">
+        </testcase>
+        <testcase classname="src/api/system.test.ts" name="部门管理 API &gt; 部门树查询与创建（字段为 name/orderNum，非 deptName）" time="0.000375264">
+        </testcase>
+        <testcase classname="src/api/system.test.ts" name="部门管理 API &gt; 部门更新与删除路径正确" time="0.000338593">
+        </testcase>
+        <testcase classname="src/api/system.test.ts" name="字典管理 API &gt; 字典类型列表（全量数组）与创建/更新/删除/启停" time="0.000583589">
+        </testcase>
+        <testcase classname="src/api/system.test.ts" name="字典管理 API &gt; 字典数据按 dictType 查询且创建/更新/删除/启停路径正确" time="0.000614875">
+        </testcase>
+        <testcase classname="src/api/system.test.ts" name="参数配置 API &gt; 列表为全量数组（无分页参数）且 CRUD/启停路径正确" time="0.000778692">
+        </testcase>
+        <testcase classname="src/api/system.test.ts" name="定时任务 API &gt; 任务列表为全量数组（无分页参数）" time="0.000361517">
+        </testcase>
+        <testcase classname="src/api/system.test.ts" name="定时任务 API &gt; 任务分页查询走 /jobs/page 且使用 pageNum/pageSize" time="0.000299413">
+        </testcase>
+        <testcase classname="src/api/system.test.ts" name="定时任务 API &gt; 任务创建/更新/删除/启停路径与请求体正确" time="0.000478453">
+        </testcase>
+        <testcase classname="src/api/system.test.ts" name="定时任务 API &gt; 手动触发走 /run，执行日志 limit 缺省 20 且可自定义" time="0.000361941">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/tenant.test.ts" timestamp="2026-11-12T16:57:37.848Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.009202045">
+        <testcase classname="src/api/tenant.test.ts" name="租户管理 API &gt; 分页必须使用 pageNum/pageSize（后端不识别 page/size）" time="0.004493489">
+        </testcase>
+        <testcase classname="src/api/tenant.test.ts" name="租户管理 API &gt; 创建租户以 POST 提交完整载荷（租户编码创建后不可变更）" time="0.000470321">
+        </testcase>
+        <testcase classname="src/api/tenant.test.ts" name="租户管理 API &gt; 生命周期动作只接受小写枚举并按 {id}/actions 提交" time="0.000680727">
+        </testcase>
+        <testcase classname="src/api/tenant.test.ts" name="租户管理 API &gt; 生命周期动作透传 expectedVersion 乐观锁" time="0.000270106">
+        </testcase>
+        <testcase classname="src/api/tenant.test.ts" name="租户管理 API &gt; 配额调整走 PUT /{id}/quota 且 null 表示不限制" time="0.000316193">
+        </testcase>
+        <testcase classname="src/api/tenant.test.ts" name="租户管理 API &gt; 配额设定具体数值时不做转换" time="0.000232847">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/user.test.ts" timestamp="2026-11-12T16:57:37.849Z" hostname="localhost" tests="8" failures="0" errors="0" skipped="0" time="0.017056902">
+        <testcase classname="src/api/user.test.ts" name="用户管理 API &gt; 当前用户信息走 /api/v1/user/info（不含角色/权限）" time="0.003944055">
+        </testcase>
+        <testcase classname="src/api/user.test.ts" name="用户管理 API &gt; 用户列表分页 page/size 与 keyword/status 筛选透传" time="0.001158976">
+        </testcase>
+        <testcase classname="src/api/user.test.ts" name="用户管理 API &gt; 详情按字符串 ID 路径参数查询（含已分配角色）" time="0.000281469">
+        </testcase>
+        <testcase classname="src/api/user.test.ts" name="用户管理 API &gt; 创建用户提交 phone/nickname/gender/birthday（与 AdminUserCreateRequest 对齐，无 username/password）" time="0.000356665">
+        </testcase>
+        <testcase classname="src/api/user.test.ts" name="用户管理 API &gt; 更新走 PUT 子路径，启停为 /status 端点并携带 { enabled }" time="0.000429548">
+        </testcase>
+        <testcase classname="src/api/user.test.ts" name="用户管理 API &gt; 角色分配整体替换 roleIds，强退会话为 POST /sessions/revoke 端点" time="0.000486341">
+        </testcase>
+        <testcase classname="src/api/user.test.ts" name="用户管理 API &gt; 后台可用角色列表端点正确" time="0.000267882">
+        </testcase>
+        <testcase classname="src/api/user.test.ts" name="用户管理 API &gt; 导出用户走通用 request（responseType 为 blob，非 get 快捷方法）并返回固定文件名" time="0.006870299">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/workflow.test.ts" timestamp="2026-11-12T16:57:37.850Z" hostname="localhost" tests="1" failures="0" errors="0" skipped="0" time="0.005245861">
+        <testcase classname="src/api/workflow.test.ts" name="getWorkflowInstanceDetail &gt; requests the registered instance detail route" time="0.003299216">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/__tests__/EmptyState.spec.ts" timestamp="2026-11-12T16:57:37.850Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.056021136">
+        <testcase classname="src/components/__tests__/EmptyState.spec.ts" name="EmptyState 组件 &gt; 默认渲染「暂无数据」与 200 图片尺寸，default 类型交给 el-empty 默认图" time="0.026535524">
+        </testcase>
+        <testcase classname="src/components/__tests__/EmptyState.spec.ts" name="EmptyState 组件 &gt; 按 type 映射内置空态图标识" time="0.005994768">
+        </testcase>
+        <testcase classname="src/components/__tests__/EmptyState.spec.ts" name="EmptyState 组件 &gt; 自定义 image 优先于 type 内置图" time="0.002032915">
+        </testcase>
+        <testcase classname="src/components/__tests__/EmptyState.spec.ts" name="EmptyState 组件 &gt; 自定义 description 透传" time="0.001638423">
+        </testcase>
+        <testcase classname="src/components/__tests__/EmptyState.spec.ts" name="EmptyState 组件 &gt; 默认插槽渲染操作内容" time="0.017370088">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/__tests__/FileUpload.spec.ts" timestamp="2026-11-12T16:57:37.851Z" hostname="localhost" tests="2" failures="0" errors="0" skipped="0" time="0.08069767">
+        <testcase classname="src/components/__tests__/FileUpload.spec.ts" name="FileUpload 上传地址 &gt; 同域部署使用相对路径" time="0.074020416">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUpload.spec.ts" name="FileUpload 上传地址 &gt; 跨域部署按基地址拼接（去尾部斜杠）" time="0.002084003">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/__tests__/FileUploadEnhanced.spec.ts" timestamp="2026-11-12T16:57:37.852Z" hostname="localhost" tests="12" failures="0" errors="0" skipped="0" time="0.373977909">
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced 上传地址 &gt; 同域部署使用相对路径" time="0.04722317">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced 上传地址 &gt; 跨域部署按基地址拼接（去尾部斜杠）" time="0.028699468">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced props 缺省与提示文案 &gt; 缺省 accept/limit/listType 等透传 el-upload" time="0.011014189">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced props 缺省与提示文案 &gt; 请求头携带 Bearer 令牌，表单参数携带 sex" time="0.009536257">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced props 缺省与提示文案 &gt; 缺省 tip 按 accept 与 10MB 上限自动生成并含压缩提示" time="0.008753852">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced props 缺省与提示文案 &gt; 自定义 tip 优先，关闭压缩后不再展示压缩提示" time="0.00497493">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced beforeUpload 校验 &gt; 超过大小上限且未启用分片时拒绝并提示" time="0.059515021">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced beforeUpload 校验 &gt; 类型不在 accept 内时拒绝并提示" time="0.027613311">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced beforeUpload 校验 &gt; 合法文件且关闭压缩时原样返回" time="0.018636116">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced beforeUpload 校验 &gt; enableChunk 开启时超限文件按 5MB 分片上传并在合并后映射 success" time="0.132182445">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced 粘贴监听 &gt; enablePaste 开启时注册 document paste 监听，卸载时以同一引用注销" time="0.016040956">
+        </testcase>
+        <testcase classname="src/components/__tests__/FileUploadEnhanced.spec.ts" name="FileUploadEnhanced 粘贴监听 &gt; enablePaste 缺省关闭时不注册监听" time="0.006905603">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/__tests__/GlobalSearch.spec.ts" timestamp="2026-11-12T16:57:37.854Z" hostname="localhost" tests="14" failures="0" errors="0" skipped="0" time="0.208868656">
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 弹层与搜索 &gt; 输入框聚焦后弹层可见" time="0.057080877">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 弹层与搜索 &gt; 关键词输入防抖 300ms 后触发一次搜索并携带分页参数" time="0.01262756">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 弹层与搜索 &gt; 连续输入重置防抖，仅最后一次触发" time="0.010133806">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 弹层与搜索 &gt; 清空关键词清空结果且不再触发搜索" time="0.008349826">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 弹层与搜索 &gt; Enter 立即触发搜索，无需等待防抖" time="0.006075986">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 弹层与搜索 &gt; 空关键词按 Enter 不发起搜索" time="0.008104496">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 结果渲染与跳转 &gt; 搜索结果渲染类型标签与标题" time="0.015910178">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 结果渲染与跳转 &gt; 点击结果跳转对应管理页并关闭弹层" time="0.045978861">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 结果渲染与跳转 &gt; 未知资源类型仅关闭弹层不跳转" time="0.008454323">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 结果渲染与跳转 &gt; 搜索失败调用 showError" time="0.009487659">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 索引重建与分页 &gt; 重建索引成功后提示" time="0.004473179">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 索引重建与分页 &gt; 重建索引失败调用 showError" time="0.004054224">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 索引重建与分页 &gt; 结果超过每页条数时渲染分页并按页码重新搜索" time="0.009354788">
+        </testcase>
+        <testcase classname="src/components/__tests__/GlobalSearch.spec.ts" name="GlobalSearch 索引重建与分页 &gt; 结果不超过每页条数时不渲染分页" time="0.006022725">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/__tests__/NotificationCenter.spec.ts" timestamp="2026-11-12T16:57:37.856Z" hostname="localhost" tests="11" failures="0" errors="0" skipped="0" time="0.15097375">
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 未读角标与 SSE &gt; 挂载即拉取未读数并以角标展示（上限 99）" time="0.041625521">
+        </testcase>
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 未读角标与 SSE &gt; 未读数为 0 或拉取失败时角标隐藏" time="0.012263115">
+        </testcase>
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 未读角标与 SSE &gt; 挂载订阅 SSE 推送，卸载时退订" time="0.005057092">
+        </testcase>
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 未读角标与 SSE &gt; SSE 推送触发未读数刷新，面板未打开时不拉列表" time="0.010992565">
+        </testcase>
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 通知面板 &gt; 面板打开时拉取最近通知列表并渲染时间与未读态" time="0.020133641">
+        </testcase>
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 通知面板 &gt; 通知列表拉取失败时展示空态" time="0.007778583">
+        </testcase>
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 通知面板 &gt; 点击未读条目标记已读并刷新角标" time="0.01280995">
+        </testcase>
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 通知面板 &gt; 点击已读条目不重复发起已读请求" time="0.008148974">
+        </testcase>
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 通知面板 &gt; 全部已读后刷新角标与列表" time="0.014352318">
+        </testcase>
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 通知面板 &gt; 未读为 0 时不渲染全部已读按钮" time="0.006101046">
+        </testcase>
+        <testcase classname="src/components/__tests__/NotificationCenter.spec.ts" name="NotificationCenter 未读数轮询 &gt; 每 60 秒轮询刷新未读数，卸载后停止" time="0.009117115">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/__tests__/Pagination.spec.ts" timestamp="2026-11-12T16:57:37.857Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.106456236">
+        <testcase classname="src/components/__tests__/Pagination.spec.ts" name="Pagination 组件 &gt; 默认每页条数取 settings 中的 DEFAULT_PAGE_SIZE" time="0.077090437">
+        </testcase>
+        <testcase classname="src/components/__tests__/Pagination.spec.ts" name="Pagination 组件 &gt; 页码变化抛出 change(page, size)" time="0.018479889">
+        </testcase>
+        <testcase classname="src/components/__tests__/Pagination.spec.ts" name="Pagination 组件 &gt; 每页条数变化时重置到第一页" time="0.003746511">
+        </testcase>
+        <testcase classname="src/components/__tests__/Pagination.spec.ts" name="Pagination 组件 &gt; total 变小导致当前页越界时回退到最后一页" time="0.00476838">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/composables/__tests__/useAgenda.spec.ts" timestamp="2026-11-12T16:57:37.858Z" hostname="localhost" tests="7" failures="0" errors="0" skipped="0" time="0.036375693">
+        <testcase classname="src/composables/__tests__/useAgenda.spec.ts" name="useAgenda &gt; 各域成功路径：items 映射正确且 totalHint 取真实 total" time="0.014805347">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useAgenda.spec.ts" name="useAgenda &gt; 站内信裸数组：条数达到单页上限时 truncated=true 且 totalHint 为「总数未知」" time="0.002445608">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useAgenda.spec.ts" name="useAgenda &gt; 任一域失败仅该域 error 置位，其余域数据正常" time="0.001892728">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useAgenda.spec.ts" name="useAgenda &gt; 单域重试成功后 error 清空且数据回填" time="0.01211044">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useAgenda.spec.ts" name="useAgenda &gt; truncated 判定：仅 total &gt; list.length 时为 true" time="0.000657362">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useAgenda.spec.ts" name="useAgenda &gt; 通知标记已读：成功后本地更新未读状态" time="0.001190986">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useAgenda.spec.ts" name="useAgenda &gt; 通知标记已读失败：文案留在条目行内且不影响其他条目" time="0.00086681">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/composables/__tests__/useBreakpoint.spec.ts" timestamp="2026-11-12T16:57:37.859Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.00873121">
+        <testcase classname="src/composables/__tests__/useBreakpoint.spec.ts" name="useBreakpoint &gt; 默认断点下返回视口尺寸" time="0.00355843">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useBreakpoint.spec.ts" name="useBreakpoint &gt; current 依宽度落入对应断点" time="0.001097746">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useBreakpoint.spec.ts" name="useBreakpoint &gt; 设备类型布尔值随断点联动" time="0.000627101">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useBreakpoint.spec.ts" name="useBreakpoint &gt; 具体断点布尔值与区间语义一致（含边界不重叠）" time="0.000479596">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useBreakpoint.spec.ts" name="useBreakpoint &gt; 自定义断点覆盖默认阈值" time="0.000213355">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useBreakpoint.spec.ts" name="useBreakpoint &gt; greaterOrEqual/smaller/between 工具方法返回响应式计算值" time="0.000432656">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/composables/__tests__/useCrud.spec.ts" timestamp="2026-11-12T16:57:37.860Z" hostname="localhost" tests="12" failures="0" errors="0" skipped="0" time="0.022337272">
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 查询按默认分页参数调用并回填数据" time="0.006362651">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 额外查询参数覆盖默认分页参数" time="0.000664298">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 查询失败时结束 loading 并向外抛出" time="0.007741682">
             <system-err>
 查询失败: Error: boom
-    at [90m[39msrc/composables/__tests__/useCrud.spec.ts:67:36
+    at [90m[39msrc/composables/__tests__/useCrud.spec.ts:78:36
     at [90mfile://[39mnode_modules/[4mvitest[24m/dist/chunks/run.C5UmxDPh.js:1628:35
     at [90mfile://[39mnode_modules/[4mvitest[24m/dist/chunks/run.C5UmxDPh.js:2783:26
     at [90mfile://[39mnode_modules/[4mvitest[24m/dist/chunks/run.C5UmxDPh.js:3319:20
@@ -133,29 +573,85 @@
 
             </system-err>
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 创建成功后提示并刷新列表" time="0.000909941">
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 创建成功后提示并刷新列表" time="0.00109855">
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 更新成功后提示并刷新列表" time="0.000716021">
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 更新成功后提示并刷新列表" time="0.000547305">
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 删除确认后调用接口并刷新" time="0.002847078">
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 删除确认后调用接口并刷新" time="0.000887448">
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 删除确认取消时静默返回，不调用接口" time="0.000715058">
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 删除确认取消时静默返回，不调用接口" time="0.000478605">
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 末页仅剩一条时删除后回退上一页" time="0.000698667">
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 末页仅剩一条时删除后回退上一页" time="0.000428968">
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 关闭删除确认时直接调用接口" time="0.000543858">
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 关闭删除确认时直接调用接口" time="0.000435974">
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 批量删除空列表只提示不调用接口" time="0.000531722">
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 批量删除空列表只提示不调用接口" time="0.000478637">
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 批量删除并发展开为单条请求后刷新" time="0.00044792">
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; 批量删除并发展开为单条请求后刷新" time="0.000413871">
         </testcase>
-        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; reset 回到第一页后查询" time="0.000395739">
+        <testcase classname="src/composables/__tests__/useCrud.spec.ts" name="useCrud &gt; reset 回到第一页后查询" time="0.000358826">
         </testcase>
     </testsuite>
-    <testsuite name="src/composables/__tests__/useTableConfig.spec.ts" timestamp="2026-11-05T02:52:02.784Z" hostname="localhost" tests="9" failures="0" errors="0" skipped="0" time="0.08557857">
-        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 无缓存时使用默认配置并返回 false" time="0.00753024">
+    <testsuite name="src/composables/__tests__/useFormDraft.spec.ts" timestamp="2026-11-12T16:57:37.861Z" hostname="localhost" tests="10" failures="0" errors="0" skipped="0" time="0.044102532">
+        <testcase classname="src/composables/__tests__/useFormDraft.spec.ts" name="useFormDraft &gt; 表单变化即写入草稿键与独立时间戳键" time="0.024491672">
+            <system-out>
+[草稿] 已保存: user-edit
+
+            </system-out>
         </testcase>
-        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 保存后可加载缓存配置" time="0.013851977">
+        <testcase classname="src/composables/__tests__/useFormDraft.spec.ts" name="useFormDraft &gt; loadDraft：草稿与时间戳齐全且未过期时返回草稿" time="0.001998631">
+            <system-out>
+[草稿] 已加载: user-edit
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/composables/__tests__/useFormDraft.spec.ts" name="useFormDraft &gt; loadDraft：缺草稿或缺时间戳返回 null" time="0.001190585">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useFormDraft.spec.ts" name="useFormDraft &gt; loadDraft：超过 ttl（默认 7 天）视为过期，清除草稿并返回 null" time="0.001343824">
+            <system-out>
+[草稿] 已清除: user-edit
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/composables/__tests__/useFormDraft.spec.ts" name="useFormDraft &gt; 挂载时存在草稿则弹出确认并恢复到表单" time="0.002238222">
+            <system-out>
+[草稿] 已加载: user-edit
+
+[草稿] 已保存: user-edit
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/composables/__tests__/useFormDraft.spec.ts" name="useFormDraft &gt; 恢复确认被拒绝时清除草稿且不改表单" time="0.002669494">
+            <system-out>
+[草稿] 已加载: user-edit
+
+[草稿] 已清除: user-edit
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/composables/__tests__/useFormDraft.spec.ts" name="useFormDraft &gt; 挂载时无草稿不弹确认" time="0.001558921">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useFormDraft.spec.ts" name="useFormDraft &gt; 卸载前表单已修改则自动保存草稿" time="0.0033017">
+            <system-out>
+[草稿] 已保存: user-edit
+
+[草稿] 已保存: user-edit
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/composables/__tests__/useFormDraft.spec.ts" name="useFormDraft &gt; warnOnLeave 开启时挂载注册 beforeunload、卸载时移除" time="0.001826272">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useFormDraft.spec.ts" name="useFormDraft &gt; clearDraft 移除草稿与时间戳键" time="0.001054938">
+            <system-out>
+[草稿] 已清除: user-edit
+
+            </system-out>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/composables/__tests__/useTableConfig.spec.ts" timestamp="2026-11-12T16:57:37.864Z" hostname="localhost" tests="9" failures="0" errors="0" skipped="0" time="0.043960781">
+        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 无缓存时使用默认配置并返回 false" time="0.006896905">
+        </testcase>
+        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 保存后可加载缓存配置" time="0.015345909">
             <system-out>
 [表格配置] 已保存: user
 [表格配置] 已加载: user
@@ -165,7 +661,7 @@
 
             </system-out>
         </testcase>
-        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 加载时合并新增默认列并保留已存列设置" time="0.004011994">
+        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 加载时合并新增默认列并保留已存列设置" time="0.003309318">
             <system-out>
 [表格配置] 已保存: user
 [表格配置] 已加载: user
@@ -175,21 +671,21 @@
 
             </system-out>
         </testcase>
-        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 切换列可见性与宽度" time="0.00120412">
+        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 切换列可见性与宽度" time="0.002290611">
             <system-out>
 [表格配置] 已保存: user
 
             </system-out>
         </testcase>
-        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 筛选、清空筛选与排序" time="0.001128726">
+        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 筛选、清空筛选与排序" time="0.003039409">
             <system-out>
 [表格配置] 已保存: user
 
             </system-out>
         </testcase>
-        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; visibleColumns 过滤隐藏列" time="0.0008161">
+        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; visibleColumns 过滤隐藏列" time="0.001304125">
         </testcase>
-        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 重置配置会清空缓存并恢复默认值" time="0.003719156">
+        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 重置配置会清空缓存并恢复默认值" time="0.001176377">
             <system-out>
 [表格配置] 已保存: user
 [表格配置] 已重置: user
@@ -197,7 +693,7 @@
 
             </system-out>
         </testcase>
-        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 导入非法配置返回 false，合法配置返回 true 并持久化" time="0.041456197">
+        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 导入非法配置返回 false，合法配置返回 true 并持久化" time="0.006954854">
             <system-out>
 [表格配置] 已保存: user
 [表格配置] 已保存: user
@@ -218,187 +714,407 @@
 
             </system-err>
         </testcase>
-        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 导出配置可被重新解析" time="0.001172407">
+        <testcase classname="src/composables/__tests__/useTableConfig.spec.ts" name="useTableConfig &gt; 导出配置可被重新解析" time="0.000763133">
             <system-out>
 [表格配置] 已保存: user
 
             </system-out>
         </testcase>
     </testsuite>
-    <testsuite name="src/directives/__tests__/permission.spec.ts" timestamp="2026-11-05T02:52:02.788Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.044312839">
-        <testcase classname="src/directives/__tests__/permission.spec.ts" name="v-permission 指令 &gt; 权限码为空时放行" time="0.032225051">
+    <testsuite name="src/directives/__tests__/permission.spec.ts" timestamp="2026-11-12T16:57:37.865Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.093755152">
+        <testcase classname="src/directives/__tests__/permission.spec.ts" name="v-permission 指令 &gt; 权限码为空时放行" time="0.07589444">
         </testcase>
-        <testcase classname="src/directives/__tests__/permission.spec.ts" name="v-permission 指令 &gt; 权限集合为空时放行（未配置视为不限制）" time="0.002435453">
+        <testcase classname="src/directives/__tests__/permission.spec.ts" name="v-permission 指令 &gt; 权限集合为空时放行（未配置视为不限制）" time="0.003827469">
         </testcase>
-        <testcase classname="src/directives/__tests__/permission.spec.ts" name="v-permission 指令 &gt; 拥有权限码时保留元素" time="0.002081957">
+        <testcase classname="src/directives/__tests__/permission.spec.ts" name="v-permission 指令 &gt; 拥有权限码时保留元素" time="0.003253717">
         </testcase>
-        <testcase classname="src/directives/__tests__/permission.spec.ts" name="v-permission 指令 &gt; 缺少权限码时移除元素" time="0.003289648">
+        <testcase classname="src/directives/__tests__/permission.spec.ts" name="v-permission 指令 &gt; 缺少权限码时移除元素" time="0.003123205">
         </testcase>
-        <testcase classname="src/directives/__tests__/permission.spec.ts" name="v-permission 指令 &gt; 逗号分隔的多码满足任一即可" time="0.001738297">
-        </testcase>
-    </testsuite>
-    <testsuite name="src/router/__tests__/dynamic.spec.ts" timestamp="2026-11-05T02:52:02.790Z" hostname="localhost" tests="7" failures="0" errors="0" skipped="0" time="0.069450307">
-        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; 按钮节点不生成路由" time="0.005908248">
-        </testcase>
-        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; 未登记的 component 被跳过" time="0.000622849">
-        </testcase>
-        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; 已登记菜单生成带 meta 的路由并保留权限码" time="0.057323639">
-        </testcase>
-        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; 目录挂载有效子路由并重定向到首个" time="0.001341523">
-        </testcase>
-        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; 没有有效子路由的目录被跳过" time="0.000788358">
-        </testcase>
-        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; visible=0 保留路由但标记 hidden" time="0.000310129">
-        </testcase>
-        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; status=0 的菜单仍生成路由" time="0.000338343">
+        <testcase classname="src/directives/__tests__/permission.spec.ts" name="v-permission 指令 &gt; 逗号分隔的多码满足任一即可" time="0.00454385">
         </testcase>
     </testsuite>
-    <testsuite name="src/stores/__tests__/app.spec.ts" timestamp="2026-11-05T02:52:02.791Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.015452386">
-        <testcase classname="src/stores/__tests__/app.spec.ts" name="app store &gt; 默认不折叠且为浅色主题" time="0.009336349">
+    <testsuite name="src/router/__tests__/dynamic.spec.ts" timestamp="2026-11-12T16:57:37.866Z" hostname="localhost" tests="7" failures="0" errors="0" skipped="0" time="0.101897464">
+        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; 按钮节点不生成路由" time="0.004038895">
         </testcase>
-        <testcase classname="src/stores/__tests__/app.spec.ts" name="app store &gt; 从 localStorage 恢复折叠与主题偏好" time="0.000769938">
+        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; 未登记的 component 被跳过" time="0.000419012">
         </testcase>
-        <testcase classname="src/stores/__tests__/app.spec.ts" name="app store &gt; 切换侧边栏折叠状态并持久化" time="0.001680347">
+        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; 已登记菜单生成带 meta 的路由并保留权限码" time="0.002382689">
         </testcase>
-        <testcase classname="src/stores/__tests__/app.spec.ts" name="app store &gt; 设置主题时同步根元素 class 并持久化" time="0.001176239">
+        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; 目录挂载有效子路由并重定向到首个" time="0.000598734">
         </testcase>
-    </testsuite>
-    <testsuite name="src/stores/__tests__/permission.spec.ts" timestamp="2026-11-05T02:52:02.792Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.013993326">
-        <testcase classname="src/stores/__tests__/permission.spec.ts" name="permission store &gt; 空权限码直接放行" time="0.006214291">
+        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; 没有有效子路由的目录被跳过" time="0.000293192">
         </testcase>
-        <testcase classname="src/stores/__tests__/permission.spec.ts" name="permission store &gt; 权限集合为空时放行" time="0.000652924">
+        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; visible=0 保留路由但标记 hidden" time="0.085965725">
         </testcase>
-        <testcase classname="src/stores/__tests__/permission.spec.ts" name="permission store &gt; 单码精确匹配" time="0.001066274">
-        </testcase>
-        <testcase classname="src/stores/__tests__/permission.spec.ts" name="permission store &gt; 逗号分隔多码满足任一即可并裁剪空格" time="0.000648996">
-        </testcase>
-        <testcase classname="src/stores/__tests__/permission.spec.ts" name="permission store &gt; permissions 派生自用户 Store" time="0.002764307">
+        <testcase classname="src/router/__tests__/dynamic.spec.ts" name="buildDynamicRoutes &gt; status=0 的菜单仍生成路由" time="0.005248597">
         </testcase>
     </testsuite>
-    <testsuite name="src/stores/__tests__/user.spec.ts" timestamp="2026-11-05T02:52:02.794Z" hostname="localhost" tests="8" failures="0" errors="0" skipped="0" time="0.023043294">
-        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; MFA 挑战响应不写入令牌与身份" time="0.008048108">
+    <testsuite name="src/stores/__tests__/app.spec.ts" timestamp="2026-11-12T16:57:37.867Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.02622479">
+        <testcase classname="src/stores/__tests__/app.spec.ts" name="app store &gt; 默认不折叠且为浅色主题" time="0.00732271">
         </testcase>
-        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 登录写入令牌、租户并加载权限" time="0.004953236">
+        <testcase classname="src/stores/__tests__/app.spec.ts" name="app store &gt; 从 localStorage 恢复折叠与主题偏好" time="0.014120554">
         </testcase>
-        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 登录请求透传固定 deviceId/platform" time="0.000958987">
+        <testcase classname="src/stores/__tests__/app.spec.ts" name="app store &gt; 切换侧边栏折叠状态并持久化" time="0.001192157">
         </testcase>
-        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; MFA 二步验证成功后写入令牌" time="0.000828388">
-        </testcase>
-        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 角色与权限接口失败时降级为空数组" time="0.001322974">
-        </testcase>
-        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 用户信息接口失败时向外抛出且不标记初始化" time="0.002648711">
-        </testcase>
-        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 身份兼容旧字段 nickName 并回退 username" time="0.000784256">
-        </testcase>
-        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 登出后端失败仍清理本地会话" time="0.000949479">
+        <testcase classname="src/stores/__tests__/app.spec.ts" name="app store &gt; 设置主题时同步根元素 class 并持久化" time="0.001047013">
         </testcase>
     </testsuite>
-    <testsuite name="src/utils/__tests__/auth-config.spec.ts" timestamp="2026-11-05T02:52:02.800Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.03844203">
-        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="权限数组按数字类型筛选和分页" time="0.004121497">
+    <testsuite name="src/stores/__tests__/office.spec.ts" timestamp="2026-11-12T16:57:37.868Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.049328489">
+        <testcase classname="src/stores/__tests__/office.spec.ts" name="office store &gt; 初始状态为空" time="0.007263912">
         </testcase>
-        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="写接口使用主应用参数契约" time="0.001475164">
+        <testcase classname="src/stores/__tests__/office.spec.ts" name="office store &gt; setCurrentPlatform 更新当前平台" time="0.034941692">
         </testcase>
-        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="拒绝把脱敏密钥作为新密钥写回" time="0.027676214">
+        <testcase classname="src/stores/__tests__/office.spec.ts" name="office store &gt; updateBindingStatus 按平台记录绑定状态且互不覆盖" time="0.003194121">
         </testcase>
-        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="编辑客户端必须显式提供查询未返回的设置" time="0.000656161">
-        </testcase>
-        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="公共授权码客户端不能关闭 PKCE" time="0.000493342">
-        </testcase>
-        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="显式客户端设置完整提交且使用 clientId 路径" time="0.000298311">
+        <testcase classname="src/stores/__tests__/office.spec.ts" name="office store &gt; reset 清空平台与绑定状态（登出语义）" time="0.000995426">
         </testcase>
     </testsuite>
-    <testsuite name="src/utils/__tests__/auth.spec.ts" timestamp="2026-11-05T02:52:02.802Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.009054922">
-        <testcase classname="src/utils/__tests__/auth.spec.ts" name="auth utils tenant session &gt; returns empty string when tenant not recorded" time="0.003531749">
+    <testsuite name="src/stores/__tests__/permission.spec.ts" timestamp="2026-11-12T16:57:37.868Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.020031897">
+        <testcase classname="src/stores/__tests__/permission.spec.ts" name="permission store &gt; 空权限码直接放行" time="0.009079197">
         </testcase>
-        <testcase classname="src/utils/__tests__/auth.spec.ts" name="auth utils tenant session &gt; saves and reads tenant id" time="0.000433123">
+        <testcase classname="src/stores/__tests__/permission.spec.ts" name="permission store &gt; 权限集合为空时放行" time="0.000939599">
         </testcase>
-        <testcase classname="src/utils/__tests__/auth.spec.ts" name="auth utils tenant session &gt; removes tenant id only" time="0.000290673">
+        <testcase classname="src/stores/__tests__/permission.spec.ts" name="permission store &gt; 单码精确匹配" time="0.001128814">
         </testcase>
-        <testcase classname="src/utils/__tests__/auth.spec.ts" name="auth utils tenant session &gt; clearSession also clears tenant record" time="0.000583173">
+        <testcase classname="src/stores/__tests__/permission.spec.ts" name="permission store &gt; 逗号分隔多码满足任一即可并裁剪空格" time="0.000828658">
         </testcase>
-    </testsuite>
-    <testsuite name="src/utils/__tests__/mask.spec.ts" timestamp="2026-11-05T02:52:02.804Z" hostname="localhost" tests="23" failures="0" errors="0" skipped="0" time="0.035271127">
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPhone &gt; 默认中间脱敏保留前 3 后 4" time="0.003044302">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPhone &gt; 支持开头与结尾脱敏" time="0.000315693">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPhone &gt; 忽略空格且过短不脱敏" time="0.000222711">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskEmail &gt; 保留域名并隐藏本地部分" time="0.000295171">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskEmail &gt; 无 @ 或空值返回空串" time="0.000179241">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskIdCard &gt; 15 位与 18 位分别保留首尾" time="0.000248094">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskIdCard &gt; 其他长度原样返回" time="0.000165753">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskBankCard &gt; 保留前 4 后 4 并用空格分隔" time="0.000233717">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskBankCard &gt; 去空格且过短原样返回" time="0.000195908">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskName &gt; 按字符数保留姓氏" time="0.000276589">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskName &gt; 空白字符串返回空串" time="0.000184215">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskAddress &gt; 保留指定前缀后追加掩码" time="0.000418646">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskAddress &gt; 支持自定义保留长度，短地址原样返回" time="0.00017578">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskIp &gt; 隐藏后两段" time="0.000227966">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskIp &gt; 非四段地址原样返回" time="0.00015051">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPassport &gt; 保留前 3 后 2 并转大写" time="0.000409594">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPassport &gt; 过短原样返回" time="0.000135396">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPlateNumber &gt; 保留前 2 后 3" time="0.017968683">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPlateNumber &gt; 过短原样返回" time="0.000188875">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskGeneral &gt; 按保留长度生成掩码" time="0.000231669">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskGeneral &gt; 支持自定义掩码字符且长度不足时原样返回" time="0.000506668">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskBatch &gt; 按规则处理存在字段并复制其余字段" time="0.004814147">
-        </testcase>
-        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskBatch &gt; 不修改原对象" time="0.001134532">
+        <testcase classname="src/stores/__tests__/permission.spec.ts" name="permission store &gt; permissions 派生自用户 Store" time="0.002389167">
         </testcase>
     </testsuite>
-    <testsuite name="src/utils/__tests__/oauth2.spec.ts" timestamp="2026-11-05T02:52:02.808Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.033534077">
-        <testcase classname="src/utils/__tests__/oauth2.spec.ts" name="生成 S256 PKCE 授权请求" time="0.017434086">
+    <testsuite name="src/stores/__tests__/user.spec.ts" timestamp="2026-11-12T16:57:37.869Z" hostname="localhost" tests="8" failures="0" errors="0" skipped="0" time="0.058023703">
+        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; MFA 挑战响应不写入令牌与身份" time="0.009352965">
         </testcase>
-        <testcase classname="src/utils/__tests__/oauth2.spec.ts" name="使用表单换取并映射 Token" time="0.004174205">
+        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 登录写入令牌、租户并加载权限" time="0.00394966">
         </testcase>
-        <testcase classname="src/utils/__tests__/oauth2.spec.ts" name="授权上下文仅消费一次且 verifier 与 S256 challenge 一致" time="0.003392819">
+        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 登录请求透传固定 deviceId/platform" time="0.000969872">
         </testcase>
-        <testcase classname="src/utils/__tests__/oauth2.spec.ts" name="错误 state 消耗上下文并拒绝授权" time="0.000604043">
+        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; MFA 二步验证成功后写入令牌" time="0.00078682">
         </testcase>
-    </testsuite>
-    <testsuite name="src/utils/__tests__/request.spec.ts" timestamp="2026-11-05T02:52:02.809Z" hostname="localhost" tests="8" failures="0" errors="0" skipped="0" time="0.086661888">
-        <testcase classname="src/utils/__tests__/request.spec.ts" name="持续 401 时最多刷新一次并重放一次" time="0.01925756">
+        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 角色与权限接口失败时降级为空数组" time="0.000952149">
         </testcase>
-        <testcase classname="src/utils/__tests__/request.spec.ts" name="重放的其他错误保留原状态" time="0.002705581">
+        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 用户信息接口失败时向外抛出且不标记初始化" time="0.002526552">
         </testcase>
-        <testcase classname="src/utils/__tests__/request.spec.ts" name="认证端点 /api/v1/auth/login 不触发自动刷新" time="0.001954047">
+        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 身份兼容旧字段 nickName 并回退 username" time="0.031962164">
         </testcase>
-        <testcase classname="src/utils/__tests__/request.spec.ts" name="认证端点 /api/v1/auth/refresh 不触发自动刷新" time="0.001218459">
-        </testcase>
-        <testcase classname="src/utils/__tests__/request.spec.ts" name="认证端点 /oauth2/token 不触发自动刷新" time="0.001217474">
-        </testcase>
-        <testcase classname="src/utils/__tests__/request.spec.ts" name="并发 401 共享一次刷新" time="0.056222636">
-        </testcase>
-        <testcase classname="src/utils/__tests__/request.spec.ts" name="会话记录租户时附带 X-Tenant-Id 请求头" time="0.001011709">
-        </testcase>
-        <testcase classname="src/utils/__tests__/request.spec.ts" name="未记录租户时不附带 X-Tenant-Id 请求头" time="0.000732728">
+        <testcase classname="src/stores/__tests__/user.spec.ts" name="user store &gt; 登出后端失败仍清理本地会话" time="0.003319066">
         </testcase>
     </testsuite>
-    <testsuite name="src/utils/__tests__/storage.spec.ts" timestamp="2026-11-05T02:52:02.822Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.203197108">
-        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; 原始字符串读写" time="0.006271078">
+    <testsuite name="src/utils/__tests__/api-base.spec.ts" timestamp="2026-11-12T16:57:37.870Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.00618502">
+        <testcase classname="src/utils/__tests__/api-base.spec.ts" name="apiBaseUrl &gt; 未配置基地址时返回空串（同域相对路径）" time="0.002835165">
         </testcase>
-        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; JSON 序列化与反序列化" time="0.001658272">
+        <testcase classname="src/utils/__tests__/api-base.spec.ts" name="apiBaseUrl &gt; 跨域基地址去掉尾部斜杠" time="0.000280755">
         </testcase>
-        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; JSON 损坏时返回 null 且不抛异常" time="0.067500515">
+        <testcase classname="src/utils/__tests__/api-base.spec.ts" name="apiUrl &gt; 同域部署返回相对路径" time="0.000353708">
+        </testcase>
+        <testcase classname="src/utils/__tests__/api-base.spec.ts" name="apiUrl &gt; 跨域部署拼接完整地址" time="0.000246472">
+        </testcase>
+        <testcase classname="src/utils/__tests__/api-base.spec.ts" name="apiUrl &gt; 路径缺少前导斜杠时补齐" time="0.000199616">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/auth-config.spec.ts" timestamp="2026-11-12T16:57:37.871Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.020524345">
+        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="权限数组按数字类型筛选和分页" time="0.00420924">
+        </testcase>
+        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="写接口使用主应用参数契约" time="0.001383034">
+        </testcase>
+        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="拒绝把脱敏密钥作为新密钥写回" time="0.011393635">
+        </testcase>
+        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="编辑客户端必须显式提供查询未返回的设置" time="0.000609375">
+        </testcase>
+        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="公共授权码客户端不能关闭 PKCE" time="0.000441644">
+        </testcase>
+        <testcase classname="src/utils/__tests__/auth-config.spec.ts" name="显式客户端设置完整提交且使用 clientId 路径" time="0.000386545">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/auth.spec.ts" timestamp="2026-11-12T16:57:37.872Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.008184391">
+        <testcase classname="src/utils/__tests__/auth.spec.ts" name="auth utils tenant session &gt; returns empty string when tenant not recorded" time="0.004189284">
+        </testcase>
+        <testcase classname="src/utils/__tests__/auth.spec.ts" name="auth utils tenant session &gt; saves and reads tenant id" time="0.000459679">
+        </testcase>
+        <testcase classname="src/utils/__tests__/auth.spec.ts" name="auth utils tenant session &gt; removes tenant id only" time="0.000291096">
+        </testcase>
+        <testcase classname="src/utils/__tests__/auth.spec.ts" name="auth utils tenant session &gt; clearSession also clears tenant record" time="0.000568799">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/echarts-theme.spec.ts" timestamp="2026-11-12T16:57:37.872Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.056860057">
+        <testcase classname="src/utils/__tests__/echarts-theme.spec.ts" name="echarts-theme &gt; 默认为亮色主题，setTheme 可切换暗色与自定义主题" time="0.004178211">
+        </testcase>
+        <testcase classname="src/utils/__tests__/echarts-theme.spec.ts" name="echarts-theme &gt; 基础配置取当前主题的颜色体系" time="0.003063009">
+        </testcase>
+        <testcase classname="src/utils/__tests__/echarts-theme.spec.ts" name="echarts-theme &gt; mergeChartOption：顶层自定义覆盖基础，嵌套对象按字段合并" time="0.000839948">
+        </testcase>
+        <testcase classname="src/utils/__tests__/echarts-theme.spec.ts" name="echarts-theme &gt; 预设折线/柱状/饼图透传数据且类型正确" time="0.035856827">
+        </testcase>
+        <testcase classname="src/utils/__tests__/echarts-theme.spec.ts" name="echarts-theme &gt; 预设仪表盘使用当前主题的分段颜色" time="0.00069687">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/echarts.spec.ts" timestamp="2026-11-12T16:57:37.873Z" hostname="localhost" tests="2" failures="0" errors="0" skipped="0" time="0.005380984">
+        <testcase classname="src/utils/__tests__/echarts.spec.ts" name="echarts 按需注册入口 &gt; 转发 echarts/core 的核心 API" time="0.00232475">
+        </testcase>
+        <testcase classname="src/utils/__tests__/echarts.spec.ts" name="echarts 按需注册入口 &gt; 核心图表与组件已注册（重复 use 同一组图表不抛错）" time="0.001148526">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/error-handler.spec.ts" timestamp="2026-11-12T16:57:37.873Z" hostname="localhost" tests="15" failures="0" errors="0" skipped="0" time="0.09148579">
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="handleError 提示映射 &gt; ApiError 透传 message 并追加 traceId" time="0.005297459">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="handleError 提示映射 &gt; 401/403/404 映射为 warning 文案" time="0.000941739">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="handleError 提示映射 &gt; 5xx 映射为服务器错误文案" time="0.00042034">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="handleError 提示映射 &gt; 网络/超时/验证/授权错误各自映射" time="0.000805317">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="handleError 提示映射 &gt; 普通 Error 透传 message；未知值走默认文案" time="0.000534153">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="handleError 提示映射 &gt; showMessage=false 与 customHandler 返回 false 均不弹提示" time="0.000821098">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="handleError 提示映射 &gt; logToConsole=false 不打印控制台" time="0.000313935">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="handleError 提示映射 &gt; useNotification 走通知通道并透传时长" time="0.000398476">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="handleError 提示映射 &gt; 错误类 name 与 ErrorType 枚举一致" time="0.000625137">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="withErrorHandling &gt; 成功时透传返回值与参数" time="0.001337165">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="withErrorHandling &gt; 失败时执行 handleError 并继续抛出" time="0.001786009">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="retryRequest &gt; 瞬时失败按指数退避重试后成功" time="0.025946567">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="retryRequest &gt; ApiError 401/403/404 不重试直接抛出" time="0.001347002">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="retryRequest &gt; 重试次数用尽后抛出最后一次错误" time="0.047569365">
+        </testcase>
+        <testcase classname="src/utils/__tests__/error-handler.spec.ts" name="createErrorBoundary &gt; errorCaptured 通知回调、处理错误并阻止传播" time="0.000549313">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/mask.spec.ts" timestamp="2026-11-12T16:57:37.875Z" hostname="localhost" tests="23" failures="0" errors="0" skipped="0" time="0.017908987">
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPhone &gt; 默认中间脱敏保留前 3 后 4" time="0.002738565">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPhone &gt; 支持开头与结尾脱敏" time="0.000272631">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPhone &gt; 忽略空格且过短不脱敏" time="0.000208033">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskEmail &gt; 保留域名并隐藏本地部分" time="0.000284687">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskEmail &gt; 无 @ 或空值返回空串" time="0.000184992">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskIdCard &gt; 15 位与 18 位分别保留首尾" time="0.00023138">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskIdCard &gt; 其他长度原样返回" time="0.000141196">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskBankCard &gt; 保留前 4 后 4 并用空格分隔" time="0.000234357">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskBankCard &gt; 去空格且过短原样返回" time="0.000190289">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskName &gt; 按字符数保留姓氏" time="0.000268104">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskName &gt; 空白字符串返回空串" time="0.000191917">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskAddress &gt; 保留指定前缀后追加掩码" time="0.000228027">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskAddress &gt; 支持自定义保留长度，短地址原样返回" time="0.000131571">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskIp &gt; 隐藏后两段" time="0.000163013">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskIp &gt; 非四段地址原样返回" time="0.00012526">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPassport &gt; 保留前 3 后 2 并转大写" time="0.000187686">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPassport &gt; 过短原样返回" time="0.000110154">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPlateNumber &gt; 保留前 2 后 3" time="0.000166781">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskPlateNumber &gt; 过短原样返回" time="0.000103206">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskGeneral &gt; 按保留长度生成掩码" time="0.000183431">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskGeneral &gt; 支持自定义掩码字符且长度不足时原样返回" time="0.000158137">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskBatch &gt; 按规则处理存在字段并复制其余字段" time="0.008380794">
+        </testcase>
+        <testcase classname="src/utils/__tests__/mask.spec.ts" name="maskBatch &gt; 不修改原对象" time="0.000195332">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/message-socket.spec.ts" timestamp="2026-11-12T16:57:37.877Z" hostname="localhost" tests="9" failures="0" errors="0" skipped="0" time="1.648594609">
+        <testcase classname="src/utils/__tests__/message-socket.spec.ts" name="message-socket &gt; 首个订阅者触发建连：先签发票据再按 ws 协议握手" time="0.190075056">
+        </testcase>
+        <testcase classname="src/utils/__tests__/message-socket.spec.ts" name="message-socket &gt; ping 帧回文本 pong（心跳保活）" time="0.057485777">
+        </testcase>
+        <testcase classname="src/utils/__tests__/message-socket.spec.ts" name="message-socket &gt; message 帧分发给订阅者，数字 messageId 转字符串；缺省为空串" time="0.052177036">
+        </testcase>
+        <testcase classname="src/utils/__tests__/message-socket.spec.ts" name="message-socket &gt; 非 JSON 帧与未知类型帧被忽略" time="0.051780629">
+        </testcase>
+        <testcase classname="src/utils/__tests__/message-socket.spec.ts" name="message-socket &gt; 连接关闭后按 5s 起步退避重连并重新签发票据" time="0.058112934">
+        </testcase>
+        <testcase classname="src/utils/__tests__/message-socket.spec.ts" name="message-socket &gt; 票据签发失败不建连，按退避重试" time="0.002259581">
+        </testcase>
+        <testcase classname="src/utils/__tests__/message-socket.spec.ts" name="message-socket &gt; 最后一个订阅者退订后关闭连接并停止重连" time="0.052645464">
+        </testcase>
+        <testcase classname="src/utils/__tests__/message-socket.spec.ts" name="message-socket &gt; 多订阅者共享一条连接，仅最后一个退订才关闭" time="0.12082694">
+        </testcase>
+        <testcase classname="src/utils/__tests__/message-socket.spec.ts" name="message-socket &gt; 状态订阅立即收到当前状态，退订后不再接收" time="1.048971593">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/notification-stream.spec.ts" timestamp="2026-11-12T16:57:37.878Z" hostname="localhost" tests="9" failures="0" errors="0" skipped="0" time="0.277172732">
+        <testcase classname="src/utils/__tests__/notification-stream.spec.ts" name="createSseParser &gt; 解析完整事件帧并分发 notification 事件" time="0.053010235">
+        </testcase>
+        <testcase classname="src/utils/__tests__/notification-stream.spec.ts" name="createSseParser &gt; 跨 chunk 的不完整行由缓冲拼接" time="0.000930265">
+        </testcase>
+        <testcase classname="src/utils/__tests__/notification-stream.spec.ts" name="createSseParser &gt; 忽略注释行（心跳）且不分发空事件" time="0.000620061">
+        </testcase>
+        <testcase classname="src/utils/__tests__/notification-stream.spec.ts" name="createSseParser &gt; 多行 data 按换行合并，无 event 字段缺省 message" time="0.000659445">
+        </testcase>
+        <testcase classname="src/utils/__tests__/notification-stream.spec.ts" name="subscribeNotificationPush &gt; 首个订阅者触发建连并携带 Authorization 头" time="0.055396921">
+        </testcase>
+        <testcase classname="src/utils/__tests__/notification-stream.spec.ts" name="subscribeNotificationPush &gt; 配置 VITE_API_BASE_URL 时按该基地址建连（去尾部斜杠）" time="0.051734072">
+        </testcase>
+        <testcase classname="src/utils/__tests__/notification-stream.spec.ts" name="subscribeNotificationPush &gt; notification 事件分发给订阅者，其他事件不分发" time="0.052527916">
+        </testcase>
+        <testcase classname="src/utils/__tests__/notification-stream.spec.ts" name="subscribeNotificationPush &gt; 最后一个退订者中止连接" time="0.052950671">
+        </testcase>
+        <testcase classname="src/utils/__tests__/notification-stream.spec.ts" name="subscribeNotificationPush &gt; 建连失败按退避重连" time="0.006928993">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/oauth2.spec.ts" timestamp="2026-11-12T16:57:37.879Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.021067751">
+        <testcase classname="src/utils/__tests__/oauth2.spec.ts" name="生成 S256 PKCE 授权请求" time="0.011211732">
+        </testcase>
+        <testcase classname="src/utils/__tests__/oauth2.spec.ts" name="使用表单换取并映射 Token" time="0.001689613">
+        </testcase>
+        <testcase classname="src/utils/__tests__/oauth2.spec.ts" name="授权上下文仅消费一次且 verifier 与 S256 challenge 一致" time="0.005134104">
+        </testcase>
+        <testcase classname="src/utils/__tests__/oauth2.spec.ts" name="错误 state 消耗上下文并拒绝授权" time="0.001130685">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/performance.spec.ts" timestamp="2026-11-12T16:57:37.880Z" hostname="localhost" tests="8" failures="0" errors="0" skipped="0" time="0.050681716">
+        <testcase classname="src/utils/__tests__/performance.spec.ts" name="PerformanceMonitor &gt; 无 window（SSR）时 init 直接跳过" time="0.005901894">
+        </testcase>
+        <testcase classname="src/utils/__tests__/performance.spec.ts" name="PerformanceMonitor &gt; init 注册 FCP/LCP/FID 三个观察者并监听页面 load" time="0.001948632">
+        </testcase>
+        <testcase classname="src/utils/__tests__/performance.spec.ts" name="PerformanceMonitor &gt; FCP 输出首次内容绘制时间" time="0.032605609">
+        </testcase>
+        <testcase classname="src/utils/__tests__/performance.spec.ts" name="PerformanceMonitor &gt; 非 FCP 命名的 paint 条目不上报" time="0.000873579">
+        </testcase>
+        <testcase classname="src/utils/__tests__/performance.spec.ts" name="PerformanceMonitor &gt; LCP 取最后一条条目" time="0.001795573">
+        </testcase>
+        <testcase classname="src/utils/__tests__/performance.spec.ts" name="PerformanceMonitor &gt; FID 按 processingStart - startTime 计算" time="0.001157975">
+        </testcase>
+        <testcase classname="src/utils/__tests__/performance.spec.ts" name="PerformanceMonitor &gt; 无 processingStart 的输入条目不上报 FID" time="0.000520958">
+        </testcase>
+        <testcase classname="src/utils/__tests__/performance.spec.ts" name="PerformanceMonitor &gt; 页面 load 后上报加载耗时（TTFB/DOM 就绪/整体加载）" time="0.00332566">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/request-cache.spec.ts" timestamp="2026-11-12T16:57:37.881Z" hostname="localhost" tests="12" failures="0" errors="0" skipped="0" time="0.027508091">
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; 相同 key 第二次命中缓存，requestFn 只执行一次" time="0.010492219">
+            <system-out>
+[请求缓存] 未命中，发起请求: user:1
+
+[请求缓存] 命中: user:1
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; 不传 key 时每次独立请求（随机键等效不命中）" time="0.001085681">
+            <system-out>
+[请求缓存] 未命中，发起请求: req_1794502648114_0.5395734666299953
+
+[请求缓存] 未命中，发起请求: req_1794502648114_0.5999195201003267
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; 超过 ttl 后缓存失效并重新请求" time="0.002035404">
+            <system-out>
+[请求缓存] 未命中，发起请求: k
+
+[请求缓存] 未命中，发起请求: k
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; forceRefresh 忽略既有缓存" time="0.000895962">
+            <system-out>
+[请求缓存] 未命中，发起请求: k
+
+[请求缓存] 未命中，发起请求: k
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; dedupe：并发相同 key 共享进行中的请求" time="0.001091458">
+            <system-out>
+[请求缓存] 未命中，发起请求: shared
+[请求去重] 等待进行中的请求: shared
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; dedupe 关闭时并发请求各自执行" time="0.000794472">
+            <system-out>
+[请求缓存] 未命中，发起请求: k
+[请求缓存] 未命中，发起请求: k
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; 请求失败不缓存，下次调用重新发起" time="0.00325">
+            <system-out>
+[请求缓存] 未命中，发起请求: k
+
+[请求缓存] 未命中，发起请求: k
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; prefetchRequest 预加载后 cachedRequest 直接命中" time="0.00095012">
+            <system-out>
+[预加载] 成功: pre-key
+
+[请求缓存] 命中: pre-key
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; prefetchRequest 失败不向外抛错" time="0.001442711">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; clearCache/clearAllCache 清除后重新请求" time="0.000904383">
+            <system-out>
+[请求缓存] 未命中，发起请求: a
+
+[请求缓存] 未命中，发起请求: b
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; has 与 getCacheStats 反映缓存状态" time="0.001643558">
+            <system-out>
+[请求缓存] 未命中，发起请求: k
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/utils/__tests__/request-cache.spec.ts" name="request-cache &gt; CACHE_KEYS 键生成符合前缀约定" time="0.000497651">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/request.spec.ts" timestamp="2026-11-12T16:57:37.883Z" hostname="localhost" tests="12" failures="0" errors="0" skipped="0" time="0.132287948">
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="持续 401 时最多刷新一次并重放一次" time="0.016270482">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="重放的其他错误保留原状态" time="0.001876979">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="认证端点 /api/v1/auth/login 不触发自动刷新" time="0.007685425">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="认证端点 /api/v1/auth/refresh 不触发自动刷新" time="0.001050316">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="认证端点 /oauth2/token 不触发自动刷新" time="0.000998578">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="并发 401 共享一次刷新" time="0.095357356">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="会话记录租户时附带 X-Tenant-Id 请求头" time="0.001659452">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="未记录租户时不附带 X-Tenant-Id 请求头" time="0.002083101">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="403 授权类错误「能力未开通」追加能力订阅引导" time="0.000744177">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="403 授权类错误「scope 不足」追加能力订阅引导" time="0.000164573">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="403 非授权类错误不追加引导" time="0.000696544">
+        </testcase>
+        <testcase classname="src/utils/__tests__/request.spec.ts" name="非 403 命中关键字不追加引导" time="0.000179273">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/__tests__/storage.spec.ts" timestamp="2026-11-12T16:57:37.885Z" hostname="localhost" tests="6" failures="0" errors="0" skipped="0" time="0.034118576">
+        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; 原始字符串读写" time="0.003351077">
+        </testcase>
+        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; JSON 序列化与反序列化" time="0.001247483">
+        </testcase>
+        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; JSON 损坏时返回 null 且不抛异常" time="0.005145819">
             <system-err>
 [storage] JSON 解析失败: broken SyntaxError: Expected property name or &apos;}&apos; in JSON at position 1 (line 1 column 2)
     at JSON.parse (&lt;anonymous&gt;)
@@ -414,9 +1130,9 @@
 
             </system-err>
         </testcase>
-        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; 删除与存在性判断" time="0.0012142">
+        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; 删除与存在性判断" time="0.000627743">
         </testcase>
-        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; 写入异常时返回 false" time="0.002373324">
+        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; 写入异常时返回 false" time="0.001783077">
             <system-err>
 [storage] 写入失败: k Error: QuotaExceededError
     at Proxy.&lt;anonymous&gt; [90m([39msrc/utils/__tests__/storage.spec.ts:44:13[90m)[39m
@@ -432,7 +1148,7 @@
 
             </system-err>
         </testcase>
-        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; 循环引用序列化失败时返回 false" time="0.120617483">
+        <testcase classname="src/utils/__tests__/storage.spec.ts" name="storage utils &gt; 循环引用序列化失败时返回 false" time="0.019708372">
             <system-err>
 [storage] JSON 序列化失败: cyclic TypeError: Converting circular structure to JSON
     --&gt; starting at object with constructor &apos;Object&apos;
@@ -451,52 +1167,92 @@
             </system-err>
         </testcase>
     </testsuite>
-    <testsuite name="src/utils/__tests__/validate.spec.ts" timestamp="2026-11-05T02:52:02.824Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.015943668">
-        <testcase classname="src/utils/__tests__/validate.spec.ts" name="validate utils &gt; validateEmail &gt; should validate correct email" time="0.0101932">
+    <testsuite name="src/utils/__tests__/tenant-package.spec.ts" timestamp="2026-11-12T16:57:37.886Z" hostname="localhost" tests="5" failures="0" errors="0" skipped="0" time="0.007405269">
+        <testcase classname="src/utils/__tests__/tenant-package.spec.ts" name="withParentChain &gt; 补全所选菜单的全部父级" time="0.003595928">
         </testcase>
-        <testcase classname="src/utils/__tests__/validate.spec.ts" name="validate utils &gt; validateEmail &gt; should reject invalid email" time="0.001038892">
+        <testcase classname="src/utils/__tests__/tenant-package.spec.ts" name="buildPackagePayload &gt; 全量开关提交空菜单/空权限，能力展开为目录全部编码" time="0.000717116">
         </testcase>
-        <testcase classname="src/utils/__tests__/validate.spec.ts" name="validate utils &gt; validatePhone &gt; should validate correct phone" time="0.000730443">
+        <testcase classname="src/utils/__tests__/tenant-package.spec.ts" name="buildPackagePayload &gt; 非全量时提交勾选项并补菜单父链，未订阅能力保持空集合" time="0.000335485">
         </testcase>
-        <testcase classname="src/utils/__tests__/validate.spec.ts" name="validate utils &gt; validatePhone &gt; should reject invalid phone" time="0.000824531">
+        <testcase classname="src/utils/__tests__/tenant-package.spec.ts" name="buildPackagePayload &gt; 仅订阅部分能力时按所选编码提交" time="0.000186805">
+        </testcase>
+        <testcase classname="src/utils/__tests__/tenant-package.spec.ts" name="buildPackagePayload &gt; 能力目录为空时全量展开得到空集合（该租户无任何订阅）" time="0.000186528">
         </testcase>
     </testsuite>
-    <testsuite name="src/utils/__tests__/xss-protection.spec.ts" timestamp="2026-11-05T02:52:02.826Z" hostname="localhost" tests="31" failures="0" errors="0" skipped="0" time="0.034683358">
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="escapeHtml / unescapeHtml &gt; 转义五类特殊字符" time="0.002964692">
+    <testsuite name="src/utils/__tests__/validate-rules.spec.ts" timestamp="2026-11-12T16:57:37.886Z" hostname="localhost" tests="13" failures="0" errors="0" skipped="0" time="0.065066721">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="规则形状与默认值 &gt; required 默认必填 + blur 触发" time="0.003500247">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="escapeHtml / unescapeHtml &gt; 空值返回空串" time="0.000344925">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="规则形状与默认值 &gt; email/url/number 走类型校验" time="0.000562945">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="escapeHtml / unescapeHtml &gt; 转义后可还原原文" time="0.000198768">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="规则形状与默认值 &gt; length/minLength/maxLength 默认消息包含边界" time="0.000655653">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="stripHtmlTags &gt; 移除标签保留文本" time="0.000306446">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="规则形状与默认值 &gt; pattern/validator 包装透传与 combine 组合" time="0.003019882">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="stripHtmlTags &gt; 空值返回空串" time="0.000161417">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="正则语义 &gt; 手机号：1[3-9] 开头的 11 位数字" time="0.000604044">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 javascript:alert(1) 被替换为 about:blank" time="0.000270049">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="正则语义 &gt; 用户名：4-16 位字母数字下划线" time="0.000678918">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 JavaScript:alert(1) 被替换为 about:blank" time="0.000104959">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="正则语义 &gt; 密码：至少 8 位且同时含字母与数字" time="0.000362598">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 data:text/html,1 被替换为 about:blank" time="0.000113605">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="正则语义 &gt; 强密码：大小写字母、数字与特殊字符缺一不可" time="0.000374523">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 vbscript:x 被替换为 about:blank" time="0.000117668">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="正则语义 &gt; 整数与正整数" time="0.001804557">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 file:///etc/passwd 被替换为 about:blank" time="0.000087388">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="正则语义 &gt; 身份证号：18 位且月份/日期段有效" time="0.001445759">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 about:config 被替换为 about:blank" time="0.000084848">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="正则语义 &gt; IPv4 地址每段 0-255" time="0.000355914">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 合法地址原样返回" time="0.000166892">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="回调型规则 &gt; 端口：空值放行，1-65535 整数放行" time="0.033891669">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeHtml &gt; 移除白名单外的标签与属性" time="0.007622799">
+        <testcase classname="src/utils/__tests__/validate-rules.spec.ts" name="回调型规则 &gt; 二次确认：空值放行、与原值一致放行、不一致报错" time="0.001012765">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeHtml &gt; 保留白名单属性并清理危险 URL" time="0.001467757">
+    </testsuite>
+    <testsuite name="src/utils/__tests__/validate.spec.ts" timestamp="2026-11-12T16:57:37.888Z" hostname="localhost" tests="4" failures="0" errors="0" skipped="0" time="0.006404676">
+        <testcase classname="src/utils/__tests__/validate.spec.ts" name="validate utils &gt; validateEmail &gt; should validate correct email" time="0.002871476">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeHtml &gt; 根节点不在白名单时连同允许的子节点一并移除" time="0.000632133">
+        <testcase classname="src/utils/__tests__/validate.spec.ts" name="validate utils &gt; validateEmail &gt; should reject invalid email" time="0.000533061">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeHtml &gt; 空值返回空串" time="0.000147816">
+        <testcase classname="src/utils/__tests__/validate.spec.ts" name="validate utils &gt; validatePhone &gt; should validate correct phone" time="0.000286376">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeJson &gt; 递归转义字符串值与键名" time="0.001327748">
+        <testcase classname="src/utils/__tests__/validate.spec.ts" name="validate utils &gt; validatePhone &gt; should reject invalid phone" time="0.000286076">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeJson &gt; 非法 JSON 返回 null" time="0.006390802">
+    </testsuite>
+    <testsuite name="src/utils/__tests__/xss-protection.spec.ts" timestamp="2026-11-12T16:57:37.888Z" hostname="localhost" tests="31" failures="0" errors="0" skipped="0" time="0.098703261">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="escapeHtml / unescapeHtml &gt; 转义五类特殊字符" time="0.00267808">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="escapeHtml / unescapeHtml &gt; 空值返回空串" time="0.000318368">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="escapeHtml / unescapeHtml &gt; 转义后可还原原文" time="0.000190668">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="stripHtmlTags &gt; 移除标签保留文本" time="0.000279193">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="stripHtmlTags &gt; 空值返回空串" time="0.000156342">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 javascript:alert(1) 被替换为 about:blank" time="0.000249718">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 JavaScript:alert(1) 被替换为 about:blank" time="0.000098919">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 data:text/html,1 被替换为 about:blank" time="0.000106314">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 vbscript:x 被替换为 about:blank" time="0.000109288">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 file:///etc/passwd 被替换为 about:blank" time="0.000081406">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 危险协议 about:config 被替换为 about:blank" time="0.000078816">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeUrl &gt; 合法地址原样返回" time="0.000142456">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeHtml &gt; 移除白名单外的标签与属性" time="0.017715224">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeHtml &gt; 保留白名单属性并清理危险 URL" time="0.00143716">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeHtml &gt; 根节点不在白名单时连同允许的子节点一并移除" time="0.000766552">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeHtml &gt; 空值返回空串" time="0.000210722">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeJson &gt; 递归转义字符串值与键名" time="0.005273258">
+        </testcase>
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeJson &gt; 非法 JSON 返回 null" time="0.053929107">
             <system-err>
 [JSON 清理] 解析失败: SyntaxError: Expected property name or &apos;}&apos; in JSON at position 1 (line 1 column 2)
     at JSON.parse (&lt;anonymous&gt;)
@@ -512,31 +1268,31 @@
 
             </system-err>
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeInput &gt; text 转义并裁剪空白" time="0.000277199">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeInput &gt; text 转义并裁剪空白" time="0.000252382">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeInput &gt; email 只保留合法字符" time="0.000206192">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeInput &gt; email 只保留合法字符" time="0.000217398">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeInput &gt; url 拦截危险协议" time="0.000116727">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeInput &gt; url 拦截危险协议" time="0.000122912">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeInput &gt; number 只保留数字、小数点和负号" time="0.000165654">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeInput &gt; number 只保留数字、小数点和负号" time="0.000154134">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeInput &gt; 空值返回空串" time="0.000103534">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="sanitizeInput &gt; 空值返回空串" time="0.000979976">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 &lt;script&gt;alert(1)&lt;/script&gt;" time="0.000662163">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 &lt;script&gt;alert(1)&lt;/script&gt;" time="0.003019726">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 javascript:x" time="0.001306988">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 javascript:x" time="0.001423048">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 &lt;img onerror=&quot;x&quot;&gt;" time="0.000315463">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 &lt;img onerror=&quot;x&quot;&gt;" time="0.000241999">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 &lt;iframe src=&quot;x&quot;&gt;" time="0.000159464">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 &lt;iframe src=&quot;x&quot;&gt;" time="0.000130494">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 eval(1)" time="0.000417798">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 eval(1)" time="0.00011947">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 expression(x)" time="0.000267028">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 识别攻击特征 expression(x)" time="0.0002022">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 正常文本不误报" time="0.0008458">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="detectXSS &gt; 正常文本不误报" time="0.000618067">
         </testcase>
-        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="generateCSPNonce &gt; 生成 32 位十六进制字符串" time="0.004046556">
+        <testcase classname="src/utils/__tests__/xss-protection.spec.ts" name="generateCSPNonce &gt; 生成 32 位十六进制字符串" time="0.00401085">
         </testcase>
     </testsuite>
 </testsuites>

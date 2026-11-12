@@ -34,12 +34,13 @@
 
 | 文件 | 签名 | 职责 |
 |------|------|------|
-| [useCrud.ts](../../src/composables/useCrud.ts) | `useCrud<T>(api: CrudApi<T>, options?: UseCrudOptions)` | 列表页通用 CRUD 状态机：分页数据、loading、查询参数、增删改后的列表刷新。`CrudApi<T>` 约定 `list/get/create/update/remove` 五个 API 函数形状 |
+| [useCrud.ts](../../src/composables/useCrud.ts) | `useCrud<T>(api: CrudApi<T>, options?: UseCrudOptions)` | 列表页通用 CRUD 状态机：分页数据、loading、查询参数、增删改后的列表刷新。`CrudApi<T>` 约定 `list/create/update/delete` 四个 API 函数形状 |
 | [useTableConfig.ts](../../src/composables/useTableConfig.ts) | `useTableConfig(tableKey, columns, options?)` | 表格列配置持久化（localStorage 键前缀 `table_config_`，见 settings.ts `TABLE_CONFIG_KEY_PREFIX`），支持列显示/排序记忆 |
 | [useFormDraft.ts](../../src/composables/useFormDraft.ts) | `useFormDraft<T>(draftKey, options?)` | 表单草稿自动暂存与恢复（键前缀 `draft_`，时间戳后缀 `_timestamp` 用于 TTL 过期清理） |
 | [useBreakpoint.ts](../../src/composables/useBreakpoint.ts) | `useBreakpoint(customBreakpoints?)` | 响应式断点侦测（返回当前断点与各区间布尔值），用于布局自适应 |
+| [useAgenda.ts](../../src/composables/useAgenda.ts) | `useAgenda()` | 工作台「我的事项」聚合数据源：工作流待办/办公审批/站内信/近期日程/系统通知五域并行加载、失败隔离、单域重试与通知标记已读（调用方 `views/dashboard/components/AgendaPanel.vue`） |
 
-统一从 [src/composables/index.ts](../../src/composables/index.ts) 桶导出。当前四个 composable 均未发现页面调用点，属已实现未接入能力。
+统一从 [src/composables/index.ts](../../src/composables/index.ts) 桶导出。`useAgenda` 已由工作台我的事项面板使用；`useCrud`/`useTableConfig`/`useFormDraft`/`useBreakpoint` 当前未发现页面调用点，属已实现未接入能力。
 
 > 选型参考（AGENTS.md §3.4）：单页内状态用 ref/reactive；跨页复用的列表 CRUD 行为优先用 `useCrud`；只有跨页面共享且需持久化/全局通知的状态才进 Pinia store。
 

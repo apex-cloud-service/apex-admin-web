@@ -1,18 +1,19 @@
 # 测试指南
 
-> 依据 [vitest.config.ts](../../vitest.config.ts)、[package.json](../../package.json) 与 `src/**/__tests__/`、`src/api/*.test.ts` 当前实现核对（2026-11-11）。2026-11-05 的历史全量执行结果见[测试报告（2026-11-05）](../archived/project-reports/test-report-2026-11-05.md)。
+> 依据 [vitest.config.ts](../../vitest.config.ts)、[playwright.config.ts](../../playwright.config.ts)、[package.json](../../package.json) 与 `src/**/__tests__/`、`src/api/*.test.ts`、`e2e/` 当前实现核对（2026-11-13）。历史全量执行结果见[测试报告（2026-11-05）](../archived/project-reports/test-report-2026-11-05.md)与[测试报告（2026-11-13）](../archived/project-reports/test-report-2026-11-13.md)。
 
 ## 1. 技术选型与现状
 
 | 项 | 现状 |
 |----|------|
 | 单元测试框架 | Vitest ^5.0.1 |
-| DOM 测试环境 | happy-dom ^20.14.5（`environment: 'happy-dom'`，`globals: true`） |
-| 组件测试 | @vue/test-utils ^2.5.0（已用于 `Pagination.vue`、`v-permission` 指令） |
+| DOM 测试环境 | happy-dom ^20.14.5（`environment: 'happy-dom'`，`globals: true`；`e2e/` 已排除，归 Playwright） |
+| 组件测试 | @vue/test-utils ^2.5.0（已用于 `Pagination`/`FileUpload`/`EmptyState`/`FileUploadEnhanced`/`GlobalSearch`/`NotificationCenter` 与 `v-permission` 指令） |
 | 全局准备 | [src/test/setup.ts](../../src/test/setup.ts)：mock `ResizeObserver` 与 `window.matchMedia`（Element Plus / ECharts 依赖） |
-| E2E | @playwright/test ^1.63.0 已安装，**尚无配置文件与用例** |
+| E2E | Playwright ^1.63.0：`playwright.config.ts` + `e2e/`（`npm run test:e2e`）；webServer 起 Vite 开发服务，后端接口在用例内经 `page.route` 打桩，不依赖真实后端；首次运行须 `npx playwright install chromium` |
+| 性能/压测 | `npm run test:perf`（Lighthouse desktop，构建产物基线口径）、`npm run test:stress`（autocannon 静态服务两档并发）；业务接口压测属后端/网关范畴 |
 | 覆盖率 | v8 provider（`@vitest/coverage-v8`），报告 text/json/html/lcov（`npm run test:coverage`） |
-| 报告产物 | `npm run test:report` 输出 JUnit XML + JSON + 覆盖率（text/html/lcov + `coverage-summary.json` 摘要）到 `reports/`；脚本末尾调用 `scripts/quality/normalize-test-report.mjs` 归一化路径与主机名；机器可读结果入库，HTML/lcov 不入库 |
+| 报告产物 | `npm run test:report` 输出 JUnit XML + JSON + 覆盖率（text/html/lcov + `coverage-summary.json` 摘要）到 `reports/`；脚本末尾调用 `scripts/quality/normalize-test-report.mjs` 归一化路径与主机名；机器可读结果（含 `e2e-results.xml`）入库，HTML/lcov/lighthouse/stress 生成物不入库 |
 | CI | 无（本地执行） |
 
 ## 2. 常用命令
@@ -24,13 +25,16 @@ npm run test:coverage   # 覆盖率报告（v8，输出 coverage/）
 npm run test:report     # 单次运行 + JUnit/JSON/HTML/lcov 报告，输出 reports/（自动归一化后仅机器可读结果入库）
 npx vitest run          # CI 式单次运行（不 watch）
 npx vitest run src/utils/__tests__/request.spec.ts   # 指定文件
+npm run test:e2e        # Playwright E2E（6 条核心链路用例）
+npm run test:perf       # Lighthouse（构建 + vite preview + 报告到 reports/lighthouse/）
+npm run test:stress     # 压测（vite preview + autocannon，报告到 reports/stress/，需已构建）
 ```
 
-测试文件按 Vitest 默认规则匹配：`**/*.{test,spec}.?(c|m)[jt]s?(x)`（vitest.config.ts 未自定义 include）。覆盖率默认不设 `coverage.include`，只统计被用例加载过的模块；如需全仓库口径，追加 `--coverage.include='src/**/*.{ts,vue}'`。
+测试文件按 Vitest 默认规则匹配 `**/*.{test,spec}.?(c|m)[jt]s?(x)`，`e2e/**` 已显式排除（归 Playwright）。覆盖率默认不设 `coverage.include`，只统计被用例加载过的模块；如需全仓库口径，追加 `--coverage.include='src/**/*.{ts,vue}'`。
 
 ## 3. 现有用例清单
 
-共 27 个测试文件、214 个用例（2026-11-11 实测 `npx vitest run` 全绿），分布于 `src/**/__tests__/`（工具、Store、组件、指令、路由）与 `src/api/`（业务 API 契约）：
+共 65 个测试文件、475 个用例（2026-11-13 实测 `npx vitest run` 全绿），分布于 `src/**/__tests__/`（工具、Store、组件、指令、路由）与 `src/api/`（业务 API 契约）。下表为 2026-11-05 基线时已存在的用例；此后新增的 37 文件 / 254 用例（23 个 API 契约、7 个 utils、office Store、2 个 composables、4 个组件）与逐文件用例数见[测试报告（2026-11-13）](../archived/project-reports/test-report-2026-11-13.md) §3：
 
 | 用例文件 | 用例数 | 覆盖内容 |
 |----------|-------|---------|
@@ -97,9 +101,9 @@ describe('auth-config api', () => {
 
 ### 4.3 优先级建议
 
-1. **必须测**：`utils/request.ts`（解包/刷新/401）、`api/oauth2.ts`（PKCE/state）、权限指令、`composables/useCrud` 等有状态的复用逻辑——以上已于 2026-11-05 补齐；
-2. **建议测**：表单校验规则（`validate.ts` / `validate-rules.ts`）、脱敏工具（`mask.ts`）、XSS 工具（`xss-protection.ts`）——`validate.ts` 与 `mask.ts` / `xss-protection.ts` 已有用例，`validate-rules.ts` 仍缺；
-3. **待补**：`composables/useFormDraft.ts`、`useBreakpoint.ts`、`utils/message-socket.ts`、`utils/request-cache.ts`、`utils/error-handler.ts`，以及 `src/views/**` 页面组件交互（配合 @vue/test-utils + happy-dom）。
+1. **必须测**：`utils/request.ts`（解包/刷新/401）、`api/oauth2.ts`（PKCE/state）、权限指令、`composables/useCrud` 等有状态的复用逻辑——已于 2026-11-05 补齐；
+2. **建议测**：表单校验规则、脱敏/XSS 工具、`validate-rules.ts`、`message-socket.ts`、`request-cache.ts`、`error-handler.ts`、`useFormDraft.ts`、`useBreakpoint.ts`、全部 API 契约与通用组件——已于 2026-11-13 补齐（39 个 API 模块全部有直接契约用例）；
+3. **待补**：`src/views/**` 页面组件交互（63 个视图组件暂无用例，核心链路由 `e2e/` 打桩集成抽样覆盖）。
 
 ## 5. 覆盖率
 
@@ -111,14 +115,16 @@ npm run test:report      # 输出到 reports/（JUnit + JSON + HTML/lcov）
 - Provider：v8（依赖 `@vitest/coverage-v8`，须与 `vitest` 主版本一致）；
 - 报告输出 text/json/html/lcov；
 - 排除：`node_modules`、`src/test`、`**/*.spec.ts`、`**/*.test.ts`、`dist`、`*.config.ts`（见 vitest.config.ts `coverage.exclude`）；
-- **默认不设 `coverage.include`，只统计被用例加载过的模块**。2026-11-11 实测：默认口径行覆盖 74.11%，强制统计 `src/**` 的全量口径行覆盖 6.87%——两者差异来自 62 个页面组件与大量未测 API/工具模块。引用覆盖率数字时必须注明口径，不能只用默认口径宣称整体覆盖水平。
+- **默认不设 `coverage.include`，只统计被用例加载过的模块**。2026-11-13 实测：默认口径行覆盖 77.35%，强制统计 `src/**` 的全量口径行覆盖 15.58%——两者差异全部来自 63 个页面组件无组件级用例（API/工具/组件层已全部有直接用例）。引用覆盖率数字时必须注明口径，不能只用默认口径宣称整体覆盖水平。
 - 当前未设覆盖率门槛（thresholds），引入 CI 时建议对 `src/utils`、`src/stores`、`src/composables` 设定下限，并单独跟踪 `src/views`。
 
 ## 6. 测试环境注意事项
 
 - `happy-dom` 对部分浏览器 API 支持有限：涉及 `ResizeObserver`、`matchMedia` 已在 [setup.ts](../../src/test/setup.ts) 全局 mock；用到其他缺失 API 时在 setup 中补充，勿散落在用例里；
 - Pinia：用例中先 `createPinia()` 并 `setActivePinia()` 再使用 store；
-- Element Plus 组件：单测中优先 mock 组件或直接测逻辑层，避免渲染整棵组件树拖慢用例。
+- Element Plus 组件：单测中优先 mock 组件或直接测逻辑层，避免渲染整棵组件树拖慢用例；
+- E2E 打桩口径：`e2e/` 用例 mock 的是 HTTP 接口层，不覆盖真实后端联调、OAuth 跳转与 Nginx 反代验证（后者用 `npm run verify:deploy`）；
+- E2E 建议独占执行：与重负载任务并行时出现过间歇超时（见测试报告 §7）。
 
 ## 7. 关联文档
 
@@ -127,4 +133,4 @@ npm run test:report      # 输出到 reports/（JUnit + JSON + HTML/lcov）
 
 ---
 
-**最后更新**：2026-11-11
+**最后更新**：2026-11-13

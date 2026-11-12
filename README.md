@@ -125,7 +125,7 @@ apex-admin-web/
 │   ├── types/          # 与后端 DTO 对齐的类型定义
 │   ├── utils/          # 请求封装(含401无感刷新) / 会话存取 / 校验 / 脱敏 / XSS防护等
 │   ├── stores/         # Pinia：用户会话 / 权限 / 应用 UI 状态 / 办公平台
-│   ├── composables/    # 组合式函数（useCrud/useTableConfig/useFormDraft/useBreakpoint）
+│   ├── composables/    # 组合式函数（useCrud/useTableConfig/useFormDraft/useBreakpoint/useAgenda）
 │   ├── router/         # 静态路由 + 菜单驱动动态路由
 │   ├── directives/     # v-permission 按钮权限指令
 │   ├── layouts/        # 管理后台主布局（侧边栏/顶栏/面包屑）

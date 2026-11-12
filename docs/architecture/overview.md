@@ -17,7 +17,7 @@
 | 图片处理 | cropperjs | ^1.6.3 | FileUploadEnhanced 裁剪 |
 | 测试 | Vitest | ^5.0.1 | happy-dom 环境（[vitest.config.ts](../../vitest.config.ts)） |
 | Mock | mockjs | ^1.1.0 | 仅开发环境动态加载（[src/mock/index.ts](../../src/mock/index.ts)） |
-| E2E | Playwright | 已安装 | **尚无 `playwright.config` 与 E2E 用例**，不构成浏览器端自动化覆盖 |
+| E2E | Playwright | ^1.63.0 | `playwright.config.ts` + `e2e/`（`npm run test:e2e`）：核心链路浏览器端集成测试，后端接口在用例内经 `page.route` 打桩，不依赖真实后端 |
 
 运行环境要求：Node >= 18。
 
@@ -85,7 +85,7 @@ flowchart TB
     end
 
     subgraph Compose["组合式函数 src/composables"]
-        C1["useCrud · useTableConfig<br/>useFormDraft · useBreakpoint<br/>（均已实现，当前无页面调用点）"]
+        C1["useCrud · useTableConfig · useFormDraft · useBreakpoint<br/>（已实现，当前无页面调用点）<br/>useAgenda（工作台我的事项，AgendaPanel 调用）"]
     end
 
     subgraph Api["接口层 src/api"]
@@ -204,9 +204,11 @@ flowchart LR
 | 手段 | 命令/位置 | 说明 |
 |------|-----------|------|
 | 类型检查 | `vue-tsc --noEmit`（build 前置） | tsconfig `strict` + `noUnusedLocals` + `noUnusedParameters` |
-| 单元测试 | `npm run test`（Vitest + happy-dom） | 27 个测试文件（2026-11-10 实测 214 用例全绿）：`src/utils/__tests__/`（11）、`src/api/*.test.ts`（7）、`stores/__tests__`（3）、`composables/__tests__`（2）、`components/__tests__`（2）、`directives`/`router`（各 1），详见 [测试指南](../reference/testing.md) |
+| 单元测试 | `npm run test`（Vitest + happy-dom） | 65 个测试文件（2026-11-13 实测 475 用例全绿）：39 个 API 模块全部有契约用例，utils/stores/composables/通用组件全覆盖，详见 [测试指南](../reference/testing.md) |
+| E2E | `npm run test:e2e`（Playwright + chromium） | `e2e/` 6 条核心链路打桩集成测试（未登录跳转/登录/退出/动态菜单/401 刷新），后端接口在用例内 `page.route` 打桩 |
 | 产物分析 | `npm run analyze` | rollup-plugin-visualizer |
-| 性能审计 | `scripts/performance/lighthouse-test.sh` | Lighthouse desktop preset，报告输出 `./reports/lighthouse` |
+| 性能测试 | `npm run test:perf`（Lighthouse desktop） | 构建产物静态基线口径，报告输出 `./reports/lighthouse`（`scripts/performance/lighthouse-test.sh` 为其底层脚本） |
+| 压力测试 | `npm run test:stress`（autocannon） | 静态服务两档并发承载基线，报告输出 `./reports/stress`；业务接口压测属后端/网关范畴 |
 | 依赖安全 | `scripts/security/security-scan.sh`、`npm run audit` | `npm run audit` 输出 JSON + HTML 到 `./reports/audit.html`；security-scan.sh 控制台输出 npm audit 结果，其中仅 snyk 为可选步骤（未安装自动跳过），npm-check-updates 经 npx 无条件执行 |
 | 上线验证 | `npm run verify:deploy` | `scripts/verify/post-deploy-check.sh`（C1–C13 检查项，需 `BASE_URL`） |
 | API 契约 | `npm run generate:api` | openapi-generator-cli（typescript-axios）；当前 `src/api/*.ts` 为手写封装，生成目录不参与运行时 |

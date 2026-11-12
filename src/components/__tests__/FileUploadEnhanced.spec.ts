@@ -1,0 +1,293 @@
+/**
+ * FileUploadEnhanced 单元测试
+ * ------------------------------------------------------------------
+ * 覆盖：上传地址与请求层同源拼接（VITE_API_BASE_URL）、props 缺省与提示文案生成、
+ * beforeUpload 大小/类型校验、enableChunk 分片编排与结果映射、document 粘贴监听
+ * 注册与注销；不含 Canvas/裁剪与真实分片传输。
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { defineComponent, h } from 'vue'
+import FileUploadEnhanced from '@/components/FileUploadEnhanced.vue'
+import { MAX_UPLOAD_SIZE } from '@/settings'
+import type {
+  ChunkInitPayload,
+  ChunkInitResult,
+  ChunkMergeResult,
+  ChunkUploadResult,
+} from '@/api/file'
+
+const mocks = vi.hoisted(() => ({
+  getToken: vi.fn<() => string>(),
+  initChunkUpload: vi.fn<(payload: ChunkInitPayload) => Promise<ChunkInitResult>>(),
+  uploadChunk: vi.fn<
+    (params: { fileId: number; chunkIndex: number; totalChunks: number }, chunk: Blob) => Promise<ChunkUploadResult>
+  >(),
+  mergeChunks: vi.fn<(payload: { fileId: number; fileName?: string }) => Promise<ChunkMergeResult>>(),
+  showError: vi.fn<(error: unknown, defaultMsg?: string) => void>(),
+  messageSuccess: vi.fn<(msg?: string) => void>(),
+  messageError: vi.fn<(msg?: string) => void>(),
+}))
+
+vi.mock('@/utils/auth', () => ({ getToken: mocks.getToken }))
+vi.mock('@/api/file', () => ({
+  initChunkUpload: mocks.initChunkUpload,
+  uploadChunk: mocks.uploadChunk,
+  mergeChunks: mocks.mergeChunks,
+}))
+vi.mock('@/utils/request', () => ({ showError: mocks.showError }))
+vi.mock('element-plus/es/components/message/index.mjs', () => ({
+  ElMessage: { success: mocks.messageSuccess, error: mocks.messageError },
+}))
+vi.mock('cropperjs', () => ({ default: vi.fn() }))
+vi.mock('cropperjs/dist/cropper.css', () => ({}))
+
+/** el-upload 桩：保留断言所需 props 并渲染 default/tip 插槽 */
+const ElUploadStub = defineComponent({
+  name: 'ElUpload',
+  props: {
+    action: { type: String, default: '' },
+    headers: { type: Object, default: () => ({}) },
+    data: { type: Object, default: () => ({}) },
+    accept: { type: String, default: '' },
+    limit: { type: Number, default: undefined },
+    listType: { type: String, default: 'text' },
+    multiple: { type: Boolean, default: false },
+    disabled: { type: Boolean, default: false },
+    drag: { type: Boolean, default: false },
+    beforeUpload: { type: Function, default: null },
+  },
+  setup(_, { slots }) {
+    return () => h('div', { class: 'el-upload-stub' }, [slots.default?.(), slots.tip?.()])
+  },
+})
+
+/** FileUploadEnhanced 的入参（与组件 Props 对齐） */
+interface EnhancedProps {
+  sex?: 0 | 1
+  limit?: number
+  listType?: 'text' | 'picture' | 'picture-card'
+  accept?: string
+  tip?: string
+  disabled?: boolean
+  drag?: boolean
+  multiple?: boolean
+  enableCompress?: boolean
+  enableCropper?: boolean
+  enablePaste?: boolean
+  enableChunk?: boolean
+  chunkMaxSizeMB?: number
+}
+
+const UPLOAD_STUBS = {
+  ElUpload: ElUploadStub,
+  ElDialog: true,
+  ElImage: true,
+  ElProgress: true,
+  ElSpace: true,
+  ElButton: true,
+  ElIcon: true,
+}
+
+/** 挂载组件 */
+function mountEnhanced(props: EnhancedProps = {}) {
+  const wrapper = mount(FileUploadEnhanced, {
+    props,
+    global: { stubs: UPLOAD_STUBS },
+  })
+  return { wrapper, stub: wrapper.findComponent(ElUploadStub) }
+}
+
+/** 从 el-upload 桩上取回组件传入的 before-upload 回调 */
+function getBeforeUpload(stub: ReturnType<typeof mountEnhanced>['stub']) {
+  return stub.props('beforeUpload') as unknown as (rawFile: File) => Promise<boolean | File>
+}
+
+describe('FileUploadEnhanced 上传地址', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('同域部署使用相对路径', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '')
+    const { wrapper, stub } = mountEnhanced()
+    await flushPromises()
+    expect(stub.props('action')).toBe('/api/v1/files/generic')
+    wrapper.unmount()
+  })
+
+  it('跨域部署按基地址拼接（去尾部斜杠）', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/')
+    const { wrapper, stub } = mountEnhanced()
+    await flushPromises()
+    expect(stub.props('action')).toBe('https://api.example.com/api/v1/files/generic')
+    wrapper.unmount()
+  })
+})
+
+describe('FileUploadEnhanced props 缺省与提示文案', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getToken.mockReturnValue('test-token')
+  })
+
+  it('缺省 accept/limit/listType 等透传 el-upload', async () => {
+    const { wrapper, stub } = mountEnhanced()
+    await flushPromises()
+    expect(stub.props('accept')).toBe('image/jpeg,image/png,image/gif,image/webp')
+    expect(stub.props('limit')).toBe(1)
+    expect(stub.props('listType')).toBe('picture-card')
+    expect(stub.props('multiple')).toBe(false)
+    expect(stub.props('drag')).toBe(false)
+    expect(stub.props('disabled')).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('请求头携带 Bearer 令牌，表单参数携带 sex', async () => {
+    const { wrapper, stub } = mountEnhanced({ sex: 1 })
+    await flushPromises()
+    expect(stub.props('headers')).toEqual({ Authorization: 'Bearer test-token' })
+    expect(stub.props('data')).toEqual({ sex: 1 })
+    wrapper.unmount()
+  })
+
+  it('缺省 tip 按 accept 与 10MB 上限自动生成并含压缩提示', async () => {
+    const { wrapper } = mountEnhanced()
+    await flushPromises()
+    const tip = wrapper.find('.el-upload__tip').text()
+    expect(tip).toContain('支持 JPEG/PNG/GIF/WEBP，大小不超过 10MB')
+    expect(tip).toContain('已启用自动压缩')
+    wrapper.unmount()
+  })
+
+  it('自定义 tip 优先，关闭压缩后不再展示压缩提示', async () => {
+    const { wrapper } = mountEnhanced({ tip: '仅支持 PNG 格式', enableCompress: false })
+    await flushPromises()
+    const tip = wrapper.find('.el-upload__tip').text()
+    expect(tip).toContain('仅支持 PNG 格式')
+    expect(tip).not.toContain('已启用自动压缩')
+    wrapper.unmount()
+  })
+})
+
+describe('FileUploadEnhanced beforeUpload 校验', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getToken.mockReturnValue('test-token')
+  })
+
+  it('超过大小上限且未启用分片时拒绝并提示', async () => {
+    const { wrapper, stub } = mountEnhanced()
+    await flushPromises()
+    const big = new File([new ArrayBuffer(MAX_UPLOAD_SIZE + 1)], 'big.png', { type: 'image/png' })
+    const result = await getBeforeUpload(stub)(big)
+    expect(result).toBe(false)
+    expect(mocks.messageError).toHaveBeenCalledWith('文件大小不能超过 10 MB')
+    wrapper.unmount()
+  })
+
+  it('类型不在 accept 内时拒绝并提示', async () => {
+    const { wrapper, stub } = mountEnhanced()
+    await flushPromises()
+    const file = new File([new ArrayBuffer(16)], 'doc.txt', { type: 'text/plain' })
+    const result = await getBeforeUpload(stub)(file)
+    expect(result).toBe(false)
+    expect(mocks.messageError).toHaveBeenCalledWith('仅支持上传 JPEG/PNG/GIF/WEBP 格式的文件')
+    wrapper.unmount()
+  })
+
+  it('合法文件且关闭压缩时原样返回', async () => {
+    const { wrapper, stub } = mountEnhanced({ enableCompress: false })
+    await flushPromises()
+    const file = new File([new ArrayBuffer(64)], 'pic.png', { type: 'image/png' })
+    const result = await getBeforeUpload(stub)(file)
+    expect(result).toBe(file)
+    wrapper.unmount()
+  })
+
+  it('enableChunk 开启时超限文件按 5MB 分片上传并在合并后映射 success', async () => {
+    mocks.initChunkUpload.mockResolvedValue({
+      fileId: 77,
+      bucketName: 'apex',
+      chunkSize: 5 * 1024 * 1024,
+      totalChunks: 3,
+      uploadedChunks: [],
+    })
+    mocks.uploadChunk
+      .mockResolvedValueOnce({ fileId: 77, chunkIndex: 0, uploaded: true, objectName: 'c0', chunkSize: 5 * 1024 * 1024 })
+      .mockResolvedValueOnce({ fileId: 77, chunkIndex: 1, uploaded: true, objectName: 'c1', chunkSize: 5 * 1024 * 1024 })
+      .mockResolvedValueOnce({ fileId: 77, chunkIndex: 2, uploaded: true, objectName: 'c2', chunkSize: 2 * 1024 * 1024 })
+    mocks.mergeChunks.mockResolvedValue({
+      fileId: 77,
+      bucketName: 'apex-bucket',
+      fileName: 'AF/big.bin',
+      url: 'https://cdn.example.com/AF/big.bin',
+      fileSize: 12 * 1024 * 1024,
+    })
+
+    const { wrapper, stub } = mountEnhanced({ enableChunk: true })
+    await flushPromises()
+    const big = new File([new ArrayBuffer(12 * 1024 * 1024)], 'big.bin', { type: 'application/octet-stream' })
+    const result = await getBeforeUpload(stub)(big)
+    expect(result).toBe(false)
+    await flushPromises()
+
+    expect(mocks.initChunkUpload).toHaveBeenCalledWith({
+      fileName: 'big.bin',
+      fileSize: 12 * 1024 * 1024,
+      chunkSize: 5 * 1024 * 1024,
+      totalChunks: 3,
+      contentType: 'application/octet-stream',
+    })
+    expect(mocks.uploadChunk).toHaveBeenCalledTimes(3)
+    expect(mocks.uploadChunk.mock.calls.map(([params]) => params.chunkIndex)).toEqual([0, 1, 2])
+    expect(mocks.uploadChunk.mock.calls.map(([, chunk]) => chunk.size)).toEqual([
+      5 * 1024 * 1024,
+      5 * 1024 * 1024,
+      2 * 1024 * 1024,
+    ])
+    expect(mocks.uploadChunk.mock.calls.every(([params]) => params.fileId === 77 && params.totalChunks === 3)).toBe(true)
+    expect(mocks.mergeChunks).toHaveBeenCalledWith({ fileId: 77 })
+    expect(mocks.messageSuccess).toHaveBeenCalledWith('上传成功')
+    expect(wrapper.emitted('success')?.[0]).toEqual([
+      {
+        bucketName: 'apex-bucket',
+        objectName: 'AF/big.bin',
+        url: 'https://cdn.example.com/AF/big.bin',
+        expiresIn: 0,
+      },
+    ])
+    wrapper.unmount()
+  })
+})
+
+describe('FileUploadEnhanced 粘贴监听', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getToken.mockReturnValue('test-token')
+  })
+
+  it('enablePaste 开启时注册 document paste 监听，卸载时以同一引用注销', () => {
+    const addSpy = vi.spyOn(document, 'addEventListener')
+    const removeSpy = vi.spyOn(document, 'removeEventListener')
+    const { wrapper } = mountEnhanced({ enablePaste: true })
+
+    const registered = addSpy.mock.calls.filter(([type]) => type === 'paste')
+    expect(registered).toHaveLength(1)
+    const handler = registered[0][1]
+
+    wrapper.unmount()
+    const removed = removeSpy.mock.calls.filter(([type]) => type === 'paste')
+    expect(removed).toHaveLength(1)
+    expect(removed[0][1]).toBe(handler)
+
+    addSpy.mockRestore()
+    removeSpy.mockRestore()
+  })
+
+  it('enablePaste 缺省关闭时不注册监听', () => {
+    const addSpy = vi.spyOn(document, 'addEventListener')
+    const { wrapper } = mountEnhanced()
+    expect(addSpy.mock.calls.filter(([type]) => type === 'paste')).toHaveLength(0)
+    wrapper.unmount()
+    addSpy.mockRestore()
+  })
+})

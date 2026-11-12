@@ -283,6 +283,7 @@
 | PUT | `/api/v1/messages/read-all` | `markAllMessagesRead()` | 全部已读 |
 | GET | `/api/v1/messages/unread/count` | `getUnreadCount()` | 未读数（顶栏 60s 轮询兜底 + WebSocket 推送刷新） |
 | POST | `/api/v1/messages/ws-ticket` | `issueMessageSocketTicket()` | 签发 30s 一次性 WebSocket 握手票据（供 `utils/message-socket.ts` 消费） |
+| GET | `/api/v1/messages/{messageId}/deliveries` | `listMessageDeliveries(messageId)` | 渠道投递记录（发送人可见全部接收人，接收人仅本人；⚠️ 返回纯数组；已发送页抽屉使用） |
 | GET | `/admin-api/v1/message-templates` | `listMessageTemplates()` | 启用模板列表（数组，无分页） |
 | POST | `/admin-api/v1/message-templates` | `createMessageTemplate(payload)` | 创建模板 |
 | PUT | `/admin-api/v1/message-templates/{templateId}` | `updateMessageTemplate(id, payload)` | 更新模板 |
@@ -330,9 +331,9 @@
 | POST | `/api/v2/office/sync/preflight` | `preflightOrgSync(platform)` | 预检（返回 ready 与缺失项） |
 | POST | `/api/v2/office/sync/preview` | `previewOrgSync(platform, syncType)` | 预览变更规模（不落库） |
 | POST | `/api/v2/office/sync/tasks` | `executeOrgSync(payload)` | 创建同步任务 |
-| GET | `/api/v2/office/sync/tasks` | `listWizardSyncTasks(params)` | 任务列表（⚠️ page/size，返回数组） |
-| GET | `/api/v2/office/sync/tasks/{taskId}` | `getWizardSyncTask(taskId)` | 任务详情 |
 | POST | `/api/v2/office/sync/tasks/{taskId}/retry` | `retryWizardSyncTask(taskId)` | 重试失败任务 |
+
+> 同步向导仅封装预检/预览/执行/重试 4 个函数；同步任务分页查询由组织同步接口 `office-platform.ts#listOrgSyncTasks` 承担，向导模块不重复封装。
 
 ### 2.16.4 密码找回 [src/api/password-recovery.ts](../../src/api/password-recovery.ts)（前缀 `/auth/v2/password-recovery`）
 
@@ -366,13 +367,10 @@
 | POST | `/api/mfa/sms/enable?phoneNumber=` | `enableSmsMfa(phone)` | 启用短信 MFA |
 | POST | `/api/mfa/email/enable?email=` | `enableEmailMfa(email)` | 启用邮箱 MFA |
 | DELETE | `/api/mfa/{type}` | `disableMfa(type)` | 关闭（TOTP/SMS/EMAIL） |
-| POST | `/api/mfa/verify?code=&type=` | `verifyMfaCode(code, type)` | 校验动态码 |
-| POST | `/api/mfa/send-code?type=` | `sendMfaCode(type)` | 发送验证码 |
 | GET | `/api/mfa/configs` | `listMfaConfigs()` | 我的配置（⚠️ 裸数组） |
-| GET | `/api/mfa/status` | `getMfaStatus()` | 是否启用任意 MFA |
 | POST | `/api/mfa/backup-codes/regenerate` | `regenerateBackupCodes()` | 重生成备用码 |
-| POST | `/api/mfa/backup-codes/verify?code=` | `verifyBackupCode(code)` | 校验备用码 |
-| POST | `/api/mfa/unlock?userId=&type=` | `unlockMfa(userId, type)` | 解锁（需管理员） |
+
+> 前端仅封装上述 7 个函数；动态码校验/发送、MFA 状态查询、备用码校验与管理员解锁等端点未在管理端封装。另有一组需显式传 userId/tenantId 的 `/api/v1/mfa/**` 契约，管理端不使用。
 
 **IP 访问控制**（前缀 `/api/ip-access-control`，⚠️ 写操作参数全部走 query string）：
 
@@ -381,7 +379,6 @@
 | GET | `/api/ip-access-control/whitelist` / `blacklist` | `listIpRules(type)` | 列表（⚠️ 裸数组） |
 | POST | `/api/ip-access-control/whitelist?ipAddress=&description=` | `addIpRule('WHITELIST', ...)` | 新增白名单 |
 | POST | `/api/ip-access-control/blacklist?ipAddress=&description=&durationMinutes=` | `addIpRule('BLACKLIST', ...)` | 新增黑名单（不传时长为永久） |
-| DELETE | `/api/ip-access-control/whitelist|blacklist?ipAddress=` | `removeIpRuleByAddress` | 按地址移除 |
 | DELETE | `/api/ip-access-control/{ruleId}` | `deleteIpRule(id)` | 按 ID 删除 |
 | PUT | `/api/ip-access-control/{ruleId}/enable|disable` | `toggleIpRule(id, enabled)` | 启停规则 |
 | POST | `/api/ip-access-control/cleanup` | `cleanupIpRules()` | 清理过期（返回数量） |

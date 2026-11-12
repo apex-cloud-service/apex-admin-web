@@ -12,7 +12,7 @@
   后端接口：
     - POST /api/v1/files/generic - 通用文件上传（FormData：file + sex）
     - POST /api/v1/file/chunk/init|upload|merge - 分片上传（启用 enableChunk 时）
-    - GET  /api/v1/file/status/{fileId} - 查询已上传分片
+    - GET  /api/v1/file/chunk/status/{fileId} - 查询已上传分片
 
   Props：
     - sex: 性别路由参数（0=男/AM，1=女/AF），随 FormData 上送

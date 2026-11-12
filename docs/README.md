@@ -15,6 +15,7 @@
 
 - [总体架构](architecture/overview.md) - 技术栈、分层架构、请求时序、部署架构、质量保障
 - [认证与路由架构](architecture/auth-and-routing.md) - 登录、令牌无感刷新、OAuth2/PKCE、动态路由全流程图
+- [领域模型与状态机图](architecture/domain-and-state-diagrams.md) - 核心领域模型类图、工作流实例/租户生命周期/办公绑定状态机、我的事项与数据总览聚合时序图
 
 ### API 文档
 
@@ -58,6 +59,7 @@
   - [上线检查清单（2026-11-10）](archived/project-reports/frontend-middle-platform-go-live-checklist-2026-11-10.md)
   - [聚合评审与事项发现方案（2026-11-11）](archived/project-reports/frontend-aggregation-review-2026-11-11.md) - 聚合能力分层评审结论与「我的事项」工作台区块实施方案（已实施）
   - [聚合能力优化调整方案（2026-11-11）](archived/project-reports/frontend-aggregation-optimization-plan-2026-11-11.md) - P0/P1/P2 各项的详细执行步骤、代码设计、测试与验收标准（P0/P1 已实施，P2-1 另立项）
+  - [前端测试报告（2026-11-13）](archived/project-reports/test-report-2026-11-13.md) - 单元/组件 65 文件 475 用例全绿 + E2E/Lighthouse/压测首建基线
 - [前后端优化实施方案](archived/frontend-backend-optimization-plan-2026-10-01.md) - 前后端功能匹配评审与分级优化方案
 - [后端待实现功能清单](archived/backend-pending-features-2026-10-01.md) - 后端待实现功能清单与接口契约
 - [后端代码生成器实现](archived/backend-code-generator-implementation-2026-10-01.md) - 代码生成器模块后端完整实现代码
@@ -162,5 +164,5 @@ apex-admin-web/
 
 ---
 
-**最后更新**: 2026-11-11  
+**最后更新**: 2026-11-13  
 **维护者**: Apex Admin Web Team

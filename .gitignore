@@ -46,9 +46,11 @@ coverage-html/
 # ===== 测试报告 =====
 # 机器可读结果（JUnit XML / 用例 JSON / 覆盖率摘要）入库，供 CI 归档与比对；
 # HTML、lcov 等生成物体积大且可随时重建，不入库。
+# E2E（Playwright）JUnit 结果与单元测试同口径入库；lighthouse/stress 生成物不入库。
 reports/*
 !reports/test-results.xml
 !reports/test-results.json
+!reports/e2e-results.xml
 !reports/coverage/
 reports/coverage/*
 !reports/coverage/coverage-summary.json

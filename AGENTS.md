@@ -2,7 +2,7 @@
 
 本文件是本仓库的开发入口，说明当前实现、模块边界、关键业务链路和变更约束。修改前先定位相关源码；文档与实现不一致时，以执行代码、类型定义和配置为依据，并同步修正文档。历史分析文档和文件头注释不能代替实现核对。
 
-**核对日期：2026-11-10。** 本次依据前端仓库（HEAD 696dd00）对全部文档、脚本、配置与代码实现的对照核对（中台整改与上线校验背景见 [上线检查清单](docs/archived/project-reports/frontend-middle-platform-go-live-checklist-2026-11-10.md)，前次前后端评审见 [评审报告](docs/archived/project-reports/frontend-backend-review-2026-11-08.md)）；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
+**核对日期：2026-11-13。** 本次依据前端仓库（工作区 595bee8 + 测试整改）对全部文档、脚本、配置与代码实现的对照核对（中台整改与上线校验背景见 [上线检查清单](docs/archived/project-reports/frontend-middle-platform-go-live-checklist-2026-11-10.md)，前次前后端评审见 [评审报告](docs/archived/project-reports/frontend-backend-review-2026-11-08.md)）；图中的后端与第三方服务表示前端依赖的接口边界，不表示已审计其内部实现。
 
 ## 1. 开发入口与关键约束
 
@@ -60,7 +60,7 @@ src/
 ├── views/                 login、oauth2、public（匿名分享/找回页）、dashboard、profile、error、demo
 │                          system、monitor、data、office、workflow、integration、iot
 ├── components/            Pagination、GlobalSearch、NotificationCenter、EmptyState、上传组件
-├── composables/           useCrud、useTableConfig、useFormDraft、useBreakpoint
+├── composables/           useCrud、useTableConfig、useFormDraft、useBreakpoint、useAgenda
 ├── stores/                user、permission、app、office
 ├── directives/            permission
 ├── api/                   按业务域拆分的类型化接口函数
@@ -90,7 +90,7 @@ src/
 | 在线会话 | `session.ts` | 在线列表/统计、用户会话查询与批量下线、单会话终止（`/auth/v1/sessions`） |
 | 账号安全 | `mfa.ts`、`ip-access-control.ts`、`auth-audit.ts` | MFA 配置与 IP 白/黑名单（`/api/mfa`、`/api/ip-access-control`）；认证中心审计事件查询与清理（`/api/v1/auth/audit-logs/**`） |
 | 运维健康 | `operations.ts` | `/api/v2/operations/*` 报告/快照/趋势/租户摘要/导出 |
-| 站内信 | `message.ts` | 收件箱/已发送/发送/未读数、WebSocket 推送与消息模板管理（`/api/v1/messages`、`/admin-api/v1/message-templates`）；游标增量收件箱（`/inbox/cursor`）与渠道投递记录（`/{id}/deliveries`，已发送页抽屉） |
+| 站内信 | `message.ts` | 收件箱/已发送/发送/未读数、WebSocket 推送与消息模板管理（`/api/v1/messages`、`/admin-api/v1/message-templates`）；渠道投递记录（`/{id}/deliveries`，已发送页抽屉）。游标增量收件箱（`/inbox/cursor`）仅后端契约，前端未封装（仅存在未消费的 `InboxCursorItem` DTO） |
 | 通知中心 | `notification.ts` | 系统事件通知收件箱/未读/已读与 SSE 实时推送（`/api/v1/notifications/**`，system 域）；与 office 域站内信是两套独立通道 |
 | 办公平台 | `office-platform.ts`、`office-approval.ts`、`office-calendar.ts`、`office-document.ts`、`office-sync-wizard.ts`、`meeting-room.ts` | 业务接口按子域拆分、version、组织同步（部门 CRUD/员工/同步历史/触发同步/映射）、同步向导（预检/预览/执行/重试）、会议室；绑定查询有 `/bindings`（数组）与 `/bindings/page`（真实分页 + status 过滤）两套 |
 | 数据脱敏 | `masking.ts` | 规则只读查询与批量脱敏试算（`/api/v1/masking`） |
@@ -469,7 +469,7 @@ sequenceDiagram
     Note over V,B: 解绑（APPROVED）使用 DELETE /bindings/{id}/unbind?version={version}
 ```
 
-`office-platform.ts` 负责平台标识、授权回调、应用配置、绑定审批与组织同步；审批/日历/文档业务分别在 `office-approval.ts`、`office-calendar.ts`、`office-document.ts`。绑定审批页（`views/office/bindings/index.vue`）已使用 `listBindingsPage`（`GET /admin-api/v1/office/bindings/page`），具备真实 `total` 与 `status`（PENDING/APPROVED/REJECTED/REVOKED）服务端过滤，platform 为必选条件。`views/office/console/index.vue` 仍使用数组口径的 `listBindings`（`GET /admin-api/v1/office/bindings`，返回数组，调用时固定 `page=1,size=100`）。审批与解绑均携带 `version` 乐观锁，冲突由后端拒绝。
+`office-platform.ts` 负责平台标识、授权回调、应用配置、绑定审批与组织同步；审批/日历/文档业务分别在 `office-approval.ts`、`office-calendar.ts`、`office-document.ts`。绑定审批页（`views/office/bindings/index.vue`）已使用 `listBindingsPage`（`GET /admin-api/v1/office/bindings/page`），具备真实 `total` 与 `status`（PENDING/APPROVED/REJECTED/REVOKED）服务端过滤，platform 为必选条件。`views/office/console/index.vue` 的绑定统计同样走 `listBindingsPage`：每平台发起两个计数请求（全部状态 / 待审批，各 `page=1,size=1`）读取真实 `total`，单平台查询失败时该平台卡片显式失败态。审批与解绑均携带 `version` 乐观锁，冲突由后端拒绝。
 
 ## 7. 常规业务、工作流与上传
 
@@ -614,18 +614,21 @@ flowchart TD
 | `npm run test:coverage` | 覆盖率检查（`@vitest/coverage-v8` 已安装，输出 `coverage/`） |
 | `npm run test:report` | 单次运行并输出 JUnit XML + JSON + 覆盖率（text/HTML/lcov + `coverage-summary.json` 摘要）到 `reports/`（机器可读结果入库，HTML/lcov 不入库） |
 | `npm run test:ui` | Vitest 浏览器 UI 交互界面 |
+| `npm run test:e2e` | Playwright 浏览器端集成测试（`playwright.config.ts` + `e2e/`；webServer 起 Vite 开发服务，后端接口在用例内经 `page.route` 打桩，不依赖真实后端；首次运行须 `npx playwright install chromium`） |
+| `npm run test:perf` | Lighthouse 性能测试（构建产物 `vite preview` 上运行 desktop 预设，报告落 `reports/lighthouse/`；无后端环境为静态加载基线口径） |
+| `npm run test:stress` | 静态服务压力测试（autocannon 对 `vite preview` 两档并发，结果落 `reports/stress/`；业务接口压测属后端/网关范畴） |
 | `npm run check:comments` | 注释规范检查（`scripts/quality/check-comments.mjs`，仅检查注释存在性，查不出注释与实现的一致性） |
 | `npm run generate:api` | openapi-generator-cli 生成 API 客户端（依赖 OpenAPI 描述源配置，当前非主链路） |
 | `npm run audit` / `npm run audit:fix` | npm 依赖安全审计与自动修复 |
 | `npm run preview` | 本地预览构建产物 |
-| `npm run verify:deploy` | 上线后验证（`scripts/verify/post-deploy-check.sh`；需 `BASE_URL`，可选 `API_BASE`/`TOKEN`；失败退出码 1） |
+| `npm run verify:deploy` | 上线后验证（`scripts/verify/post-deploy-check.sh`；需 `BASE_URL`，缺失时退出码 2；可选 `API_BASE`/`TOKEN`/`TENANT_ID`/`INSECURE`/`SKIP_UPLOAD`/`SKIP_WS`；检查失败退出码 1） |
 | `npm run analyze` | 构建并打开产物分析报告 |
 
-当前 package.json 没有 lint 或独立 typecheck 脚本；类型检查使用上述 vue-tsc 或 build 命令。不得记录不存在的 `npm run lint`。Vitest 使用 happy-dom 和 `src/test/setup.ts`，覆盖率配置没有阈值；Playwright 已安装但尚无配置及 E2E 用例，不应宣称已有浏览器端自动化覆盖。
+当前 package.json 没有 lint 或独立 typecheck 脚本；类型检查使用上述 vue-tsc 或 build 命令。不得记录不存在的 `npm run lint`。Vitest 使用 happy-dom 和 `src/test/setup.ts`（`e2e/` 目录已排除，归 Playwright 执行），覆盖率配置没有阈值。E2E 为打桩集成测试：`playwright.config.ts` 起真实浏览器（chromium）与 Vite 开发服务，覆盖未登录跳转、表单登录、退出清理、动态菜单渲染与 401 单飞刷新重放等核心链路；其 mock 的是 HTTP 接口层，不覆盖真实后端联调、OAuth 跳转与 Nginx 反代验证（后者用 `verify:deploy`）。
 
-截至 2026-11-11，共 28 个测试文件、221 个用例（`npx vitest run` 全绿），2026-11-05 的历史基线见 [测试报告](docs/archived/project-reports/test-report-2026-11-05.md)。请求刷新测试覆盖认证端点排除、单次重放、并发单飞、重放错误保留与授权类 403 提示引导；另有 OAuth2 PKCE/state、认证配置 API、SSE 通知流、`api-base` 地址拼接、套餐父链补全与载荷构造、脱敏/XSS/存储工具、`v-permission` 指令、`useCrud`/`useTableConfig`/`useAgenda`、user/app/permission Store、动态路由菜单转换和 `Pagination`/`FileUpload` 组件测试。API 层还有 `api/auth.test.ts`、`api/message.test.ts`、`api/notification.test.ts`、`api/workflow.test.ts`、`api/office-platform.test.ts`、`api/platform.test.ts`、`api/generator.test.ts`，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status）。
+截至 2026-11-13，共 65 个测试文件、475 个用例（`npx vitest run` 全绿）；E2E 3 文件 6 用例（`npx playwright test` 全绿，接口层打桩）。历史基线见 [测试报告（2026-11-05）](docs/archived/project-reports/test-report-2026-11-05.md)与 [测试报告（2026-11-13）](docs/archived/project-reports/test-report-2026-11-13.md)。39 个 API 模块全部有契约测试，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status、租户分页 pageNum/pageSize）；工具层覆盖请求刷新（认证端点排除、单次重放、并发单飞、重放错误保留、授权类 403 提示引导）、OAuth2 PKCE/state、认证配置 API、SSE 通知流、`api-base` 地址拼接、套餐父链补全与载荷构造、脱敏/XSS/存储/校验规则/错误处理/请求缓存/WS 连接管理/ECharts 主题、`v-permission` 指令、`useCrud`/`useTableConfig`/`useAgenda`/`useFormDraft`/`useBreakpoint`、user/app/permission/office Store、动态路由菜单转换和 `Pagination`/`FileUpload`/`EmptyState`/`FileUploadEnhanced`/`GlobalSearch`/`NotificationCenter` 组件测试。
 
-覆盖率存在两个口径：默认配置不设 `coverage.include`，只统计被用例加载的模块（2026-11-10 行覆盖 74.11%）；强制 `--coverage.include='src/**/*.{ts,vue}'` 的全量口径行覆盖为 6.87%，因 62 个页面组件与多数 API/工具模块无用例。引用覆盖率须注明口径，不得以默认口径宣称整体覆盖水平。DOM 模拟测试不能替代真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证。
+覆盖率存在两个口径：默认配置不设 `coverage.include`，只统计被用例加载的模块（2026-11-13 行覆盖 77.35%）；强制 `--coverage.include='src/**/*.{ts,vue}'` 的全量口径行覆盖为 15.58%，差异全部来自 63 个页面组件无组件级用例（API/工具/组件层已全部有直接用例）。引用覆盖率须注明口径，不得以默认口径宣称整体覆盖水平。DOM 模拟测试与接口层打桩的 E2E 均不能替代真实后端联调、真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证（上线边界用 `verify:deploy`）。
 
 `VITE_API_PROXY_TARGET` 用于开发代理；`VITE_API_BASE_URL` 用于 Axios baseURL；OAuth2 客户端相关变量参照 `.env.example` 和 `env.d.ts`。不输出真实环境文件中的密钥，不把构建期与运行期配置混为一谈。
 
@@ -664,7 +667,7 @@ flowchart TD
 | 密码找回不可用 | 依赖 `/auth/v2/password-recovery/**` 与已绑定的邮箱/手机号；`sessionRevocation=PENDING` 表示会话撤销未完成，不代表失败 |
 | 组织部门保存后无 ID 或层级为空 | createDepartment 返回体不含生成 id（须刷新列表）、deptLevel/deptPath 后端照抄不计算（前端推导） |
 | 组织同步页无数据 | `/admin-api/v1/org/**` 与 `/api/v1/office/organization/**` 契约、同步任务为 page/size 且返回数组 |
-| 办公绑定分页/筛选不符合预期 | 审批页走 `/bindings/page`（真实 total + status 过滤，platform 必选）；console 页为数组口径 `listBindings`（固定 page=1,size=100）；version 乐观锁冲突 |
+| 办公绑定分页/筛选不符合预期 | 审批页与 console 统计均走 `/bindings/page`（真实 total + status 过滤，platform 必选；console 为每平台两个 page=1,size=1 计数请求）；version 乐观锁冲突 |
 | 办公文档列表为空或创建失败 | 文档列表数据源为 `GET /api/office/documents/my?ownerId=`（裸数组，平台/类型/关键词筛选与分页在前端完成）；创建须携带 ownerId/ownerName 且 platform 为小写（feishu/dingtalk/wecom），documentType 仅 DOC/SHEET/SLIDE/MINDMAP/FOLDER/FILE；后端无文档更新与分享端点，复制/移动的 targetFolderId 走 query 参数 |
 | SSO 页面操作 403/404 | 提供商与页面的启用切换走整体 `PUT /providers/{id}`（后端全量覆盖，须携带完整字段）；会话撤销为 `POST /sessions/{id}/revoke`（按数字主键，批量前端并发）；会话/审计列表均为裸数组；统计走 `GET /sessions/statistics`；页面权限码为 `system:sso:provider:*`、`system:sso:session:*`、`system:sso:auditlog:*` |
 | OAuth2 回调失败 | sessionStorage 上下文、state 一次性消费、redirect_uri、PKCE、token 代理 |
@@ -691,6 +694,7 @@ flowchart TD
 - [项目说明](README.md)
 - [架构概览](docs/architecture/overview.md)
 - [认证与路由](docs/architecture/auth-and-routing.md)
+- [领域模型与状态机图](docs/architecture/domain-and-state-diagrams.md)
 - [接口文档索引](docs/api/README.md)
 - [部署指南](docs/guides/deployment.md)
 - [测试说明](docs/reference/testing.md)

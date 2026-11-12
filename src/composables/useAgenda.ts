@@ -1,3 +1,14 @@
+/**
+ * 我的事项聚合 Composable
+ * ------------------------------------------------------------------
+ * 用途：
+ * 为工作台「我的事项」面板（AgendaPanel.vue）提供聚合数据源。
+ * 工作流待办、办公审批、站内信、近期日程、系统通知五个领域并行加载、
+ * 失败隔离；只做展示与跳转，办理操作在各领域原页面完成。
+ *
+ * @author anqli
+ * @date 2026-11-12
+ */
 import { ref } from 'vue'
 import type { AgendaDomain, AgendaItem, AgendaSection } from '@/types'
 import { useUserStore } from '@/stores/user'

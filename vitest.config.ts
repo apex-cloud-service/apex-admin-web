@@ -19,6 +19,8 @@ export default defineConfig({
     environment: 'happy-dom',
     // 用例执行前的全局装置（模拟 jsdom 缺失的浏览器 API）
     setupFiles: ['./src/test/setup.ts'],
+    // e2e/ 归 Playwright 执行（vitest 默认 include 会误收 *.spec.ts）
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     coverage: {
       // 使用 v8 内建覆盖率收集
       provider: 'v8',

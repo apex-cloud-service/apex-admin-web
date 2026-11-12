@@ -4,7 +4,7 @@
 
 ```bash
 npm install        # Node >= 18
-npm run dev        # http://localhost:5173，代理 /api /admin-api /oauth2 → VITE_API_PROXY_TARGET（默认 127.0.0.1:8080）
+npm run dev        # http://localhost:5173，代理 /api /admin-api /auth/v1|v2 /integration/v1 /oauth2 → VITE_API_PROXY_TARGET（默认 127.0.0.1:8080）
 ```
 
 联调需要后端 apex-scaffold 已启动（接口模块 8080）；无后端时可启用 Mock（仅开发环境自动加载，见 `src/mock/`）。

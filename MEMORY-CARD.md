@@ -1,7 +1,7 @@
 # 记忆卡 · apex-admin-web（管理后台前端）
 
 > **用法**：接手前端或需要改页面时先读本卡（约 3 分钟），细节按文末指针进入 `AGENTS.md` 与 `docs/`。
-> **基线**：2026-11-11 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`c75622b` 已提交）
+> **基线**：2026-11-13 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`f6ecb49` 已提交）
 > **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-11-10）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
 
 ## 1. 一句话
@@ -29,17 +29,17 @@ Apex Scaffold 的管理后台（前后端分离独立工程），消费 `apex-sc
 src/
 ├── api/          39 个按业务域拆分的类型化接口文件（无统一 index.ts）
 ├── router/       index.ts 静态路由 + dynamic.ts 菜单转路由 + VIEW_REGISTRY
-├── views/        62 个 .vue 页面，14 个业务目录
+├── views/        63 个 .vue 页面，14 个业务目录
 ├── stores/       user / permission / app / office
 ├── layouts/      AdminLayout（菜单、顶栏、面包屑、未读角标、权限码告警）
-├── composables/  useCrud / useTableConfig / useFormDraft / useBreakpoint
+├── composables/  useCrud / useTableConfig / useFormDraft / useBreakpoint / useAgenda
 ├── directives/   permission
 ├── utils/        request.ts（统一 Axios）、auth.ts（会话）、storage、校验、XSS
 ├── mock/         仅 DEV 动态加载
 └── test/         Vitest 全局准备
 ```
 
-业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `oauth2` `profile` `public` `login` `demo` `error`。测试文件 **27 个**（2026-11-10 实测 214 用例全绿）：`src/api/` 7 个业务 API 契约（认证/消息/通知/工作流/办公平台/平台模块/生成器），其余 20 个为 `*.spec.ts` 单测（`utils/__tests__` 11、`stores/__tests__` 3、`composables/__tests__` 2、`components/__tests__` 2、`directives`/`router` 各 1）。
+业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `oauth2` `profile` `public` `login` `demo` `error`。测试文件 **65 个**（2026-11-13 实测 475 用例全绿）：`src/api/` 30 个业务 API 契约（39 个模块全部覆盖），其余 35 个为 `*.spec.ts` 单测（`utils/__tests__` 18、`stores/__tests__` 4、`composables/__tests__` 5、`components/__tests__` 6、`directives`/`router` 各 1）。另有 Playwright E2E 3 文件 6 用例（`npm run test:e2e`，接口层打桩）、Lighthouse（`test:perf`）与 autocannon 压测（`test:stress`）。
 
 ## 4. 契约前缀（后端改路径必查这里）
 
@@ -93,8 +93,10 @@ src/
 | 集成/IoT/在线会话/密码找回页 404 或返回 HTML | 代理须覆盖 `/integration/v1`、`/auth/v1\|v2`（带版本前缀，勿用裸 `/integration` 撞菜单路由）；`/oauth2/consent` 仅 POST 反代 |
 | 站内信模板编辑/删除 404 | 网关 office 路由须含 `/admin-api/v1/message-templates/**`（后端已修，环境需滚动新配置） |
 
-## 7. 当前状态（2026-11-11）
+## 7. 当前状态（2026-11-13）
 
+- 11-13（四任务整改：文档对齐 + 测试体系 + 图谱 + 注释）：**文档**清理幽灵端点（api/README MFA 5 项、同步向导 2 函数、IP `removeIpRuleByAddress`、`/inbox/cursor` 口径、CHANGELOG TraceQuery）；**测试** 28→**65** 文件 / 221→**475** 用例（39 个 API 模块契约全覆盖 + utils/stores/composables/组件补齐），首建 Playwright E2E（`playwright.config.ts` + `e2e/`，6 条打桩用例，`npm run test:e2e`）、Lighthouse（`test:perf`，静态基线 perf 95）与 autocannon 压测（`test:stress`，devDep 新增 autocannon）；**图谱**新增 `docs/architecture/domain-and-state-diagrams.md`（类图 + 工作流/租户/绑定三状态机 + 我的事项与数据总览时序图）；**注释**补 `useAgenda.ts` 头注等 3 处，`check:comments` 213 文件全绿。报告见 [测试报告（2026-11-13）](docs/archived/project-reports/test-report-2026-11-13.md)。
+- 11-12（`595bee8` 数据总览与我的事项）：数据总览登记三源字段中文映射 `FIELD_LABELS` 与字节格式化、聚合失败改区块级失败态可重试、图表改分类统计柱状图；新增 `composables/useAgenda.ts` + `views/dashboard/components/AgendaPanel.vue`（五域并行加载、失败隔离、单域重试），`src/views` 62→**63**；办公控制台绑定统计改走 `/bindings/page` 读真实 total；`docs/` Markdown 41→**44**（聚合评审、优化方案、字段映射方案三篇归档）。
 - 11-11（`c75622b` 文档对齐）：以 `696dd00` 代码为基线，对齐全仓 `docs/`、脚本与配置；`docs/` Markdown 38→41（新增 11-10 中台整改调整方案、上线检查清单、评审报告三篇归档）。代码无功能变更。
 - 11-10（`696dd00` 中台整改与上线前校验）：**套餐 features 空集合改「未订阅」语义**（全量须显式提交目录全部编码，租户开通套餐必选、去掉手输编码）；**上传组件与通知 SSE 统一经 `api-base.ts#apiUrl` 拼接**（跨域部署正确指向网关）；`showError` 对授权类 403 追加能力运营页引导、AdminLayout 顶栏加「未获得权限码」告警；Nginx 补 20m 请求体上限、产物目录缓存与安全头、consent 仅 POST 反代、SSE/WS 精确匹配；新增 `scripts/verify/post-deploy-check.sh`（C1–C13，`npm run verify:deploy`）。详见 [上线检查清单](docs/archived/project-reports/frontend-middle-platform-go-live-checklist-2026-11-10.md)。
 - 11-08（二批）：**通知中心 SSE 接入**（api/notification.ts + utils/notification-stream.ts fetch 流式客户端 + NotificationCenter 面板）；E2E 拉起真实环境验证并修复后端三处 SSE 阻断（Sinks autoCancel、网关 notification-stream 路由、NettyConfig 读超时边界，均 apex-scaffold）；`nginx -t` 容器内通过。SSE 请求必须带 `Accept: text/event-stream`。

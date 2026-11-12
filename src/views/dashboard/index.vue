@@ -2,7 +2,9 @@
   工作台（仪表盘）
   ------------------------------------------------------------------
   欢迎信息 + 系统概览指标卡片（来自 /admin-api/v1/monitor/overview 真实数据）
-  + 接口调用分类统计（基于网关/接口计数器累计值）。
+  + 接口调用分类统计（基于网关/接口计数器累计值）
+  + 数据总览（D5 跨域只读聚合，FIELD_LABELS 字段中文映射，单源降级为区块级失败态可重试）
+  + 我的事项面板（AgendaPanel，五域并行聚合，仅展示/跳转/标记已读）。
 -->
 <template>
   <div class="dashboard">
@@ -100,6 +102,8 @@
  * 工作台脚本
  * - 指标卡片：来自监控概览接口（真实数据，失败时回退占位符）
  * - 分类统计图：ECharts 柱状图（接口计数器累计值，非时间序列）
+ * - 数据总览：跨域聚合接口（单源 DEGRADED 降级 + 区块级失败重试，未登记字段回退原名）
+ * - 我的事项：useAgenda 五域聚合，由 AgendaPanel 组件承载
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from '@/utils/echarts'

@@ -7,7 +7,6 @@
 ### Added
 - 功能配置与数据维护盘点：JWT 配置测试（`POST /admin-api/v1/auth/config/jwt/test`，认证配置页"测试配置"弹窗）；覆盖说明见 `docs/guides/config-maintenance-coverage.md`
 - 统一权限认证与多租户适配：登录可选 `tenantId` 租户匹配声明（登录页租户输入由 `VITE_AUTH_TENANT_ENABLED` 控制，默认关闭）、租户 ID 会话存取（`apex.admin.tenant-id`）、请求层条件附带 `X-Tenant-Id` 头；评审结论见 `docs/guides/auth-tenant-adaptation.md`
-- 监控大盘增强：新增链路追踪查询页（`/monitor/trace` 静态路由，`TraceQuery.vue`）与 `monitor/trace/{traceId}` 接口封装（`src/api/monitor.ts`）
 - 认证配置管理模块（`src/api/auth-config.ts`、`views/system/auth`）：JWT/OAuth2 客户端/权限码/会话/安全策略/登录尝试管理
 - SSO 单点登录模块（`src/api/sso.ts`、`views/system/sso`）：SAML/CAS/LDAP/OAuth2/OIDC 提供商、会话、审计
 - 代码生成器模块（`src/api/generator.ts`、`views/system/generator`）
