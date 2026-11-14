@@ -66,6 +66,10 @@ const VIEW_REGISTRY: Record<string, () => Promise<unknown>> = {
   'integration/connector/index': () => import('@/views/integration/connector.vue'),
   'iot/device/index': () => import('@/views/iot/device.vue'),
   'iot/device-rule/index': () => import('@/views/iot/device-rule.vue'),
+  'knowledge/space/index': () => import('@/views/knowledge/space/index.vue'),
+  'knowledge/document/index': () => import('@/views/knowledge/document/index.vue'),
+  'knowledge/search/index': () => import('@/views/knowledge/search/index.vue'),
+  'knowledge/chat/index': () => import('@/views/knowledge/chat/index.vue'),
 }
 
 /**

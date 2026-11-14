@@ -1631,3 +1631,91 @@ export interface CommandDispatchPayload {
   /** 超时秒数（缺省 60，上限 3600） */
   timeoutSeconds?: number
 }
+
+/** 知识空间（后端 KnowledgeSpaceDTO） */
+export interface KnowledgeSpace {
+  id: number
+  name: string
+  description?: string
+  /** 0=停用 1=正常 */
+  status: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 知识文档（后端 KnowledgeDocumentDTO） */
+export interface KnowledgeDocument {
+  id: number
+  spaceId: number
+  title: string
+  /** UPLOAD / MANUAL */
+  sourceType: string
+  contentType?: string
+  fileSize?: number
+  /** PENDING / PARSING / PARSED / FAILED */
+  parseStatus: string
+  parseError?: string
+  chunkCount: number
+  /** NONE / PENDING / INDEXED / INDEXED_LEXICAL / FAILED */
+  indexStatus: string
+  createTime?: string
+  updateTime?: string
+}
+
+/** 知识分块预览（后端 KnowledgeChunkDTO，不含向量） */
+export interface KnowledgeChunk {
+  id: number
+  seq: number
+  content: string
+  tokenEstimate?: number
+}
+
+/** 知识检索命中条目（后端 KbSearchItemDTO） */
+export interface KbSearchItem {
+  chunkId: number
+  documentId: number
+  documentTitle: string
+  spaceId: number
+  spaceName: string
+  content: string
+  /** <em> 高亮片段（可能为空） */
+  highlight?: string
+  score: number
+}
+
+/** 知识检索结果（后端 KbSearchResultDTO） */
+export interface KbSearchResult {
+  total: number
+  /** 是否实际启用向量语义检索（false 表示词法结果或未启用） */
+  hybridUsed: boolean
+  items: KbSearchItem[]
+}
+
+/** 知识问答会话（后端 KbConversationDTO） */
+export interface KbConversation {
+  id: number
+  title?: string
+  createTime?: string
+  updateTime?: string
+}
+
+/** 问答引用溯源（后端 CitationDTO） */
+export interface KbCitation {
+  index: number
+  chunkId: number
+  documentId: number
+  documentTitle: string
+  spaceId: number
+  snippet: string
+}
+
+/** 知识问答消息（后端 KbMessageDTO） */
+export interface KbMessage {
+  id: number
+  conversationId: number
+  /** USER / ASSISTANT */
+  role: string
+  content: string
+  citations?: KbCitation[]
+  createTime?: string
+}
