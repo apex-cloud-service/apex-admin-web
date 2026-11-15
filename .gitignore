@@ -73,6 +73,9 @@ test-results/
 .trae-html-share-packages/
 .zcode/
 
+# ===== 本地运行日志（后端服务在联调时可能写入工作目录） =====
+/logs/
+
 # ===== 备份和临时文件 =====
 *.bak
 diagnostic.html

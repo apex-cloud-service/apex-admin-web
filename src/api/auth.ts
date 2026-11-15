@@ -1,8 +1,15 @@
 /**
  * 认证相关 API
  * ------------------------------------------------------------------
- * 覆盖：图形验证码、账号密码登录、登出、角色/权限查询，
+ * 覆盖：图形验证码、账号密码登录（统一认证 /auth/v1/login）、登出、角色/权限查询，
  * 以及系统角色与权限的管理（CRUD，与登录链路同源数据域）。
+ *
+ * 登录/刷新走认证中心（apex-auth-service，网关 /auth/v1/**）：
+ * - POST /auth/v1/login 签发 RS256 访问令牌（claims 含 tokenType/userId/tenantId，
+ *   供各业务服务共享 JWKS 独立验签），响应为裸 LoginResponse（不包 Result）；
+ * - POST /auth/v1/refresh 以一次性刷新令牌轮换新令牌对，响应为裸 TokenPair；
+ * - 两者失败时后端返回 HTTP 401/403 与纯文本原因，由 request.ts 转换为 ApiError。
+ * 图形验证码仍取自 system（GET /api/v1/auth/captcha），认证中心登录不校验验证码字段。
  */
 import { del, get, post } from '@/utils/request'
 import type { CaptchaVO, LoginResult } from '@/types'
@@ -39,12 +46,13 @@ export function getCaptcha(): Promise<CaptchaVO> {
 }
 
 /**
- * 账号密码登录。
+ * 账号密码登录（统一认证中心）。
+ * 后端认证中心不校验图形验证码与 loginType；冗余字段会被忽略，透传以兼容两种后端链路。
  * @param payload 登录参数（含验证码）
- * @returns 访问令牌信息
+ * @returns 访问令牌信息（裸 LoginResponse：accessToken/refreshToken/tenantId/mfaRequired 等）
  */
 export function login(payload: LoginPayload): Promise<LoginResult> {
-  return post<LoginResult>('/api/v1/auth/login', {
+  return post<LoginResult>('/auth/v1/login', {
     loginType: 'PASSWORD',
     ...payload,
   })
@@ -110,13 +118,13 @@ export async function getMyPermissions(): Promise<string[]> {
 
 
 /**
- * 刷新访问令牌。
+ * 刷新访问令牌（统一认证中心，刷新令牌一次性消费后轮换）。
  * 仅供 utils/request.ts 的 401 单飞刷新流程调用，页面不应直接使用。
  * @param refreshToken 当前持有的刷新令牌
- * @returns 新的会话令牌（refreshToken 仅在后端返回时存在）
+ * @returns 新的会话令牌对（裸 TokenPair：accessToken/refreshToken/tokenType/expiresIn）
  */
 export function refreshToken(refreshToken: string): Promise<LoginResult> {
-  return post<LoginResult>('/api/v1/auth/refresh', { refreshToken, deviceId: 'apex-admin-web', platform: 'web' })
+  return post<LoginResult>('/auth/v1/refresh', { refreshToken, deviceId: 'apex-admin-web', platform: 'web' })
 }
 
 /** ========== 系统角色与权限管理 ========== */

@@ -42,7 +42,7 @@ export interface CaptchaVO {
   image: string
 }
 
-/** 登录响应（POST /api/v1/auth/login） */
+/** 登录响应（POST /auth/v1/login，认证中心裸结构） */
 export interface LoginResult {
   accessToken: string
   refreshToken?: string

@@ -65,6 +65,24 @@ function handleUnauthorized(): void {
   }
 }
 
+/**
+ * 从 HTTP 错误响应中提取后端提示消息。
+ * 兼容三种形态：Result 包装（取 msg）、认证中心的纯文本原因（401/403 响应体即消息）、
+ * 以及无响应体的网络错误（回退到 Axios message）。
+ * @param error Axios 错误对象
+ * @param fallback 提取不到时的默认文案
+ * @returns 后端提示消息；无可用内容时返回空串
+ */
+function extractServerMessage(error: unknown, fallback = ''): string {
+  const data = (error as { response?: { data?: unknown } })?.response?.data
+  if (typeof data === 'string' && data.trim()) return data.trim()
+  if (data && typeof data === 'object' && typeof (data as { msg?: unknown }).msg === 'string') {
+    return ((data as { msg: string }).msg || '').trim() || fallback
+  }
+  const axiosMsg = (error as { message?: string })?.message
+  return fallback || axiosMsg || ''
+}
+
 /** 响应拦截：统一解包 Result 结构 */
 service.interceptors.response.use(
   (response: AxiosResponse<Result>) => {
@@ -88,7 +106,12 @@ service.interceptors.response.use(
     const status = error.response?.status
     const config = error.config as (InternalAxiosRequestConfig & { authRetried?: boolean }) | undefined
     const path = config?.url?.split('?')[0]
-    const authEndpoint = path === '/api/v1/auth/refresh' || path === '/api/v1/auth/login' || path === '/oauth2/token'
+    const authEndpoint =
+      path === '/api/v1/auth/refresh' ||
+      path === '/api/v1/auth/login' ||
+      path === '/auth/v1/login' ||
+      path === '/auth/v1/refresh' ||
+      path === '/oauth2/token'
     if (status === CODE_UNAUTHORIZED && config && !config.authRetried && !authEndpoint && getRefreshToken()) {
       config.authRetried = true
       if (!refreshPromise) {
@@ -109,10 +132,15 @@ service.interceptors.response.use(
       return service.request(config)
     }
     if (status === CODE_UNAUTHORIZED) {
+      // 登录端点自身失败（如密码错误）：认证中心以纯文本原因返回 401/403，
+      // 向调用方透出真实原因，不触发登出清理（登录页无需跳转回登录页）
+      if (path === '/auth/v1/login') {
+        return Promise.reject(new ApiError(extractServerMessage(error, '登录失败，请核对账号与密码'), status))
+      }
       handleUnauthorized()
       return Promise.reject(new ApiError('登录状态已失效，请重新登录', status))
     }
-    const msg = error.response?.data?.msg || error.message || '网络异常，请稍后重试'
+    const msg = extractServerMessage(error) || '网络异常，请稍后重试'
     return Promise.reject(new ApiError(msg, status || -1))
   },
 )

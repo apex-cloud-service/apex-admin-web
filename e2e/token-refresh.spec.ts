@@ -17,12 +17,13 @@ test.describe('令牌无感刷新', () => {
     await mockBackend(page)
 
     let refreshCount = 0
-    await page.route(/\/api\/v1\/auth\/refresh/, async (route) => {
+    await page.route(/\/auth\/v1\/refresh/, async (route) => {
       refreshCount += 1
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: ok({ accessToken: 'new-access', refreshToken: 'new-refresh', tokenType: 'Bearer', expiresIn: 7200 }),
+        // 认证中心刷新端点返回裸 TokenPair（不包 Result）
+        body: JSON.stringify({ accessToken: 'new-access', refreshToken: 'new-refresh', tokenType: 'Bearer', expiresIn: 7200 }),
       })
     })
 

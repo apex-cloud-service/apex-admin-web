@@ -5,6 +5,7 @@
  * - 持续 401 时只刷新一次令牌并重放一次
  * - 重放后的非 401 错误保留原状态码
  * - 认证端点自身不触发自动刷新
+ * - 登录端点 401 透传认证中心的纯文本原因且不清理会话
  * - 并发 401 共享同一次刷新
  * - showError 对 403 授权类错误追加能力订阅引导
  */
@@ -37,13 +38,36 @@ it('重放的其他错误保留原状态', async () => {
   expect(refreshToken).toHaveBeenCalledTimes(1)
 })
 
-it.each(['/api/v1/auth/login', '/api/v1/auth/refresh', '/oauth2/token'])('认证端点 %s 不触发自动刷新', async (url) => {
+it.each([
+  '/api/v1/auth/login',
+  '/api/v1/auth/refresh',
+  '/auth/v1/login',
+  '/auth/v1/refresh',
+  '/oauth2/token',
+])('认证端点 %s 不触发自动刷新', async (url) => {
   vi.mocked(refreshToken).mockClear()
   const adapter = vi.fn(async (config) => {
     throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, undefined, { status: 401, statusText: 'Unauthorized', headers: {}, data: {}, config })
   })
   await expect(request({ url, adapter })).rejects.toMatchObject({ code: 401 })
   expect(adapter).toHaveBeenCalledTimes(1)
+  expect(refreshToken).not.toHaveBeenCalled()
+})
+it('登录端点 401 透传后端纯文本原因且不清理会话', async () => {
+  vi.mocked(refreshToken).mockClear()
+  const adapter = vi.fn(async (config) => {
+    throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, undefined, {
+      status: 401,
+      statusText: 'Unauthorized',
+      headers: {},
+      data: '用户名或密码错误',
+      config,
+    })
+  })
+  await expect(request({ url: '/auth/v1/login', adapter })).rejects.toMatchObject({
+    code: 401,
+    message: '用户名或密码错误',
+  })
   expect(refreshToken).not.toHaveBeenCalled()
 })
 it('并发 401 共享一次刷新', async () => {

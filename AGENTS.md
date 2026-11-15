@@ -23,7 +23,7 @@
 
 | 任务 | 首先阅读 | 重点约束 |
 | --- | --- | --- |
-| 登录与令牌 | `stores/user.ts`、`utils/auth.ts`、`utils/request.ts`、`api/auth.ts` | 身份初始化、401 单飞刷新、单次重放、租户声明（可选 `tenantId`，`VITE_AUTH_TENANT_ENABLED` 控制） |
+| 登录与令牌 | `stores/user.ts`、`utils/auth.ts`、`utils/request.ts`、`api/auth.ts` | 统一认证登录（`POST /auth/v1/login`，RS256 令牌）、身份初始化、401 单飞刷新（`POST /auth/v1/refresh`）、单次重放、登录失败原因透传、租户声明（可选 `tenantId`，`VITE_AUTH_TENANT_ENABLED` 控制） |
 | 页面与菜单 | `router/index.ts`、`router/dynamic.ts`、`layouts/AdminLayout.vue` | 静态/动态路由、注册表、hidden |
 | 按钮权限 | `stores/permission.ts`、`directives/permission.ts` | 空列表放行、多码任一满足、移除 DOM |
 | 常规 CRUD | 相邻页面、对应 `api/*.ts`、`types/index.ts` | DTO、分页、错误提示与刷新行为 |
@@ -200,8 +200,11 @@ sequenceDiagram
     V->>V: 表单校验
     V->>S: login(params)
     S->>A: loginType=PASSWORD / deviceId / platform / tenantId?
-    A->>B: POST /api/v1/auth/login
-    B-->>S: accessToken / refreshToken? / tenantId?
+    A->>B: POST /auth/v1/login（统一认证中心）
+    B-->>S: 裸 LoginResponse：accessToken / refreshToken? / tenantId / userId
+    Note over A,B: 认证中心不校验验证码与 loginType（冗余字段被忽略）；
+    签发 RS256 令牌（claims 含 tokenType/userId/tenantId/accountId）
+    Note over A,B: 凭据错误时返回 HTTP 401/403 与纯文本原因，请求层透传不触发登出
     S->>L: 保存令牌
     S->>L: 清残留后记录 tenantId（响应返回时）
     S->>S: loadIdentity()
@@ -350,7 +353,7 @@ sequenceDiagram
     R->>B: Bearer 旧令牌
     B-->>R: HTTP 401
     R->>R: 校验条件 / authRetried=true
-    R->>B: 首个请求创建 refreshPromise，POST /api/v1/auth/refresh
+    R->>B: 首个请求创建 refreshPromise，POST /auth/v1/refresh
     C2->>R: 另一请求返回 401
     R->>R: 标记该请求 authRetried，等待已有 refreshPromise
     alt 刷新成功且有 accessToken
@@ -371,7 +374,7 @@ sequenceDiagram
     end
 ```
 
-刷新必须同时满足：HTTP 401、有请求 config、未标记 authRetried、有 refreshToken，且路径不是 `/api/v1/auth/login`、`/api/v1/auth/refresh`、`/oauth2/token`。重放再次 401 时不继续刷新；重放返回其他错误时保留其错误语义。不要新增无限重试或独立并发刷新机制。
+刷新必须同时满足：HTTP 401、有请求 config、未标记 authRetried、有 refreshToken，且路径不是 `/api/v1/auth/login`、`/api/v1/auth/refresh`、`/auth/v1/login`、`/auth/v1/refresh`、`/oauth2/token`。重放再次 401 时不继续刷新；重放返回其他错误时保留其错误语义。登录端点 `/auth/v1/login` 的 401/403（认证中心返回纯文本原因）向调用方透传真实原因且不触发登出清理；刷新令牌为一次性消费，`/auth/v1/refresh` 返回裸 TokenPair。不要新增无限重试或独立并发刷新机制。
 
 请求错误携带 traceId 时用于后端日志关联；不要输出密码、验证码、完整 Token 或办公平台密钥。请求层抛错不代表所有页面自动有统一提示，提示由具体调用方处理。
 
@@ -626,7 +629,7 @@ flowchart TD
 
 当前 package.json 没有 lint 或独立 typecheck 脚本；类型检查使用上述 vue-tsc 或 build 命令。不得记录不存在的 `npm run lint`。Vitest 使用 happy-dom 和 `src/test/setup.ts`（`e2e/` 目录已排除，归 Playwright 执行），覆盖率配置没有阈值。E2E 为打桩集成测试：`playwright.config.ts` 起真实浏览器（chromium）与 Vite 开发服务，覆盖未登录跳转、表单登录、退出清理、动态菜单渲染与 401 单飞刷新重放等核心链路；其 mock 的是 HTTP 接口层，不覆盖真实后端联调、OAuth 跳转与 Nginx 反代验证（后者用 `verify:deploy`）。
 
-截至 2026-11-13，共 65 个测试文件、475 个用例（`npx vitest run` 全绿）；E2E 3 文件 6 用例（`npx playwright test` 全绿，接口层打桩）。历史基线见 [测试报告（2026-11-05）](docs/archived/project-reports/test-report-2026-11-05.md)与 [测试报告（2026-11-13）](docs/archived/project-reports/test-report-2026-11-13.md)。39 个 API 模块全部有契约测试，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status、租户分页 pageNum/pageSize）；工具层覆盖请求刷新（认证端点排除、单次重放、并发单飞、重放错误保留、授权类 403 提示引导）、OAuth2 PKCE/state、认证配置 API、SSE 通知流、`api-base` 地址拼接、套餐父链补全与载荷构造、脱敏/XSS/存储/校验规则/错误处理/请求缓存/WS 连接管理/ECharts 主题、`v-permission` 指令、`useCrud`/`useTableConfig`/`useAgenda`/`useFormDraft`/`useBreakpoint`、user/app/permission/office Store、动态路由菜单转换和 `Pagination`/`FileUpload`/`EmptyState`/`FileUploadEnhanced`/`GlobalSearch`/`NotificationCenter` 组件测试。
+截至 2026-11-15，共 66 个测试文件、486 个用例（`npx vitest run` 全绿）；E2E 3 文件 6 用例（`npx playwright test` 全绿，接口层打桩；登录/刷新打桩已对齐统一认证端点 `/auth/v1/login`、`/auth/v1/refresh` 与裸响应契约）。历史基线见 [测试报告（2026-11-05）](docs/archived/project-reports/test-report-2026-11-05.md)与 [测试报告（2026-11-13）](docs/archived/project-reports/test-report-2026-11-13.md)。39 个 API 模块全部有契约测试，断言函数以正确的 HTTP 方法/路径调用请求层并透传关键参数（如乐观锁 `version`、绑定分页 platform/status、租户分页 pageNum/pageSize）；工具层覆盖请求刷新（认证端点排除、单次重放、并发单飞、重放错误保留、授权类 403 提示引导）、OAuth2 PKCE/state、认证配置 API、SSE 通知流、`api-base` 地址拼接、套餐父链补全与载荷构造、脱敏/XSS/存储/校验规则/错误处理/请求缓存/WS 连接管理/ECharts 主题、`v-permission` 指令、`useCrud`/`useTableConfig`/`useAgenda`/`useFormDraft`/`useBreakpoint`、user/app/permission/office Store、动态路由菜单转换和 `Pagination`/`FileUpload`/`EmptyState`/`FileUploadEnhanced`/`GlobalSearch`/`NotificationCenter` 组件测试。
 
 覆盖率存在两个口径：默认配置不设 `coverage.include`，只统计被用例加载的模块（2026-11-13 行覆盖 77.35%）；强制 `--coverage.include='src/**/*.{ts,vue}'` 的全量口径行覆盖为 15.58%，差异全部来自 63 个页面组件无组件级用例（API/工具/组件层已全部有直接用例）。引用覆盖率须注明口径，不得以默认口径宣称整体覆盖水平。DOM 模拟测试与接口层打桩的 E2E 均不能替代真实后端联调、真实浏览器的 OAuth 跳转、剪贴板、Canvas、上传和 Nginx 反代验证（上线边界用 `verify:deploy`）。
 
@@ -650,6 +653,7 @@ flowchart TD
 | 侧边栏没有菜单但 URL 可访问 | visible=0 / meta.hidden，不是路由缺失 |
 | 按钮权限未收敛 | 权限请求是否失败降级为空、当前 Store 是否为空、指令是否已移除节点 |
 | 401 后仍未恢复 | refreshToken、认证端点排除、authRetried、刷新结果是否含 accessToken |
+| 登录报「用户名或密码错误/禁止访问」但账号正确 | 统一认证 `/auth/v1/login` 的 401/403 为纯文本原因；确认认证中心用户库（auth_user）种子密码哈希有效、`auth_user.account_id` 已映射主应用 sys_user、认证中心与主应用租户编码一致（`auth-center.login-tenant` / `auth-center.login.default-tenant`） |
 | 上传 401 与其他请求行为不同 | Element Plus/XHR 没有经过 request.ts 拦截器 |
 | 工作流分页为空 | 是否误用 page/size 或 list/total |
 | 工作流待办为空或 404 | 是否使用 `/api/v1/workflows/tasks/pending`、办理仅 complete+comment、任务是否分配给当前用户 |

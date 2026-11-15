@@ -24,12 +24,12 @@ describe('auth api', () => {
     vi.clearAllMocks()
   })
 
-  it('登录固定 PASSWORD 类型并透传参数', async () => {
+  it('登录调用统一认证端点并透传参数', async () => {
     request.post.mockResolvedValue({ accessToken: 'a' })
 
     await login({ username: 'admin', password: 'p', captchaId: 'cid', captchaCode: '1234', tenantId: 'acme' })
 
-    expect(request.post).toHaveBeenCalledWith('/api/v1/auth/login', {
+    expect(request.post).toHaveBeenCalledWith('/auth/v1/login', {
       loginType: 'PASSWORD',
       username: 'admin',
       password: 'p',
@@ -74,7 +74,7 @@ describe('auth api', () => {
 
     await refreshToken('refresh-x')
 
-    expect(request.post).toHaveBeenCalledWith('/api/v1/auth/refresh', {
+    expect(request.post).toHaveBeenCalledWith('/auth/v1/refresh', {
       refreshToken: 'refresh-x',
       deviceId: 'apex-admin-web',
       platform: 'web',

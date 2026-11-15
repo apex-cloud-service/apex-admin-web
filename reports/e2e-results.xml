@@ -1,20 +1,20 @@
-<testsuites id="" name="" tests="6" failures="0" skipped="0" errors="0" time="8.959009">
-<testsuite name="auth.spec.ts" timestamp="2026-11-12T16:58:48.251Z" hostname="chromium" tests="3" failures="0" skipped="0" time="14.93" errors="0">
-<testcase name="认证与路由守卫 › 未登录访问受保护路由跳转登录页并携带回跳地址" classname="auth.spec.ts" time="3.119">
+<testsuites id="" name="" tests="6" failures="0" skipped="0" errors="0" time="14.083862">
+<testsuite name="auth.spec.ts" timestamp="2026-11-14T23:33:35.740Z" hostname="chromium" tests="3" failures="0" skipped="0" time="24.102" errors="0">
+<testcase name="认证与路由守卫 › 未登录访问受保护路由跳转登录页并携带回跳地址" classname="auth.spec.ts" time="6.215">
 </testcase>
-<testcase name="认证与路由守卫 › 表单登录成功进入工作台并写入会话" classname="auth.spec.ts" time="5.58">
+<testcase name="认证与路由守卫 › 表单登录成功进入工作台并写入会话" classname="auth.spec.ts" time="7.835">
 </testcase>
-<testcase name="认证与路由守卫 › 退出登录清理会话并回到登录页" classname="auth.spec.ts" time="6.231">
-</testcase>
-</testsuite>
-<testsuite name="dynamic-menu.spec.ts" timestamp="2026-11-12T16:58:48.251Z" hostname="chromium" tests="2" failures="0" skipped="0" time="12.979" errors="0">
-<testcase name="动态菜单与路由 › 登录后渲染菜单树，点击子菜单进入动态页面" classname="dynamic-menu.spec.ts" time="6.402">
-</testcase>
-<testcase name="动态菜单与路由 › 动态路由支持 URL 直达（刷新后守卫重新注册）" classname="dynamic-menu.spec.ts" time="6.577">
+<testcase name="认证与路由守卫 › 退出登录清理会话并回到登录页" classname="auth.spec.ts" time="10.052">
 </testcase>
 </testsuite>
-<testsuite name="token-refresh.spec.ts" timestamp="2026-11-12T16:58:48.251Z" hostname="chromium" tests="1" failures="0" skipped="0" time="4.938" errors="0">
-<testcase name="令牌无感刷新 › 401 触发单飞刷新且原请求重放成功" classname="token-refresh.spec.ts" time="4.938">
+<testsuite name="dynamic-menu.spec.ts" timestamp="2026-11-14T23:33:35.740Z" hostname="chromium" tests="2" failures="0" skipped="0" time="19.077" errors="0">
+<testcase name="动态菜单与路由 › 登录后渲染菜单树，点击子菜单进入动态页面" classname="dynamic-menu.spec.ts" time="9.506">
+</testcase>
+<testcase name="动态菜单与路由 › 动态路由支持 URL 直达（刷新后守卫重新注册）" classname="dynamic-menu.spec.ts" time="9.571">
+</testcase>
+</testsuite>
+<testsuite name="token-refresh.spec.ts" timestamp="2026-11-14T23:33:35.740Z" hostname="chromium" tests="1" failures="0" skipped="0" time="8.322" errors="0">
+<testcase name="令牌无感刷新 › 401 触发单飞刷新且原请求重放成功" classname="token-refresh.spec.ts" time="8.322">
 </testcase>
 </testsuite>
 </testsuites>

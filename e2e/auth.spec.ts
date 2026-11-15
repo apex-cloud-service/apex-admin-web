@@ -20,9 +20,9 @@ test.describe('认证与路由守卫', () => {
   test('表单登录成功进入工作台并写入会话', async ({ page }) => {
     await mockBackend(page)
     let loginPayload: Record<string, unknown> | null = null
-    await page.route(/\/api\/v1\/auth\/login/, async (route) => {
+    await page.route(/\/auth\/v1\/login/, async (route) => {
       loginPayload = route.request().postDataJSON() as Record<string, unknown>
-      await route.fulfill({ status: 200, contentType: 'application/json', body: ok(LOGIN_RESULT) })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(LOGIN_RESULT) })
     })
 
     await loginViaForm(page)

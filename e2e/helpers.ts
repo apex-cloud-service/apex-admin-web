@@ -11,12 +11,13 @@ export function ok<T>(data: T): string {
   return JSON.stringify({ code: 0, msg: 'ok', data, traceId: 'e2e' })
 }
 
-/** 登录响应（LoginResult 契约） */
+/** 登录响应（认证中心 LoginResponse 裸契约，不包 Result） */
 export const LOGIN_RESULT = {
   accessToken: 'e2e-access',
   refreshToken: 'e2e-refresh',
   tokenType: 'Bearer',
   expiresIn: 7200,
+  tenantId: 'default',
 }
 
 /** 菜单树夹具：系统管理目录 + 用户管理菜单（component 已在 VIEW_REGISTRY 登记） */
@@ -66,8 +67,8 @@ export async function mockBackend(page: Page): Promise<void> {
   await page.route(/\/api\/v1\/auth\/captcha/, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: ok({ captchaId: 'e2e-cap', image: 'iVBORw0KGgo=' }) }),
   )
-  await page.route(/\/api\/v1\/auth\/login/, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: ok(LOGIN_RESULT) }),
+  await page.route(/\/auth\/v1\/login/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(LOGIN_RESULT) }),
   )
   await page.route(/\/api\/v1\/auth\/logout/, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: ok(null) }),
