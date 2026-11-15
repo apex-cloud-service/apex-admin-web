@@ -1,12 +1,9 @@
 /**
  * 办公平台状态管理
  * ------------------------------------------------------------------
- * 管理办公平台（飞书、钉钉、企业微信）的配置和绑定状态。
- * 
- * 状态包括：
- *   - 平台配置信息（appId、appSecret 等）
- *   - 用户绑定状态
- *   - 当前选中的平台
+ * 仅保存当前选中的平台标识与各平台绑定布尔状态，不保存 appId/appSecret
+ * 等平台配置，也不发起绑定或登录请求。该 Store 当前仅被测试引用，未接入
+ * 生产页面或登出流程；reset 只提供手动清空能力。
  */
 
 import { defineStore } from 'pinia'
@@ -19,9 +16,9 @@ import { ref } from 'vue'
  */
 export const useOfficeStore = defineStore('office', () => {
   /**
-   * 当前选中的平台类型
+   * 当前选中的平台标识
    * 
-   * @description 可选值：'feishu' | 'dingtalk' | 'wechat'
+   * @description 任意字符串，setter 不做枚举或格式校验；页面约定值为 feishu/dingtalk/wechat
    */
   const currentPlatform = ref<string>('')
 
@@ -52,9 +49,9 @@ export const useOfficeStore = defineStore('office', () => {
   }
 
   /**
-   * 清理所有状态
+   * 清理内存中的平台与绑定状态
    * 
-   * @description 用户登出时调用
+   * @description 提供手动重置能力，当前未接入生产登出链路
    */
   const reset = () => {
     currentPlatform.value = ''

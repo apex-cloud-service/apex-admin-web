@@ -18,7 +18,7 @@ export const useAppStore = defineStore('app', () => {
   /** 侧边栏是否折叠 */
   const sidebarCollapsed = ref<boolean>(readRaw(SIDEBAR_KEY) === '1')
 
-  /** 当前主题（默认跟随系统浅色） */
+  /** 当前主题：读取本地缓存值，缺省为 light；不检测系统主题 */
   const theme = ref<ThemeMode>((readRaw(THEME_KEY) as ThemeMode) || 'light')
 
   /**
@@ -30,7 +30,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   /**
-   * 切换明暗主题并应用到根元素（el-config-provider 同步）。
+   * 设置并持久化主题，同时切换根元素 dark class；未接入 el-config-provider。
    * @param mode 目标主题
    */
   function setTheme(mode: ThemeMode): void {

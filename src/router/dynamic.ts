@@ -8,10 +8,10 @@
  * 组件通过「组件名 → 视图模块」注册表解析，避免动态 import 路径逃逸。
  *
  * 状态语义说明：
- * - 后端 MenuState 枚举定义 status：0=停用 1=正常；但历史种子数据（V2/V8）写入
- *   的 status 取值与枚举不一致。为避免“全量菜单被丢弃导致页面 404”，路由生成
- *   不按 status 过滤（目录/菜单且组件可解析即注册），停用/隐藏仅影响侧边栏展示：
- * - visible：0=隐藏 1=显示，隐藏的菜单仍保留路由（可直接访问）但不出现在侧边栏
+ * - 路由生成不读取菜单 status，后端菜单状态不参与注册或过滤；
+ * - visible：0=隐藏 1=显示，隐藏菜单仍注册路由（可直接访问）；侧边栏仅按 Root 直接子项的
+ *   title/hidden 过滤，目录内子项不会再次过滤 hidden。
+ * - 空目录（无可解析子菜单）不生成路由；permissions 参数当前未参与过滤。
  */
 import type { RouteRecordRaw } from 'vue-router'
 import { listMenuTree } from '@/api/system'
@@ -113,8 +113,8 @@ function toRouteRecord(node: MenuNode): RouteRecordRaw | null {
 
 /**
  * 拉取菜单树并构建动态路由。
- * @param _permissions 当前用户权限码（保留参数，供后续按权限过滤）
- * @returns 路由记录数组
+ * @param _permissions 当前用户权限码；当前未参与过滤，保留参数供后续扩展
+ * @returns 路由记录数组（未登记的组件与空目录被跳过）
  */
 export async function buildDynamicRoutes(_permissions: string[]): Promise<RouteRecordRaw[]> {
   const menus = await listMenuTree()

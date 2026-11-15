@@ -46,6 +46,7 @@
 | 授权同意 | `views/oauth2/consent.vue`、`api/oauth2.ts` | `POST /oauth2/consent`（form-urlencoded：client_id/scope/decision）；按方案 §12.3 登记 **public 匿名页**——页面可匿名打开，同意提交须登录（后端要求认证主体），未登录先登录后回跳 |
 | 运维健康 | `api/operations.ts`、`views/monitor/operations/` | 前端封装 health-report、snapshots、trend、租户摘要和导出相关子路径；快照分页为 page/size；页面含报告/快照/趋势/导出/租户摘要五个页签；未封装根路径与导出任务列表，端点是否存在需以目标后端契约为准 |
 | 办公平台 | `api/office-platform.ts`、`api/office-{approval,calendar,document}.ts`、`views/office/` | 平台标识与 `PLATFORM_NAMES` 唯一定义在 office-platform；业务接口按子域拆分、version、组织同步与部门 CRUD；绑定列表双接口并存（数组口径 / `/bindings/page` 真实分页）；控制台绑定统计走 `/bindings/page` 读真实 total（每平台两个计数请求，失败显式标注），跳转绑定审批页带 `platform` query 预填 |
+| 知识库 | `api/knowledge.ts`、`views/knowledge/` | `/admin-api/v1/kb` 管理、`/api/v1/kb` 检索/问答；分页 page/size→list/total；问答 fetch SSE（不走 Axios 刷新），error JSON 为 code/message，兼容旧纯文本；删除布尔值表示接受意图，清理记录与重试入口位于文档页，不表示外部资源已全部清理 |
 | 文件上传 | `api/file.ts`、两个上传组件 | Element Plus/XHR 路径不经过 Axios 拦截器，上传地址统一由 `utils/api-base.ts#apiUrl` 拼接（跨域部署自动带 `VITE_API_BASE_URL`）；增强组件 `enableChunk` 开启时超限文件走分片上传（`/api/v1/file/chunk/**`，upload 为原始字节流、参数走 query） |
 | 部署 | `vite.config.ts`、`Dockerfile`、`docker/nginx.conf` | 构建期变量与运行期反代变量 |
 
@@ -58,7 +59,7 @@ src/
 ├── router/                静态路由、守卫、菜单转换和组件注册表
 ├── layouts/               AdminLayout：菜单、顶栏、面包屑、主视图
 ├── views/                 login、oauth2、public（匿名分享/找回页）、dashboard、profile、error、demo
-│                          system、monitor、data、office、workflow、integration、iot
+│                          system、monitor、data、office、workflow、integration、iot、knowledge
 ├── components/            Pagination、GlobalSearch、NotificationCenter、EmptyState、上传组件
 ├── composables/           useCrud、useTableConfig、useFormDraft、useBreakpoint、useAgenda
 ├── stores/                user、permission、app、office
@@ -94,6 +95,7 @@ src/
 | 通知中心 | `notification.ts` | 系统事件通知收件箱/未读/已读与 SSE 实时推送（`/api/v1/notifications/**`，system 域）；与 office 域站内信是两套独立通道 |
 | 办公平台 | `office-platform.ts`、`office-approval.ts`、`office-calendar.ts`、`office-document.ts`、`office-sync-wizard.ts`、`meeting-room.ts` | 业务接口按子域拆分、version、组织同步（部门 CRUD/员工/同步历史/触发同步/映射）、同步向导（预检/预览/执行/重试）、会议室；绑定查询有 `/bindings`（数组）与 `/bindings/page`（真实分页 + status 过滤）两套 |
 | 数据脱敏 | `masking.ts` | 规则只读查询与批量脱敏试算（`/api/v1/masking`） |
+| 知识库 | `knowledge.ts`、`views/knowledge/` | 空间/文档管理、混合检索、用户会话与 SSE 问答；删除清理记录分页/详情/重试（kb:doc:read/delete）；后台保留清理凭证供失败恢复与定向复核 |
 | 文件与搜索 | `file.ts`、`search.ts` | 文件接口（含分片上传）、上传组件、顶栏全文搜索与索引重建 |
 
 后端路径按现有 API 区分：`/api/v1/**` 为认证、用户、文件、站内信和办公平台接入等接口；`/api/v2/**` 为租户管理、租户套餐、能力运营、工作流定义、运维健康、文件分享与办公会议室/同步向导/统一通知；`/admin-api/v1/**` 为管理接口；`/integration/v1/**` 为集成中心与物联网管理接口（`/internal/v1/**` 为其集群内部端点，网关强制拒绝外部访问）；`/auth/v1/sessions/**` 为认证中心会话管理；`/api/workflow/**` 为工作流高级操作；`/api/office/**` 为办公业务接口；`/api/mfa/**` 与 `/api/ip-access-control/**` 为认证中心安全能力；标准 OAuth2 使用 `/oauth2/authorize`、`/oauth2/token`、`/oauth2/consent`。本仓库可确认前端调用路径，目标环境网关是否暴露这些路径需外部核验。

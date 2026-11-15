@@ -12,11 +12,14 @@ import {
   deleteSpace,
   getConversationMessages,
   getDocument,
+  getDocumentCleanup,
+  listDocumentCleanups,
   listConversations,
   listDocuments,
   listKbSpaces,
   listSpaces,
   reindexDocument,
+  retryDocumentCleanup,
   searchKnowledge,
   updateSpace,
   uploadDocument,
@@ -76,6 +79,59 @@ describe('知识库 API', () => {
     expect(request.post).toHaveBeenCalledWith('/admin-api/v1/kb/documents/9/reindex', {})
     deleteDocument(9)
     expect(request.del).toHaveBeenCalledWith('/admin-api/v1/kb/documents/9')
+  })
+
+  it('清理记录分页 GET 使用 page/size 并透传已解包的 list/total', async () => {
+    const record = {
+      documentId: 9,
+      title: '待清理文档',
+      status: 'FAILED' as const,
+      errorMessage: '索引服务不可用',
+      attempts: 3,
+      updatedAt: '2026-11-15T10:00:00',
+      nextRetryAt: null,
+    }
+    const result = { list: [record], total: 31, pageNum: 2, pageSize: 20, pages: 2 }
+    request.get.mockResolvedValueOnce(result)
+    await expect(listDocumentCleanups({ page: 2, size: 20 })).resolves.toBe(result)
+    expect(request.get).toHaveBeenCalledWith('/admin-api/v1/kb/document-cleanups', { page: 2, size: 20 })
+  })
+
+  it('清理详情 GET 按 documentId 定位且保留 nullable 字段', async () => {
+    const detail = {
+      documentId: 9,
+      title: '待清理文档',
+      status: 'PENDING' as const,
+      errorMessage: null,
+      attempts: 0,
+      updatedAt: '2026-11-15T10:00:00',
+      nextRetryAt: '2026-11-15T10:05:00',
+    }
+    request.get.mockResolvedValueOnce(detail)
+    await expect(getDocumentCleanup(9)).resolves.toBe(detail)
+    expect(request.get).toHaveBeenCalledWith('/admin-api/v1/kb/document-cleanups/9')
+  })
+
+  it.each([true, false])('重试 POST 透传接受结果 %s，不自行视为清理完成', async (accepted) => {
+    request.post.mockResolvedValueOnce(accepted)
+    await expect(retryDocumentCleanup(9)).resolves.toBe(accepted)
+    expect(request.post).toHaveBeenCalledWith('/admin-api/v1/kb/document-cleanups/9/retry', {})
+  })
+
+  it.each([true, false])('文档 DELETE 保留接受结果 %s', async (accepted) => {
+    request.del.mockResolvedValueOnce(accepted)
+    await expect(deleteDocument(9)).resolves.toBe(accepted)
+    expect(request.del).toHaveBeenCalledWith('/admin-api/v1/kb/documents/9')
+  })
+
+  it('清理查询与重试错误原样交给调用方', async () => {
+    const error = new Error('服务不可用')
+    request.get.mockRejectedValueOnce(error)
+    await expect(listDocumentCleanups({ page: 1, size: 20 })).rejects.toBe(error)
+    request.get.mockRejectedValueOnce(error)
+    await expect(getDocumentCleanup(9)).rejects.toBe(error)
+    request.post.mockRejectedValueOnce(error)
+    await expect(retryDocumentCleanup(9)).rejects.toBe(error)
   })
 
   it('检索 spaceIds 以逗号拼接为查询参数', () => {

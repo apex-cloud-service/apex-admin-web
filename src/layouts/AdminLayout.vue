@@ -1,9 +1,10 @@
 <!--
   管理后台主布局
   ------------------------------------------------------------------
-  左侧：菜单侧边栏（基于路由表渲染，目录/菜单树形展示）
+  左侧：菜单侧边栏（Root 直接子项 + 一层 children，非递归组件）
   顶部：折叠开关、全局搜索、通知中心（SSE）、站内信未读提醒、明暗主题切换、用户信息与登出
   主体：<router-view> 渲染当前页面
+  站内信角标：挂载时拉取、60 秒轮询与 WebSocket 推送触发刷新；通知中心 SSE 为独立通道
 -->
 <template>
   <el-container class="admin-layout">
@@ -21,7 +22,7 @@
           router
           background-color="transparent"
         >
-          <!-- 递归渲染菜单树 -->
+          <!-- 菜单渲染：Root 直接子项 + 一层 children，无递归子菜单 -->
           <template v-for="route in menuRoutes" :key="route.path">
             <el-sub-menu v-if="route.children && route.children.length" :index="route.path">
               <template #title>
@@ -142,7 +143,7 @@ const userStore = useUserStore()
 /** 当前激活菜单路径（高亮） */
 const activeMenu = computed(() => (route.meta.activeMenu as string) || route.path)
 
-/** 布局下的菜单路由（过滤掉无标题项与隐藏菜单 visible=0） */
+/** 布局下的菜单路由：仅 Root 直接子项，过滤无标题与 hidden；不递归处理目录内子项 */
 const menuRoutes = computed(() => {
   const root = router.options.routes.find((r) => r.name === 'Root')
   return (root?.children || []).filter((r) => r.meta?.title && !r.meta?.hidden)
@@ -163,7 +164,7 @@ const avatarText = computed(() => {
   return name.charAt(0).toUpperCase()
 })
 
-/** 站内信未读数：WebSocket 推送实时刷新，60 秒轮询兜底（失败静默避免打扰） */
+/** 站内信未读数：挂载拉取 + 60 秒轮询 + WebSocket 推送触发刷新（失败静默并归零） */
 const unreadCount = ref(0)
 let unreadTimer: ReturnType<typeof setInterval> | undefined
 let unsubscribePush: (() => void) | undefined
@@ -192,9 +193,9 @@ onBeforeUnmount(() => {
 })
 
 /**
- * 菜单图标解析：优先使用路由 meta.icon（Element Plus 图标名），默认 Grid。
+ * 菜单图标解析：读取路由 meta.icon 的 Element Plus 图标名，缺省返回 Grid。
  * @param routeRecord 路由记录
- * @returns 图标组件
+ * @returns 图标名或组件
  */
 function iconOf(routeRecord: RouteRecordRaw): unknown {
   const icon = routeRecord.meta?.icon

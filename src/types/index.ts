@@ -42,15 +42,17 @@ export interface CaptchaVO {
   image: string
 }
 
-/** 登录响应（POST /auth/v1/login，认证中心裸结构） */
+/** 登录响应（POST /auth/v1/login，认证中心裸结构；MFA 挑战时不含正式令牌） */
 export interface LoginResult {
+  /** 正式登录时的访问令牌；MFA 挑战响应实际不返回该字段，调用方须先检查 mfaRequired */
   accessToken: string
   refreshToken?: string
   tokenType?: string
+  /** 访问令牌有效期，单位秒 */
   expiresIn?: number
   /** 当前租户 ID（认证中心登录链路返回；单体登录暂不返回） */
   tenantId?: string
-  /** 用户 ID（MFA 挑战响应返回） */
+  /** 认证中心用户 ID（auth_user.id，正常登录与 MFA 挑战均可返回，非主应用账户 ID） */
   userId?: number
   username?: string
   /** MFA 挑战模式标记：true 表示未签发正式令牌，须携 challengeToken 完成二步验证 */
@@ -1660,6 +1662,17 @@ export interface KnowledgeDocument {
   indexStatus: string
   createTime?: string
   updateTime?: string
+}
+
+/** 后台文档清理记录；COMPLETED 为最近清理已确认，后台复核不保证永久物理擦除。 */
+export interface KnowledgeDocumentCleanupDTO {
+  documentId: number
+  title: string
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+  errorMessage: string | null
+  attempts: number
+  updatedAt: string
+  nextRetryAt: string | null
 }
 
 /** 知识分块预览（后端 KnowledgeChunkDTO，不含向量） */

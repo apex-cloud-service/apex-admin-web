@@ -1,8 +1,8 @@
 /**
  * 认证相关 API
  * ------------------------------------------------------------------
- * 覆盖：图形验证码、账号密码登录（统一认证 /auth/v1/login）、登出、角色/权限查询，
- * 以及系统角色与权限的管理（CRUD，与登录链路同源数据域）。
+ * 覆盖：图形验证码、统一认证登录、MFA 二步验证、令牌刷新与登出，
+ * 以及主应用的角色/权限查询和管理；认证中心与主应用不是同一用户数据表。
  *
  * 登录/刷新走认证中心（apex-auth-service，网关 /auth/v1/**）：
  * - POST /auth/v1/login 签发 RS256 访问令牌（claims 含 tokenType/userId/tenantId，
@@ -16,23 +16,23 @@ import type { CaptchaVO, LoginResult } from '@/types'
 
 /** 登录请求体 */
 export interface LoginPayload {
-  /** 登录类型：PASSWORD=账号密码（管理后台固定使用） */
+  /** 登录类型兼容字段（前端默认 PASSWORD，当前认证中心忽略该字段） */
   loginType?: string
-  /** 登录账号（sys_user.username） */
+  /** 登录账号（认证中心 auth_user.username；主应用账户通过 accountId 关联） */
   username?: string
   /** 登录密码（BCrypt 哈希比对） */
   password?: string
-  /** 图形验证码 ID（登录前先调用 getCaptcha） */
+  /** 图形验证码 ID（由 getCaptcha 获取；当前认证中心忽略该字段） */
   captchaId?: string
-  /** 图形验证码内容 */
+  /** 图形验证码内容（当前认证中心忽略该字段） */
   captchaCode?: string
-  /** 设备标识（Token 刷新时校验设备一致性） */
+  /** 登录设备标识；刷新时后端沿用旧令牌记录，不校验本次请求的设备标识 */
   deviceId?: string
   /** 客户端平台标识 */
   platform?: string
   /**
    * 租户 ID 声明（可选，仅用于登录时的租户匹配校验，不能切换租户）。
-   * 认证中心登录链路使用；单体登录后端会忽略该字段。缺省时后端使用 default 租户。
+   * 未提供时使用后端 auth-center.login.default-tenant 配置（缺省 default），不保证所有部署同值。
    */
   tenantId?: string
 }
@@ -46,10 +46,11 @@ export function getCaptcha(): Promise<CaptchaVO> {
 }
 
 /**
- * 账号密码登录（统一认证中心）。
- * 后端认证中心不校验图形验证码与 loginType；冗余字段会被忽略，透传以兼容两种后端链路。
- * @param payload 登录参数（含验证码）
- * @returns 访问令牌信息（裸 LoginResponse：accessToken/refreshToken/tenantId/mfaRequired 等）
+ * 账号密码登录（POST /auth/v1/login，统一认证中心）。
+ * loginType、图形验证码与 platform 为兼容字段，当前后端忽略；本函数不写入本地会话。
+ * @param payload 登录账号、密码及可选设备/租户声明，验证码字段仅透传
+ * @returns 裸 LoginResponse；mfaRequired=true 时为挑战响应，不含正式令牌
+ * @throws ApiError 认证中心拒绝凭证/租户或请求失败；登录 401/403 透传后端原因
  */
 export function login(payload: LoginPayload): Promise<LoginResult> {
   return post<LoginResult>('/auth/v1/login', {
@@ -63,6 +64,7 @@ export function login(payload: LoginPayload): Promise<LoginResult> {
  * 认证中心端点 POST /auth/v1/mfa/verify；成功返回与登录同构的正式令牌响应。
  * @param challengeToken 登录响应返回的短 TTL 挑战凭据
  * @param code 6 位 TOTP 验证码
+ * @returns 正式登录响应；令牌持久化与身份初始化由 user Store 负责
  */
 export function verifyMfaChallenge(challengeToken: string, code: string): Promise<LoginResult> {
   return post<LoginResult>('/auth/v1/mfa/verify', { challengeToken, code })
@@ -118,10 +120,11 @@ export async function getMyPermissions(): Promise<string[]> {
 
 
 /**
- * 刷新访问令牌（统一认证中心，刷新令牌一次性消费后轮换）。
- * 仅供 utils/request.ts 的 401 单飞刷新流程调用，页面不应直接使用。
- * @param refreshToken 当前持有的刷新令牌
- * @returns 新的会话令牌对（裸 TokenPair：accessToken/refreshToken/tokenType/expiresIn）
+ * 刷新访问令牌（POST /auth/v1/refresh，刷新令牌一次性消费后轮换）。
+ * 供 utils/request.ts 的 401 单飞刷新使用；调用成功不自动持久化令牌，页面不应另建刷新机制。
+ * deviceId/platform 仍随请求提交，但当前后端只消费 refreshToken，设备信息沿用旧令牌记录。
+ * @param refreshToken 当前持有的刷新令牌，不应对同一令牌并行请求刷新
+ * @returns 裸 TokenPair（accessToken/refreshToken/tokenType/expiresIn），有效期单位为秒
  */
 export function refreshToken(refreshToken: string): Promise<LoginResult> {
   return post<LoginResult>('/auth/v1/refresh', { refreshToken, deviceId: 'apex-admin-web', platform: 'web' })

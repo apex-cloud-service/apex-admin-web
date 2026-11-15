@@ -37,7 +37,8 @@ sequenceDiagram
     B-->>L: CaptchaVO{captchaId, base64 图片}
     U->>L: 提交表单
     L->>S: login({username, password, captchaId, captchaCode, tenantId?})
-    S->>B: POST /api/v1/auth/login<br/>(附带 deviceId='apex-admin-web', platform='web'，<br/>tenantId 仅作租户匹配声明，缺省由后端使用 default)
+    S->>B: POST /auth/v1/login<br/>(deviceId='apex-admin-web', platform='web'，<br/>tenantId 可选，缺省由 auth-center.login.default-tenant 配置决定)
+    Note over S,B: 登录查认证中心用户；图形验证码、loginType 和 platform 当前不参与后端校验
     B-->>S: LoginResult
     alt mfaRequired=true（账号已启用 MFA，不签发令牌）
         S-->>L: 返回 {mfaRequired, challengeToken}
@@ -96,7 +97,7 @@ flowchart TD
 
 1. HTTP 状态码 401；
 2. 请求未带 `authRetried` 标记（防死循环）；
-3. URL 不属于认证端点：`/api/v1/auth/refresh`、`/api/v1/auth/login`、`/oauth2/token`；
+3. URL 不属于排除端点：`/api/v1/auth/refresh`、`/api/v1/auth/login`、`/auth/v1/login`、`/auth/v1/refresh`、`/oauth2/token`；
 4. 本地存在 refreshToken。
 
 ```mermaid
@@ -104,7 +105,7 @@ sequenceDiagram
     autonumber
     participant C as 业务请求
     participant R as request.ts 拦截器
-    participant B as /api/v1/auth/refresh
+    participant B as /auth/v1/refresh
     participant S as 会话存储
 
     C->>R: 请求返回 401
@@ -113,7 +114,7 @@ sequenceDiagram
         Note over R: 并发 401 共享同一个刷新 Promise
     else 首个触发
         R->>B: POST refreshToken(refreshToken)
-        B-->>R: LoginResult{accessToken, refreshToken?}
+        B-->>R: 裸 TokenPair{accessToken, refreshToken, expiresIn}
         R->>S: setToken；若返回新 refreshToken 则一并更新
     end
     alt 刷新成功
@@ -125,7 +126,9 @@ sequenceDiagram
     end
 ```
 
-补充：后端也可通过响应头 `x-new-access-token` 主动下发新令牌，拦截器收到后直接 `setToken`（request.ts:71）。
+补充：后端也可通过响应头 `x-new-access-token` 主动下发新令牌，拦截器收到后直接 `setToken`。
+
+前端单飞只覆盖当前页面实例，不覆盖其他标签页或客户端；不要在页面自行建立并行刷新机制。统一登录的 401/403 透传纯文本原因，不触发登出。身份初始化失败与令牌签发成功是不同状态：Store 先写入令牌，再请求用户信息，失败不会自动回滚已写令牌。
 
 ## 5. OAuth2 授权码登录
 

@@ -24,7 +24,7 @@ export interface UseFormDraftOptions {
 /**
  * 表单草稿自动保存
  * @param formKey 表单唯一标识
- * @param form 表单数据（响应式对象）
+ * @param form 表单数据的 Ref（深层监听其 value）
  * @param options 配置选项
  */
 export function useFormDraft<T extends Record<string, any>>(
@@ -46,11 +46,11 @@ export function useFormDraft<T extends Record<string, any>>(
   let isDirty = false
 
   /**
-   * 保存草稿
+   * 保存草稿与时间戳键。
+   * 两次写入独立执行，内容写入失败时仍会尝试更新时间戳；返回值只用于日志判断，不保证原子。
    */
   const saveDraft = () => {
     const saved = writeJSON(storageKey, form.value)
-    // 时间戳与草稿内容分开存储，写入失败时不更新时间戳（保留旧草稿的有效期）
     const stamped = writeRaw(timestampKey, Date.now().toString())
     if (saved && stamped) {
       console.log(`[草稿] 已保存: ${formKey}`)
@@ -140,7 +140,7 @@ export function useFormDraft<T extends Record<string, any>>(
     { deep: true }
   )
 
-  // 页面离开前提示（使用原生 beforeunload）
+  // 页面离开前提示（使用浏览器 beforeunload，不拦截 SPA 路由切换）
   if (warnOnLeave) {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {

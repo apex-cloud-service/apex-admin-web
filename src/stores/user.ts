@@ -35,9 +35,10 @@ export const useUserStore = defineStore('user', () => {
   const initialized = ref(false)
 
   /**
-   * 账号密码登录（管理后台入口）。
-   * @param params 登录参数（含图形验证码）
-   * @returns 登录结果；`mfaRequired=true` 时未签发正式令牌，须调用 verifyMfaChallenge 完成二步验证
+   * 账号密码登录并初始化身份（管理后台入口）。
+   * 正式令牌响应先写入会话，再加载身份；身份加载失败向调用方抛出，当前方法不回滚令牌。
+   * @param params 登录参数（含图形验证码；当前认证中心不校验验证码字段）
+   * @returns 登录响应；mfaRequired=true 时不写入会话，须调用 verifyMfaChallenge 完成二步验证
    */
   async function login(params: LoginParams): Promise<LoginResult> {
     const result = await loginApi({
@@ -56,9 +57,11 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
-   * MFA 二步验证：以挑战凭据 + TOTP 验证码交换正式令牌。
+   * MFA 二步验证：交换正式令牌后写入会话并加载身份。
+   * 身份初始化失败仍向调用方抛出；本方法不负责回滚已写入的令牌。
    * @param challengeToken 登录响应返回的挑战凭据
    * @param code 6 位 TOTP 验证码
+   * @returns 身份初始化完成后的正式登录响应
    */
   async function verifyMfaChallenge(challengeToken: string, code: string): Promise<LoginResult> {
     const result = await verifyMfaChallengeApi(challengeToken, code)
@@ -68,7 +71,10 @@ export const useUserStore = defineStore('user', () => {
 
   /**
    * 写入会话令牌并加载身份（登录与 MFA 二步共用）。
+   * 先清除旧租户标识再保存响应中的 tenantId；未返回 refreshToken 时保留已有刷新令牌。
+   * 身份请求失败不会撤销已写入的会话；调用方收到拒绝后自行决定恢复或清理。
    * @param result 含正式令牌的登录响应
+   * @returns 身份、权限与 initialized 状态更新完成
    */
   async function applyLoginResult(result: LoginResult): Promise<void> {
     token.value = result.accessToken
@@ -82,9 +88,11 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
-   * 拉取当前用户身份信息、角色码与权限码（刷新页面后恢复会话用）。
-   * 后端 GET /api/v1/user/info 仅返回 UserDTO（无 roles/permissions），
-   * 角色与权限码需分别调用 /api/v1/auth/roles/my 与 /permissions/my 获取。
+   * 拉取并合并当前用户信息、角色码与权限码（登录与页面刷新共用）。
+   * 三个请求并行：角色或权限请求失败降级为空数组，用户信息失败则拒绝并保留当前状态。
+   * 仅在用户信息成功返回后更新 identity、permissions 与 initialized；空权限数组不代表已授权，
+   * 当前前端权限检查会对空数组放行，服务端接口仍须独立鉴权。
+   * @returns 身份合并并持久化完成；权限与角色来自各自的“我的”接口
    */
   async function loadIdentity(): Promise<void> {
     const [info, roles, perms] = await Promise.all([
@@ -108,7 +116,9 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
-   * 退出登录：通知服务端失效 Token 并清空本地会话。
+   * 退出登录：尝试通知服务端，再清空本地会话。
+   * 服务端请求失败被吞掉，finally 仍调用 clearLocal；本地退出不保证服务端撤销成功。
+   * @returns 本地令牌、身份、权限及初始化标记清理完成
    */
   async function logout(): Promise<void> {
     try {

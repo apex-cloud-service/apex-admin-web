@@ -3,8 +3,9 @@
  * ------------------------------------------------------------------
  * 统一处理：
  *   1. 请求拦截：注入 Bearer Token
- *   2. 响应拦截：解包 Result{code,msg,data,traceId}
- *   3. 401 处理：自动刷新令牌（并发单飞）并单次重放；失败才清除会话并跳转登录页（保留回跳地址）
+ *   2. 响应拦截：解包 Result{code,msg,data,traceId}，非包装响应原样透传
+ *   3. HTTP 401：符合条件时并发单飞刷新并单次重放；刷新失败或不可刷新时清理会话
+ *      并跳转登录页（保留回跳地址），/auth/v1/login 的认证失败仅透传原因
  *   4. 业务错误：code !== 0 时抛出带 traceId 的错误信息
  *   5. 请求超时：默认 30s（与后端全局响应超时对齐）
  */
@@ -45,7 +46,7 @@ service.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
     // 租户作用域由后端从令牌解析；此头仅作匹配声明（网关会剥离重建）。
-    // 仅当登录响应返回过 tenantId 时携带，值与服务端签发一致，不会触发 403。
+    // 仅在会话记录了 tenantId 时携带；服务端仍会校验，前端不能保证匹配声明被接受。
     const tenantId = getTenantId()
     if (tenantId) {
       config.headers['X-Tenant-Id'] = tenantId
@@ -71,7 +72,7 @@ function handleUnauthorized(): void {
  * 以及无响应体的网络错误（回退到 Axios message）。
  * @param error Axios 错误对象
  * @param fallback 提取不到时的默认文案
- * @returns 后端提示消息；无可用内容时返回空串
+ * @returns 提取到的消息；无可用响应消息时依次回退 fallback、Axios message、空串
  */
 function extractServerMessage(error: unknown, fallback = ''): string {
   const data = (error as { response?: { data?: unknown } })?.response?.data
@@ -83,7 +84,7 @@ function extractServerMessage(error: unknown, fallback = ''): string {
   return fallback || axiosMsg || ''
 }
 
-/** 响应拦截：统一解包 Result 结构 */
+/** 响应拦截：解包含数字 code 的 Result，裸响应原样返回 */
 service.interceptors.response.use(
   (response: AxiosResponse<Result>) => {
     const newToken = response.headers['x-new-access-token']
@@ -146,9 +147,11 @@ service.interceptors.response.use(
 )
 
 /**
- * 通用请求方法（解包后的业务数据）。
- * @param config axios 请求配置
- * @returns 后端 Result.data 业务数据
+ * 通用请求方法：解包业务响应，兼容认证中心令牌等裸响应。
+ * HTTP 401 仅在存在刷新令牌、未重放且不属于排除端点时刷新；业务 code 不触发刷新。
+ * @param config Axios 请求配置
+ * @returns 数字 code=0 时返回 Result.data；无数字 code 时返回原始 response.data
+ * @throws ApiError 业务失败、HTTP 失败或网络错误；刷新成功后的重放仍保留其自身错误语义
  */
 export function request<T = unknown>(config: AxiosRequestConfig): Promise<T> {
   return service.request(config) as Promise<T>
@@ -157,7 +160,8 @@ export function request<T = unknown>(config: AxiosRequestConfig): Promise<T> {
 /**
  * GET 请求快捷方法。
  * @param url 请求地址
- * @param params 查询参数
+ * @param params 查询参数（可选）
+ * @returns 经统一响应拦截器解包或原样透传的数据
  */
 export function get<T = unknown>(url: string, params?: Record<string, unknown>): Promise<T> {
   return request<T>({ method: 'GET', url, params })
@@ -166,8 +170,9 @@ export function get<T = unknown>(url: string, params?: Record<string, unknown>):
 /**
  * POST 请求快捷方法。
  * @param url 请求地址
- * @param data 请求体
- * @param config 附加 Axios 配置（如自定义 headers）
+ * @param data 请求体（可选）
+ * @param config 附加 Axios 配置（可选：headers、timeout、signal）
+ * @returns 经统一响应拦截器解包或原样透传的数据
  */
 export function post<T = unknown>(
   url: string,
@@ -180,7 +185,8 @@ export function post<T = unknown>(
 /**
  * PUT 请求快捷方法。
  * @param url 请求地址
- * @param data 请求体
+ * @param data 请求体（可选）
+ * @returns 经统一响应拦截器解包或原样透传的数据
  */
 export function put<T = unknown>(url: string, data?: unknown): Promise<T> {
   return request<T>({ method: 'PUT', url, data })
@@ -189,7 +195,8 @@ export function put<T = unknown>(url: string, data?: unknown): Promise<T> {
 /**
  * DELETE 请求快捷方法。
  * @param url 请求地址
- * @param params 查询参数
+ * @param params 查询参数（可选）
+ * @returns 经统一响应拦截器解包或原样透传的数据
  */
 export function del<T = unknown>(url: string, params?: Record<string, unknown>): Promise<T> {
   return request<T>({ method: 'DELETE', url, params })

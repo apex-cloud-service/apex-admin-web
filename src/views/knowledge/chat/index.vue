@@ -2,12 +2,13 @@
   知识智能问答页面
   ------------------------------------------------------------------
   功能：基于知识库的 RAG 流式问答（SSE），会话列表 + 消息区 + 输入区；
-        回答携带引用溯源，可展开查看命中片段。
+        回答展示引用文档标题与片段摘要（片段最多显示两行，无展开控件）。
   权限要求：kb:chat:ask（问答接口）；会话管理接口登录即可。
   菜单组件路径：knowledge/chat/index
-  流式说明：POST /api/v1/kb/chat/ask 为 SSE 端点，axios 不支持流式响应，
-           此处用 fetch + createSseParser（复用 notification-stream 的分帧解析器），
-           必须携带 Accept: text/event-stream 与 Authorization 头（不走 axios 拦截器）。
+  流式说明：POST /api/v1/kb/chat/ask 使用 fetch 读取响应流，
+           仅复用 notification-stream 的 createSseParser 分帧解析器，
+           携带 Accept: text/event-stream 与 Authorization 头，不经过 Axios 拦截器，
+           不具备自动重连；收到终止事件或读取失败时取消响应流并释放读取锁。
 -->
 <template>
   <div class="chat-page">
@@ -76,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref } from 'vue'
 import { Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { deleteConversation, getConversationMessages, listConversations } from '@/api/knowledge'
@@ -102,7 +103,7 @@ const question = ref('')
 const streaming = ref(false)
 const messageContainer = ref<HTMLDivElement>()
 
-/** 加载会话列表 */
+/** 加载当前用户第一页会话（最多 50 条，页面未提供后续分页入口） */
 async function fetchConversations(): Promise<void> {
   conversationsLoading.value = true
   try {
@@ -115,7 +116,7 @@ async function fetchConversations(): Promise<void> {
   }
 }
 
-/** 切换会话并加载历史消息 */
+/** 切换会话并加载最近 50 条历史消息；列表顺序由后端按消息 ID 升序返回 */
 async function switchConversation(id: number): Promise<void> {
   conversationId.value = id
   try {
@@ -165,18 +166,32 @@ function handleKeydownEnter(event: KeyboardEvent): void {
   void handleAsk()
 }
 
-/** 发起问答（SSE 流式） */
+/**
+ * 发起一次 SSE 问答并累积回答；终止事件后停止消费，失败保留已有正文并显示一次提示。
+ * fetch 不经过 Axios 的令牌刷新与错误转换，error 帧兼容 JSON 协议和旧纯文本。
+ * @returns 响应流结束并复位生成状态，随后异步刷新第一页会话
+ */
 async function handleAsk(): Promise<void> {
   const text = question.value.trim()
   if (!text || streaming.value) return
   streaming.value = true
   question.value = ''
   messages.value.push({ role: 'USER', content: text })
-  const assistantMessage: ChatMessage = { role: 'ASSISTANT', content: '', streaming: true }
+  const assistantMessage = reactive<ChatMessage>({ role: 'ASSISTANT', content: '', streaming: true })
   messages.value.push(assistantMessage)
   await scrollToBottom()
 
   const controller = new AbortController()
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+  let terminated = false
+  let completed = false
+  let failureShown = false
+  const appendFailure = (message: string): void => {
+    if (failureShown) return
+    failureShown = true
+    assistantMessage.content += assistantMessage.content ? '\n\n' : ''
+    assistantMessage.content += `[回答失败] ${message}`
+  }
   try {
     const response = await fetch(apiUrl('/api/v1/kb/chat/ask'), {
       method: 'POST',
@@ -191,40 +206,77 @@ async function handleAsk(): Promise<void> {
     if (!response.ok || !response.body) {
       throw new Error(`问答请求失败：HTTP ${response.status}`)
     }
+    reader = response.body.getReader()
     const parser = createSseParser((eventName: string, data: string) => {
+      if (terminated) return
       if (eventName === 'citations') {
         assistantMessage.citations = safeParseCitations(data)
       } else if (eventName === 'delta') {
         assistantMessage.content += data
         void scrollToBottom()
       } else if (eventName === 'done') {
-        const done = JSON.parse(data) as { conversationId?: string }
-        if (done.conversationId && !conversationId.value) {
-          conversationId.value = Number(done.conversationId)
+        let done: unknown
+        try {
+          done = JSON.parse(data)
+        } catch {
+          throw new Error('问答完成事件格式无效')
         }
+        if (!done || typeof done !== 'object' || Array.isArray(done)) {
+          throw new Error('问答完成事件格式无效')
+        }
+        const id = Number((done as { conversationId?: unknown }).conversationId)
+        if (!conversationId.value && Number.isFinite(id) && Number.isInteger(id) && id > 0) {
+          conversationId.value = id
+        }
+        completed = true
+        terminated = true
       } else if (eventName === 'error') {
-        const failure = JSON.parse(data) as { message?: string }
-        assistantMessage.content += assistantMessage.content ? '\n\n' : ''
-        assistantMessage.content += `[回答失败] ${failure.message ?? '服务暂时不可用'}`
+        appendFailure(parseStreamError(data))
+        terminated = true
       }
     })
-    const reader = response.body.getReader()
     const decoder = new TextDecoder()
-    for (;;) {
+    while (!terminated) {
       const { done, value } = await reader.read()
       if (done) break
       parser.processChunk(decoder.decode(value, { stream: true }))
     }
+    if (!completed && !failureShown) appendFailure('回答流中断，请重试')
   } catch (error) {
-    if (assistantMessage.content === '') {
-      assistantMessage.content = `[回答失败] ${(error as Error).message}`
-    }
+    appendFailure(error instanceof Error && error.message ? error.message : '服务暂时不可用')
   } finally {
+    controller.abort()
+    if (reader) {
+      try {
+        await reader.cancel()
+      } catch {
+        // 流可能已经关闭，取消失败不覆盖原始回答或错误。
+      } finally {
+        reader.releaseLock()
+      }
+    }
     assistantMessage.streaming = false
     streaming.value = false
     void scrollToBottom()
-    // 新会话首次提问后刷新会话列表
     void fetchConversations()
+  }
+}
+
+/** 解析问答错误消息；旧纯文本可展示，畸形 JSON 与非字符串消息使用安全默认文案 */
+function parseStreamError(data: string): string {
+  const fallback = '服务暂时不可用'
+  const text = data.trim()
+  if (!text) return fallback
+  try {
+    const value: unknown = JSON.parse(text)
+    if (typeof value === 'string') return value.trim() || fallback
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const message = (value as { message?: unknown }).message
+      return typeof message === 'string' && message.trim() ? message.trim() : fallback
+    }
+    return fallback
+  } catch {
+    return /^[{["<]/.test(text) ? fallback : text
   }
 }
 

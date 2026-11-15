@@ -110,9 +110,10 @@ function handlePageChange(page: number, size: number): void {
 }
 
 /**
- * 渲染高亮片段：highlight 含 <em> 标记（服务端分帧生成），其余内容转义后拼接。
- * @param item 命中条目
- * @returns 安全的 HTML 片段
+ * 渲染索引引擎返回的高亮片段，缺少高亮时回退正文；超过 320 个字符时截断并追加省略号。
+ * 转义内容后仅恢复 <em> 标签，不直接信任服务端 HTML；检索响应为 JSON，不是 SSE。
+ * @param item 检索命中条目（highlight 可为空）
+ * @returns 仅允许 <em> 高亮标记的 HTML 片段
  */
 function renderHighlight(item: KbSearchItem): string {
   const source = item.highlight && item.highlight.trim().length > 0 ? item.highlight : item.content

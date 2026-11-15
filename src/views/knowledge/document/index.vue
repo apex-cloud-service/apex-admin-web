@@ -2,9 +2,10 @@
   知识文档管理页面
   ------------------------------------------------------------------
   功能：文档查询（空间/解析状态/标题过滤）、multipart 上传、在线录入、
-        分块预览、手动重建索引、删除。
-  权限要求：kb:doc:read（页面）、kb:doc:upload（上传/录入）、
-           kb:doc:reindex（重建索引）、kb:doc:delete（删除）。
+        分块预览、手动重建索引、接受删除并软隐藏、后台清理记录与重试。
+  权限要求：kb:doc:read（文档/清理记录读取）、kb:doc:upload（上传/录入）、
+           kb:doc:reindex（重建索引）、kb:doc:delete（删除/清理重试）；
+           空间选择器依赖管理端 listSpaces，额外要求 kb:space:read。
   菜单组件路径：knowledge/document/index
 -->
 <template>
@@ -24,6 +25,9 @@
             </el-button>
             <el-button :icon="EditPen" v-permission="'kb:doc:upload'" @click="manualVisible = true">
               在线录入
+            </el-button>
+            <el-button :icon="View" v-permission="'kb:doc:read'" @click="openCleanups">
+              清理记录
             </el-button>
           </div>
         </div>
@@ -91,7 +95,14 @@
             <el-button link type="warning" :icon="RefreshRight" v-permission="'kb:doc:reindex'" @click="handleReindex(row)">
               重建
             </el-button>
-            <el-button link type="danger" :icon="Delete" v-permission="'kb:doc:delete'" @click="handleDelete(row)">
+            <el-button
+              link
+              type="danger"
+              :icon="Delete"
+              :loading="deletingIds.has(row.id)"
+              v-permission="'kb:doc:delete'"
+              @click="handleDelete(row)"
+            >
               删除
             </el-button>
           </template>
@@ -100,6 +111,55 @@
 
       <Pagination :total="total" @change="handlePageChange" />
     </el-card>
+
+    <el-drawer v-model="cleanupVisible" title="文档清理记录" size="85%" class="cleanup-drawer">
+      <div class="cleanup-toolbar">
+        <span class="tip-text">删除接受后文档已隐藏；后台清理可能失败，可刷新状态或重试待清理、失败的记录。「已完成」仅表示最近清理已确认，后台复核不保证永久物理擦除。</span>
+        <el-button :icon="Refresh" :loading="cleanupLoading" v-permission="'kb:doc:read'" @click="fetchCleanups">
+          刷新
+        </el-button>
+      </div>
+      <el-alert
+        v-if="cleanupError"
+        class="cleanup-error"
+        title="加载清理记录失败，请刷新重试"
+        type="error"
+        :closable="false"
+        show-icon
+      />
+      <el-table v-loading="cleanupLoading" :data="cleanupList" class="cleanup-table" border stripe>
+        <el-table-column prop="documentId" label="文档 ID" width="180" />
+        <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
+        <el-table-column label="清理状态" width="110" align="center">
+          <template #default="{ row }">
+            <el-tag :type="cleanupStatusType(row.status)">{{ cleanupStatusText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="错误摘要" min-width="220" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.errorMessage || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="attempts" label="尝试次数" width="90" align="center" />
+        <el-table-column prop="updatedAt" label="更新时间" width="190" />
+        <el-table-column label="下次重试时间" width="190">
+          <template #default="{ row }">{{ row.nextRetryAt || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="90" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.status === 'FAILED' || row.status === 'PENDING'"
+              link
+              type="warning"
+              :loading="retryingIds.has(row.documentId)"
+              v-permission="'kb:doc:delete'"
+              @click="handleCleanupRetry(row)"
+            >
+              重试
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <Pagination v-show="!cleanupError" :total="cleanupTotal" @change="handleCleanupPageChange" />
+    </el-drawer>
 
     <!-- 上传对话框 -->
     <el-dialog v-model="uploadVisible" title="上传知识文档" width="520px">
@@ -164,12 +224,14 @@ import {
   createManualDocument,
   deleteDocument,
   getDocument,
+  listDocumentCleanups,
   listDocuments,
   listSpaces,
   reindexDocument,
+  retryDocumentCleanup,
   uploadDocument,
 } from '@/api/knowledge'
-import type { KnowledgeChunk, KnowledgeDocument, KnowledgeSpace } from '@/types'
+import type { KnowledgeChunk, KnowledgeDocument, KnowledgeDocumentCleanupDTO, KnowledgeSpace } from '@/types'
 import { showError } from '@/utils/request'
 import Pagination from '@/components/Pagination.vue'
 
@@ -181,6 +243,16 @@ const total = ref(0)
 const spaces = ref<KnowledgeSpace[]>([])
 
 const queryForm = reactive({ page: 1, size: 20, spaceId: undefined as number | undefined, parseStatus: '', keyword: '' })
+
+const cleanupVisible = ref(false)
+const cleanupLoading = ref(false)
+const cleanupError = ref(false)
+const cleanupList = ref<KnowledgeDocumentCleanupDTO[]>([])
+const cleanupTotal = ref(0)
+const cleanupQuery = reactive({ page: 1, size: 20 })
+let cleanupRequestId = 0
+const retryingIds = reactive(new Set<number>())
+const deletingIds = reactive(new Set<number>())
 
 const uploadVisible = ref(false)
 const uploading = ref(false)
@@ -226,6 +298,65 @@ async function fetchList(): Promise<void> {
     showError(error, '加载知识文档失败')
   } finally {
     loading.value = false
+  }
+}
+
+/** 按需打开清理抽屉并读取当前页，不在页面挂载时查询，也不重复触发在途读取。 */
+function openCleanups(): void {
+  cleanupVisible.value = true
+  if (!cleanupLoading.value) void fetchCleanups()
+}
+
+/** 独立加载清理分页；请求序号避免旧响应覆盖新页，失败清空记录并隐藏分页但保留页码，文档列表不受影响。 */
+async function fetchCleanups(): Promise<void> {
+  const requestId = ++cleanupRequestId
+  cleanupLoading.value = true
+  cleanupError.value = false
+  try {
+    const result = await listDocumentCleanups({ ...cleanupQuery })
+    if (requestId !== cleanupRequestId) return
+    cleanupList.value = result.list
+    cleanupTotal.value = result.total
+  } catch (error) {
+    if (requestId !== cleanupRequestId) return
+    cleanupList.value = []
+    cleanupError.value = true
+    showError(error, '加载清理记录失败')
+  } finally {
+    if (requestId === cleanupRequestId) cleanupLoading.value = false
+  }
+}
+
+/** 清理区块分页独立使用 page/size，不改变文档查询条件。 */
+function handleCleanupPageChange(page: number, size: number): void {
+  cleanupQuery.page = page
+  cleanupQuery.size = size
+  void fetchCleanups()
+}
+
+/** 仅待清理/失败可确认重试；按文档锁定确认与提交，取消静默退出，false 不报成功，接受后刷新但不视为清理完成。 */
+async function handleCleanupRetry(row: KnowledgeDocumentCleanupDTO): Promise<void> {
+  if ((row.status !== 'FAILED' && row.status !== 'PENDING') || retryingIds.has(row.documentId)) return
+  retryingIds.add(row.documentId)
+  try {
+    try {
+      await ElMessageBox.confirm(`确定提交「${row.title}」的后台清理重试吗？接受后仍需刷新查看状态。`, '重试确认', {
+        type: 'warning',
+      })
+    } catch {
+      return
+    }
+    const accepted = await retryDocumentCleanup(row.documentId)
+    if (!accepted) {
+      ElMessage.warning('清理重试未被接受，请刷新记录后再试')
+      return
+    }
+    ElMessage.success('清理重试已接受，请稍后刷新查看状态')
+    await fetchCleanups()
+  } catch (error) {
+    showError(error, '清理重试提交失败')
+  } finally {
+    retryingIds.delete(row.documentId)
   }
 }
 
@@ -328,21 +459,29 @@ async function handleReindex(row: KnowledgeDocument): Promise<void> {
   }
 }
 
-/** 删除文档 */
+/** 确认后台删除并按文档防重入；true 仅接受/软隐藏，false 不报成功，接受后刷新文档和已打开的清理记录。 */
 async function handleDelete(row: KnowledgeDocument): Promise<void> {
+  if (deletingIds.has(row.id)) return
+  deletingIds.add(row.id)
   try {
-    await ElMessageBox.confirm(`确定删除文档「${row.title}」吗？分块与索引将同步清理。`, '删除确认', {
-      type: 'warning',
-    })
-  } catch {
-    return
-  }
-  try {
-    await deleteDocument(row.id)
-    ElMessage.success('文档删除成功')
-    await fetchList()
+    try {
+      await ElMessageBox.confirm(`确定删除文档「${row.title}」吗？接受后文档将隐藏，分块、索引与存储资源由后台清理，可在清理记录中查看状态与重试。`, '删除确认', {
+        type: 'warning',
+      })
+    } catch {
+      return
+    }
+    const accepted = await deleteDocument(row.id)
+    if (!accepted) {
+      ElMessage.warning('删除请求未被接受，请刷新文档后再试')
+      return
+    }
+    ElMessage.success('删除请求已接受，文档已隐藏，后台清理状态可在清理记录中查看')
+    await Promise.all([fetchList(), ...(cleanupVisible.value ? [fetchCleanups()] : [])])
   } catch (error) {
-    showError(error, '文档删除失败')
+    showError(error, '文档删除请求失败')
+  } finally {
+    deletingIds.delete(row.id)
   }
 }
 
@@ -393,6 +532,26 @@ function indexStatusType(status: string): 'info' | 'primary' | 'success' | 'warn
   return map[status] ?? 'info'
 }
 
+function cleanupStatusText(status: KnowledgeDocumentCleanupDTO['status']): string {
+  const map: Record<KnowledgeDocumentCleanupDTO['status'], string> = {
+    PENDING: '待清理',
+    PROCESSING: '清理中',
+    COMPLETED: '已完成',
+    FAILED: '清理失败',
+  }
+  return map[status]
+}
+
+function cleanupStatusType(status: KnowledgeDocumentCleanupDTO['status']): 'info' | 'primary' | 'success' | 'danger' {
+  const map: Record<KnowledgeDocumentCleanupDTO['status'], 'info' | 'primary' | 'success' | 'danger'> = {
+    PENDING: 'info',
+    PROCESSING: 'primary',
+    COMPLETED: 'success',
+    FAILED: 'danger',
+  }
+  return map[status]
+}
+
 /** 字节数格式化 */
 function formatSize(size?: number): string {
   if (!size) return '-'
@@ -420,6 +579,18 @@ onMounted(() => {
 
 .query-form {
   margin-bottom: 8px;
+}
+
+.cleanup-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.cleanup-error {
+  margin-bottom: 16px;
 }
 
 .tip-text {

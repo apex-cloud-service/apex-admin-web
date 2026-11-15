@@ -121,7 +121,8 @@ let dynamicRoutesAdded = false
 
 /**
  * 登录后（或刷新后）生成菜单驱动的动态路由。
- * 由前端路由守卫调用；失败时静默降级（仅静态路由可用）。
+ * 由前端路由守卫调用；失败时记录警告并保留静态路由。若动态子路由已挂入根记录，
+ * 会在 addRoute 前设置已生成标记；因此注册异常后的后续导航不保证自动重试成功。
  */
 export async function setupDynamicRoutes(): Promise<void> {
   if (dynamicRoutesAdded) return
@@ -147,7 +148,8 @@ export async function setupDynamicRoutes(): Promise<void> {
 /** 全局前置守卫 */
 router.beforeEach(async (to) => {
   const hasToken = !!getToken()
-  // 公开页面（登录/404）直接放行
+  // 公开页面（meta.public=true，如登录、OAuth 回调、密码找回、分享兑换）直接放行；
+  // NotFound 未声明 public，仍受登录与动态路由流程约束
   if (to.meta.public) return true
   // 未登录 → 登录页并携带回跳地址
   if (!hasToken) {

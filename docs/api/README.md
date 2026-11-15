@@ -21,7 +21,7 @@
 | `/api/v2/**` | 第二代接口：租户管理、租户套餐、能力目录/用量、数据总览、工作流定义、运维健康、文件分享、办公会议室/同步向导/统一通知 | 同 `/api` |
 | `/admin-api/v1/**` | 管理后台接口：系统管理、监控、日志、SSO、生成器、认证配置、消息模板、组织同步等 | Vite proxy `/admin-api`、Nginx `/admin-api/` |
 | `/integration/v1/**` | 集成中心连接器/凭据与物联网设备/规则（`/internal/v1/**` 为集群内部端点，网关强制拒绝外部访问） | Vite proxy `/integration/v1`、Nginx `/integration/v1/` |
-| `/auth/v1/**` | 认证中心：MFA 登录二步验证（`/auth/v1/mfa/verify`）与在线会话管理（`/auth/v1/sessions/**`） | Vite proxy `/auth/v1`、Nginx `/auth/v1/` |
+| `/auth/v1/**` | 认证中心：统一登录、令牌刷新、MFA 登录二步验证与在线会话管理 | Vite proxy `/auth/v1`、Nginx `/auth/v1/` |
 | `/auth/v2/**` | 认证中心密码找回（`/auth/v2/password-recovery/**`） | Vite proxy `/auth/v2`、Nginx `/auth/v2/` |
 | `/api/workflow/**` | 工作流高级操作（回退/转办/委派/挂起/恢复） | 同 `/api` |
 | `/api/office/**` | 前端办公平台业务 API 使用的路径前缀（消息/审批/日历/文档）；仓库内仅能确认相关调用和开发代理配置 | 同 `/api` |
@@ -39,7 +39,7 @@
 ### 1.4 认证
 
 - 请求拦截自动注入 `Authorization: Bearer <accessToken>`；
-- HTTP 401 且满足刷新条件（有请求 config、未标记 `authRetried`、会话持有 refreshToken）时自动触发**令牌无感刷新并重放一次**；`/api/v1/auth/login`、`/api/v1/auth/refresh`、`/oauth2/token` 三个端点不参与刷新（详见 [认证与路由架构](../architecture/auth-and-routing.md)）；
+- HTTP 401 且满足刷新条件（有请求 config、未标记 `authRetried`、会话持有 refreshToken）时自动触发**令牌无感刷新并重放一次**；`/api/v1/auth/login`、`/api/v1/auth/refresh`、`/auth/v1/login`、`/auth/v1/refresh`、`/oauth2/token` 不参与刷新（详见 [认证与路由架构](../architecture/auth-and-routing.md)）；统一登录的 401/403 透传后端原因，登录失败不自动清理会话；
 - 响应头 `x-new-access-token` 自动更新本地令牌。
 
 ## 2. 接口清单（按业务域）
@@ -49,9 +49,9 @@
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
 | GET | `/api/v1/auth/captcha` | `getCaptcha()` | 图形验证码（captchaId + base64） |
-| POST | `/api/v1/auth/login` | `login(payload)` | 账号密码登录（附带 deviceId/platform；可选 tenantId 租户匹配声明，`VITE_AUTH_TENANT_ENABLED` 控制登录页输入） |
+| POST | `/auth/v1/login` | `login(payload)` | 统一认证中心密码登录，裸 LoginResponse；MFA 挑战不返回正式令牌，图形验证码、loginType 与 platform 为兼容透传字段 |
 | POST | `/api/v1/auth/logout` | `logout()` | 登出 |
-| POST | `/api/v1/auth/refresh` | `refreshToken(rt)` | 刷新令牌（request.ts 401 时自动调用） |
+| POST | `/auth/v1/refresh` | `refreshToken(rt)` | 一次性刷新令牌轮换，裸 TokenPair；由 request.ts 401 单飞流程自动调用 |
 | POST | `/auth/v1/mfa/verify` | `verifyMfaChallenge(challengeToken, code)` | MFA 二步验证：登录响应 `mfaRequired=true` 时不签发令牌，用 `challengeToken` + 动态码换取正式令牌（挑战一次性消费；store `login()` 已按此分流） |
 | GET | `/api/v1/auth/roles/my` | `getMyRoles()` | 当前用户角色码 |
 | GET | `/api/v1/auth/permissions/my` | `getMyPermissions()` | 当前用户权限码 |
@@ -510,7 +510,45 @@
 
 页面 `views/dashboard/index.vue`。内部端点 `/internal/v1/overview` 网关强制 403，浏览器不可直连。
 
-### 2.30 自动生成接口
+### 2.30 知识库 [src/api/knowledge.ts](../../src/api/knowledge.ts)
+
+管理端前缀为 `/admin-api/v1/kb`，业务检索与问答为 `/api/v1/kb`，分页请求使用 `page/size`、响应读取 `list/total`。
+
+| 方法 | 路径 | 函数 | 说明 |
+|------|------|------|------|
+| GET/POST | `/admin-api/v1/kb/spaces` | `listSpaces` / `createSpace` | 空间分页 / 创建 |
+| GET/PUT/DELETE | `/admin-api/v1/kb/spaces/{spaceId}` | `getSpace` / `updateSpace` / `deleteSpace` | 空间详情 / 更新 / 删除；有文档时拒绝删除 |
+| GET | `/admin-api/v1/kb/documents` | `listDocuments` | 文档分页，按空间、解析状态、标题过滤 |
+| GET | `/admin-api/v1/kb/documents/{docId}` | `getDocument` | 文档详情与分块预览 |
+| POST | `/admin-api/v1/kb/spaces/{spaceId}/documents` | `uploadDocument` | multipart 上传，登记后独立摄取 |
+| POST | `/admin-api/v1/kb/manual-documents` | `createManualDocument` | 纯文本录入 |
+| POST | `/admin-api/v1/kb/documents/{docId}/reindex` | `reindexDocument` | 重置处理状态并触发摄取，响应不等待完成 |
+| DELETE | `/admin-api/v1/kb/documents/{docId}` | `deleteDocument` | 布尔结果表示删除意图已接受，外部资源由后台清理 |
+| GET | `/admin-api/v1/kb/document-cleanups` | `listDocumentCleanups` | 删除清理记录分页（`kb:doc:read`） |
+| GET | `/admin-api/v1/kb/document-cleanups/{docId}` | `getDocumentCleanup` | 当前租户文档的清理状态 |
+| POST | `/admin-api/v1/kb/document-cleanups/{docId}/retry` | `retryDocumentCleanup` | 接受清理重试（`kb:doc:delete`），不代表已完成 |
+| GET | `/api/v1/kb/spaces` | `listKbSpaces` | 正常空间数组 |
+| GET | `/api/v1/kb/search` | `searchKnowledge` | JSON 检索结果 items/total/hybridUsed；向量不可用时词法兜底 |
+| GET | `/api/v1/kb/chat/conversations` | `listConversations` | 当前用户会话分页 |
+| GET | `/api/v1/kb/chat/conversations/{conversationId}/messages` | `getConversationMessages` | 最近消息数组，按消息 ID 升序返回 |
+| DELETE | `/api/v1/kb/chat/conversations/{conversationId}` | `deleteConversation` | 删除当前用户会话 |
+
+问答 `POST /api/v1/kb/chat/ask` 由 [聊天页](../../src/views/knowledge/chat/index.vue) 直接 fetch 消费 SSE，携带 `Authorization`、`Accept: text/event-stream`，不经过 Axios 的 401 刷新。事件为 citations（引用 JSON）→ delta（文本）→ done（完成 JSON）；error 统一 `{code: string, message: string}`，页面兼容旧纯文本错误，保留部分答案并显示失败，终止后取消读取并释放锁，不自动重连。
+
+文档页提供删除清理记录与手动刷新/重试。`PENDING/PROCESSING/COMPLETED/FAILED` 分别表示待清理、处理中、最近一轮清理已确认、待重试；COMPLETED 不表示历史对象已物理擦除或永久无晚到索引任务。后台凭证保留以便定向复核。历史未知存储位置不自动猜测，具体恢复与租户范围配置以后端为准。
+
+```mermaid
+flowchart LR
+    A[确认删除] --> B[持久化删除意图并隐藏文档]
+    B --> C[后台清理任务]
+    C --> D{索引与对象清理确认?}
+    D -->|成功| E[COMPLETED 保留凭证]
+    D -->|失败或未知| F[FAILED 安全错误摘要]
+    F --> G[后台或手动重试]
+    G --> C
+```
+
+### 2.31 自动生成接口
 
 `npm run generate:api`（openapi-generator-cli 7.2.0，typescript-axios，配置见 [openapitools.json](../../openapitools.json)）依据 `glob: "openapi.json"` 从根目录 `openapi.json` 生成代码到 `src/api/generated/`。该 OpenAPI 规范文件由后端接口导出提供，当前仓库未内置（`.gitignore` 也未忽略），执行前须先将其放到根目录；`src/api/generated/` 亦为生成目录，当前仓库不存在。生成物为辅助参考，业务代码仍以手写 [src/api/](../../src/api/) 模块为准。
 
@@ -541,4 +579,4 @@ try {
 
 ---
 
-**最后更新**：2026-11-11（依据前端源码、类型定义、页面调用和代理配置核对；后端及生产部署状态需外部核验）
+**最后更新**：2026-11-15（本次增量核对统一认证、知识问答错误协议与删除清理接口；其余业务保留此前基线，后端及生产部署状态需外部核验）

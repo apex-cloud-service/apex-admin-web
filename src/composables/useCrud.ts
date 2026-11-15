@@ -68,9 +68,10 @@ export function useCrud<T>(api: CrudApi<T>, options: UseCrudOptions = {}) {
   } = options
 
   /**
-   * 分页查询列表：按当前页码/条数请求并回填数据
-   * @param params 额外查询参数（覆盖默认分页参数）
-   * @returns 查询到的 PageResponse
+   * 分页查询列表：按当前页码/条数请求并回填数据。
+   * params 可覆盖默认 page/size；额外筛选不保存，create/update/remove 后的刷新使用默认参数。
+   * @param params 额外查询参数（可覆盖默认分页参数）
+   * @returns 无返回值；请求失败向上抛出，成功仅更新 list/total
    */
   const query = async (params: any = {}) => {
     loading.value = true
@@ -158,7 +159,8 @@ export function useCrud<T>(api: CrudApi<T>, options: UseCrudOptions = {}) {
   }
 
   /**
-   * 批量删除：并发删除多条记录，全部完成后刷新列表
+   * 批量删除：始终弹出确认，确认后并发调用单条删除。
+   * 部分失败不会回滚已成功项，也不进入成功提示或列表刷新；调用方需自行处理重试。
    * @param ids 待删除的记录 ID 列表（空列表时仅提示）
    */
   const batchRemove = async (ids: string[]) => {

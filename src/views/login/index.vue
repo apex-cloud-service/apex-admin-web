@@ -1,8 +1,9 @@
 <!--
   登录页
   ------------------------------------------------------------------
-  账号密码 + 图形验证码登录（PASSWORD 登录方式），
-  登录成功后按 redirect 参数跳转（默认进入工作台）。
+  用途：账号密码登录、MFA 二步验证、标准 OAuth2 授权入口与密码找回。
+  图形验证码在页面校验并随登录请求提交，当前统一认证中心不校验该字段。
+  正式令牌及身份初始化完成后按 redirect 参数跳转（默认进入工作台）。
 -->
 <template>
   <div class="login-page">
@@ -251,7 +252,7 @@ async function loadCaptcha(): Promise<void> {
 }
 
 /**
- * 提交登录：校验 → 调用登录接口 → 跳转目标页。
+ * 提交密码登录：校验表单，MFA 挑战时切换验证界面，身份初始化完成后跳转。
  */
 async function handleLogin(): Promise<void> {
   if (!formRef.value) return
@@ -281,7 +282,7 @@ async function handleLogin(): Promise<void> {
     completeLogin()
   } catch (error) {
     showLoginError(error)
-    // 登录失败后刷新验证码（验证码一次性消费）
+    // 登录失败后仍刷新图形验证码；当前认证中心不校验或消费该验证码。
     loadCaptcha()
   } finally {
     loading.value = false
@@ -352,8 +353,8 @@ function completeLogin(): void {
 }
 
 /**
- * 第三方登录处理函数
- * @param provider 登录平台类型（wechat/github/google等）
+ * 发起标准 OAuth2 授权登录；各社交入口当前共用同一客户端与 PKCE 授权流程。
+ * @param _provider 入口传入的平台标识；当前未用于选择不同提供商
  */
 async function handleSocialLogin(_provider: string): Promise<void> {
   try {

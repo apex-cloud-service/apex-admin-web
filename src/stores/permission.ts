@@ -15,9 +15,9 @@ export const usePermissionStore = defineStore('permission', () => {
   const permissions = computed(() => userStore.permissions)
 
   /**
-   * 判断当前用户是否拥有指定权限码。
+   * 判断前端是否允许展示对应操作。
    * @param code 权限码（如 system:user:create）；支持逗号分隔多码（满足其一即可）
-   * @returns true=拥有权限
+   * @returns true=允许前端展示；空 code 或权限列表为空时也放行（fail-open），不代表服务端已授权
    */
   function hasPermission(code: string): boolean {
     if (!code) return true
