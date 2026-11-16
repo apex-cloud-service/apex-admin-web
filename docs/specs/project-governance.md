@@ -216,6 +216,7 @@
 | --- | --- | --- |
 | `scripts/governance/verify-docs.sh` | 六目录/索引/任务大盘/私有目录边界/规模快照 | `bash scripts/governance/verify-docs.sh` |
 | `scripts/governance/audit-frontend-rules.sh` | 越权 Axios、绕过 `auth.ts`、`: any` 规模、`script setup` 覆盖 | `bash scripts/governance/audit-frontend-rules.sh [--strict]` |
+| `scripts/governance/check-doc-refs.sh` | 活文档私有路径残留 + Markdown 断链（含白名单豁免） | `bash scripts/governance/check-doc-refs.sh [--strict]` |
 | `.githooks/pre-commit` | 治理范围改动时跑自检 + 图表删除告警 + 大文件提醒 | `git config core.hooksPath .githooks` |
 
 脚本说明见 `scripts/governance/README.md`；`--strict` 才产生非零退出码，默认只警告。

@@ -55,3 +55,14 @@ git config --unset core.hooksPath     # 临时关闭
 1. 脚本不得修改仓库文件；只允许读与打印。
 2. 新增检查项必须同步更新本 README 与 `docs/specs/project-governance.md` §8。
 3. macOS 自带 bash 3.2：避免 `case ... ;;` 嵌在命令替换里；变量紧跟中文标点时用 `${VAR}`。
+## 5. `check-doc-refs.sh`（活文档指针自检，2026-11-16 新增）
+
+| 项 | 说明 |
+| --- | --- |
+| 检查 1 | 受控 Markdown 中是否仍指向 AI 私有目录（`.workbuddy/knowledge|reports/`、`.zcode/plans/`、`.trae/documents/`） |
+| 检查 2 | Markdown 相对链接是否可达（目标是 `.md` 文件的相对链接） |
+| 豁免 | ① `docs/_archive/` 前缀整体豁免 ② `doc-refs-allowlist.txt` 列出的文件 ③ 行内含「原文未入库」 |
+| 接入 | `verify-docs.sh` 第 8 项 |
+| 严格模式 | `bash scripts/governance/check-doc-refs.sh --strict` |
+
+**为什么新增**：跨仓指针（`apex-scaffold/.trae/documents/...`）失效、`docs/archived/` 相对层级写错，旧自检都发现不了。

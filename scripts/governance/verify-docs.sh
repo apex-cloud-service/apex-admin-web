@@ -62,6 +62,14 @@ if [ -d docs/archived/ai-sessions/zcode-plans ]; then
   [ -f docs/archived/ai-sessions/zcode-plans/README.md ] && pass "zcode-plans 索引存在" || warn "zcode-plans 缺少 README"
 fi
 
+echo "== 8. 活文档私有路径与断链 =="
+REFS=$("$ROOT/scripts/governance/check-doc-refs.sh" 2>&1 | tail -1 | grep -oE '[0-9]+' | head -1)
+if [ "${REFS:-0}" -gt 0 ]; then
+  warn "check-doc-refs 发现 ${REFS} 项（明细见 bash scripts/governance/check-doc-refs.sh）"
+else
+  pass "活文档无私有路径残留、无断链"
+fi
+
 echo
 if [ "$FAIL" -eq 0 ]; then
   echo "✅ 文档治理自检通过（0 项问题）"
