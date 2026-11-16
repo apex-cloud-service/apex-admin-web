@@ -66,3 +66,20 @@ git config --unset core.hooksPath     # 临时关闭
 | 严格模式 | `bash scripts/governance/check-doc-refs.sh --strict` |
 
 **为什么新增**：跨仓指针（`apex-scaffold/.trae/documents/...`）失效、`docs/archived/` 相对层级写错，旧自检都发现不了。
+
+
+## 6. `check-memory-sync.sh`（记忆台账同步校验，2026-11-16 新增）
+
+| 项 | 说明 |
+| --- | --- |
+| 目的 | 强制「任何改动都写入记忆台账」，落实规范 §5.4 |
+| 查什么 | ① 本次暂存改动里是否包含记忆台账 `docs/reference/ai-knowledge/04-change-memory.md`（后端仓为 `07-change-memory.md`，脚本自动探测）② 提交信息是否带 `memory:` 标记 |
+| 阻断 | 默认**只告警**（exit 0），`--strict` 才 exit 1 |
+| 接入点 | `.githooks/pre-commit` 第 0 步（所有提交都跑）+ `.githooks/commit-msg`（校验提交信息） |
+| 例外 | 纯机械改动（格式化、改错字）在提交信息写 `memory: n/a（原因）` |
+
+```bash
+bash scripts/governance/check-memory-sync.sh
+bash scripts/governance/check-memory-sync.sh --msg "$(cat .git/COMMIT_EDITMSG)"
+bash scripts/governance/check-memory-sync.sh --strict            # CI 用，缺登记即失败
+```

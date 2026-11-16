@@ -50,7 +50,9 @@
 | 7 | 分支 | `main` → `master`：`git branch -m main master` + `git push -u origin master`；远端默认分支切到 `master` 后 `git push origin --delete main` 成功 + `git fetch --prune`；规范 §5.3 与记录副本同步 `master` 口径 | `88ca2d1` | `git ls-remote origin` 现仅 `dev/master/test`；历史零改写 |
 | 8 | 分支 | **新建 `dev` / `test`**（自 `master`），推送并建立跟踪，三支同点 | `c3802d7` | `git branch -vv` → 三支分别跟踪 `origin/dev`、`origin/test`、`origin/master` |
 | 9 | 治理 | **`dev` 设为默认工作分支**：规范 §5.3 分支模型表改为 `dev` 默认、`master` 仅接受从 `dev` 合入、`test` 仅由 `dev` 合入；写明开工自检与合入命令；本地切 `dev` | `9931af3` | `git checkout dev` + `git pull --ff-only`；该规则更新本身即首个 `dev` 提交 |
+| 11 | 脚本 | 新增 `scripts/governance/check-memory-sync.sh`（校验暂存改动是否含台账、提交信息是否带 `memory:` 标记；默认只告警，`--strict` 才 exit 1），接入 `.githooks/pre-commit` 第 0 步与新增的 `.githooks/commit-msg`；`scripts/governance/README.md` 增 §6 说明 | 本条提交 | `bash scripts/governance/check-memory-sync.sh` 实测输出；警告模式，不影响构建与页面 |
 | 10 | 文档 | 本篇 `04-change-memory.md` 建立 + 规范 §5.4「记忆文档同步（强制）」+ `MEMORY-CARD.md`/`README.md` 索引同步 | 本条提交 | 本文件；`grep -n "5.4 记忆文档同步" docs/specs/project-governance.md` |
+| 12 | 脚本 | **更正 #11**：`check-memory-sync.sh` 首版在 macOS bash 3.2 下报 `MEM_NAME: unbound variable` —— 变量紧跟中文全角括号时被并入变量名；改为 `${MEM_NAME}` 后复测通过（`OK：本次提交已登记记忆台账（04-change-memory.md）`）。**结论：脚本里变量后接非 ASCII 字符一律写 `${VAR}`** | 本条提交 | 修复后实测两条路径（未登记→告警 / 已登记→OK）均正常 |
 
 ---
 
