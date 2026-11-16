@@ -60,6 +60,7 @@
 | 17 | 治理 | **`dev` 分支治理一致性评审（前端）**：本仓判定表、偏差归属 D-02/D-03/D-04/D-06/D-07/D-08、允许差异（无编号目录）、前端特有注意（不挂 `npm run build` 为 status check）；唯一正文在后端 `docs/reviews/` | 本条提交 | 实测：无 `.github`（无 CI）、`AGENTS.md` 第 0 章缺台账/分支条款、任务盘止于 FE-015、`.gitignore` 四组重复；`verify-docs`/`check-doc-refs` 均 0 项、红线无阻断 |
 | 18 | 治理 | **整改 B1+B2（关闭 D-03/D-08/D-04）**：`AGENTS.md` 第 0 章新增 `0.8 记忆台账、分支模型与工具链`；规范 §5.3 默认分支改为既成事实；知识库 README 增加「维护口径」（台账强制登记、其余为派生视图）；任务盘补 FE-016~FE-021 | 本条提交 | 验收：`tail -n 712 AGENTS.md \| shasum -a 256` = `ae5e19db…53a` **不变**；任务盘 6 列对齐 |
 | 19 | 脚本 | **整改 B5（关闭 D-06）**：`.gitignore` 合并重复项为单一「AI 私有目录」区块（9 类各 1 条带注释），移除工具链段重复目录与重复构建产物 | 本条提交 | 验收：去重检查为空；`git check-ignore docs/README.md` 无命中；`verify-docs` 0 项 |
+| 20 | 治理 | **整改 B3（关闭 D-02）**：新增 `.github/workflows/ci.yml`（`docs-and-rules` job 跑 4 个治理脚本 + `build` job 跑 `npm ci && npm run build`），触发 `master/test/dev`、PR `master/test`、支持手动触发 | 本条提交 | 验收：`ruby -ryaml` 解析通过；本地预演 4 个治理脚本全通过；首次推送 `dev` 即验证触发 |
 
 ---
 

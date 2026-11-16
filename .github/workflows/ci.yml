@@ -1,0 +1,45 @@
+name: ci
+
+# 分支模型：dev（日常开发）→ test（验收）→ master（生产）；分支策略变更时同步此列表
+on:
+  push:
+    branches: [ master, test, dev ]
+  pull_request:
+    branches: [ master, test ]
+  workflow_dispatch:
+
+jobs:
+  docs-and-rules:
+    name: 文档与红线门禁
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 文档治理自检
+        run: bash scripts/governance/verify-docs.sh
+
+      - name: 文档断链检查
+        run: bash scripts/governance/check-doc-refs.sh
+
+      - name: 前端红线扫描
+        run: bash scripts/governance/audit-frontend-rules.sh
+
+      - name: 记忆台账校验
+        run: bash scripts/governance/check-memory-sync.sh
+
+  build:
+    name: 构建（vue-tsc + vite）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 构建
+        run: npm run build
