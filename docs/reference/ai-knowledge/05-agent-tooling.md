@@ -26,6 +26,14 @@
 
 `find_plugin`（代码审查/测试/Spring Boot/Vue/质量检测）**无可用结果**，本轮不装第三方插件；对应能力用仓库内脚本：`scripts/governance/{verify-docs,check-doc-refs,audit-frontend-rules,check-memory-sync}.sh`、`scripts/verify/post-deploy-check.sh`、`npm run test:report`。
 
+
+## 3.5 配套脚本与规则
+
+| 产物 | 路径 | 用途 |
+| --- | --- | --- |
+| 一键预检 | `scripts/dev/apex-preflight.sh` | 分支/工作区/远端/附录A哈希/台账/治理脚本/node 与 build/分支对齐；支持 `--fast`/`--commit`/`--strict` |
+| 分支保护清单 | `docs/guides/github-branch-protection.md` | 指向后端唯一正文；含前端特有注意（别把 `npm run build` 挂成 status check） |
+
 ## 4. 生效验证
 
 ```bash

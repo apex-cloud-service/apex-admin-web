@@ -216,6 +216,8 @@ git branch test master && git push -u origin test
 
 首建时三支指向同一提交（前端 `88ca2d1`、后端 `ee244f89`），历史零变化。旧远端 `main` 已于远端默认分支切换为 `master` 后删除（`git push origin --delete main` + `git fetch --prune`）。
 
+**分支保护**：`master`/`test` 应开「Require PR + 线性历史 + 禁强推 + 禁删除」，`dev` 只禁强推与删除。完整清单见 `docs/guides/github-branch-protection.md`（唯一正文在后端 `docs/05-operations/github-branch-protection.md`）。保护开启后本地 `merge --ff-only && push` 会被拒，须改走 PR + Rebase and merge。
+
 **远端与离线归档（`origin` = `git@github.com:apex-cloud-service/apex-admin-web.git`，SSH 走 443）**：
 
 1. 未配置远端（或推送受阻）时，全部历史只存在于本机 → **每周做一次离线归档**（用 `git archive`，避免把 `dist/`、`node_modules/` 打进包）：
