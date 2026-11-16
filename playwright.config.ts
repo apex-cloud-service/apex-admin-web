@@ -10,6 +10,9 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  // 并行下首个用例需冷启动 Vite + 首屏，5s 默认断言超时偏紧；统一放宽并允许一次重试
+  expect: { timeout: 15_000 },
+  retries: 1,
   forbidOnly: !!process.env.CI,
   reporter: [
     ['junit', { outputFile: 'reports/e2e-results.xml' }],
