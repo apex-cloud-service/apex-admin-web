@@ -8,7 +8,6 @@
 ## 1. 活跃任务
 
 | ID | 优先级 | 任务 | 状态 | 负责 | 验收标准 | 关联 |
-| FE-015 | P2 | 治理评审整改（前端项：死指针 1 处、断链 3 条、规范 §9 范围） | 待规划 | 主控 | `verify-docs.sh` 通过、断链 0 | `apex-scaffold/docs/reviews/2026-11-16-governance-alignment-review.md` |
 | --- | --- | --- | --- | --- | --- | --- |
 | FE-001 | P2 | `docs/reference/ai-knowledge` 与 `docs/api`、`docs/architecture` 去重收敛：同源结论只保留一份，其余改为交叉链接 | 待规划 | 待定 | 无重复段落；索引可达；`verify-docs.sh` 通过 | `docs/reference/ai-knowledge/README.md` |
 | FE-002 | P2 | 契约映射表核对：`03-contract-map.md` 中的后端端点与 `docs/api/` 逐条对照，补 `page/size` 与 `pageNum/pageSize` 口径标注 | 待规划 | 待定 | 每条端点注明分页口径与响应字段名 | `docs/api/README.md` |
@@ -27,6 +26,7 @@
 | FE-012 | P1 | 迁移私有目录业务文档：`.workbuddy/knowledge` → `docs/reference/ai-knowledge`；`.zcode/plans` → `docs/archived/ai-sessions/zcode-plans`（内容逐字节校验后移除原件，保留指针） | 已完成 | 2026-11-16 | 迁移记录见 `docs/records/` |
 | FE-013 | P1 | 治理自检脚本与 pre-commit 钩子 | 已完成 | 2026-11-16 | `scripts/governance/`、`.githooks/pre-commit` |
 | FE-014 | P3 | 规范正文入仓并补工具目录/忽略规则条款 | 已完成 | 2026-11-16 | `docs/specs/project-governance.md`、`AGENTS.md` 0.1/0.3/0.7、`scripts/governance/README.md` |
+| FE-015 | P2 | 治理评审整改（前端项：死指针 1 处、断链 3 条、规范 §9 范围、离线归档条款） | 已完成 | 主控 | 2026-11-16 | `verify-docs.sh` 通过、`check-doc-refs.sh` 0 项 | `docs/records/2026-11-16-governance-alignment-remediation.md` |
 
 ## 3. 阻塞与风险登记
 

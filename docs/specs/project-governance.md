@@ -117,6 +117,14 @@
 4. 源文件与导出件成对（`.mmd` ↔ `.svg`）；新增图必须两者齐备。
 5. 本仓现状：`docs/` 无独立 SVG/MMD，图表以内嵌 Mermaid 形式存在于 md 中；后续新增按上述执行。
 
+### 3.6 历史归档的旧路径与断链（豁免口径）
+
+1. 适用范围：`docs/archived/` 下的历史记录、`docs/_archive/`（如有）、`CHANGELOG.md` 历史条目。
+2. 这些文档记录的是当时真实路径与当时真实断链 → **不改正文**，只做两件事：文首加「历史记录说明」（注明正文已迁入 `docs/`、未迁入部分「原文未入库」），并登记 `scripts/governance/doc-refs-allowlist.txt` 写明理由。
+3. **活文档（现行规范、索引、指南、评审）不得豁免**，必须改到可达；本仓 2026-11-16 已把 `docs/archived/project-reports/` 的 3 条相对层级错误修到 0。
+4. 豁免准入只有三类：历史归档 / 迁移说明与来源证明 / 评审取证。
+5. 自检口径：`check-doc-refs.sh` 计数必须收敛到 0，否则视为整改未完成。
+
 ---
 
 ## 4. 多智能体协作
@@ -175,9 +183,23 @@
 - 禁止 `git reset --hard`、禁止 `push -f` 覆盖他人工作；回滚用 `git revert`。
 - 他人未提交改动（`git status` 中非本轮产物）**不得清理、不得覆盖、不得加入本次提交**。
 
-### 5.3 分支
+### 5.3 分支与远端
 
 主线 `main`；改动走短分支后合并，禁止长期分叉。文档治理类改动可在 `main` 小步提交。
+
+**远端与离线归档（本仓当前 `git remote` = 0）**：
+
+1. 未配置远端时，全部历史只存在于本机 → **每周做一次离线归档**：
+   ```bash
+   cd /Users/work/apex-admin-web
+   ts=$(date +%Y%m%d); mkdir -p /Users/work/backup
+   tar -czf /Users/work/backup/apex-admin-web-$ts.tar.gz --exclude=.git .
+   shasum -a 256 /Users/work/backup/apex-admin-web-$ts.tar.gz >> /Users/work/backup/SHA256SUMS.txt
+   git bundle create /Users/work/backup/apex-admin-web-$ts.bundle main
+   ```
+2. 归档件（tar.gz + bundle）须异地/异盘至少一份；`SHA256SUMS.txt` 用于校验完整性。
+3. 拿到远端地址后**先 push**：`git remote add origin <url> && git push -u origin main`；禁止 `push -f`。
+4. 无远端时「合并到 main」等价于「在 `main` 上提交 + 生成 bundle 归档」。
 
 ---
 
@@ -228,7 +250,7 @@
 ### 9.1 做了什么
 
 1. `AGENTS.md`：前置新增第 0 章，原文整体下移为附录 A（`tail -n 712` 哈希 `ae5e19db…53a` 与原文件一致）。
-2. 新建六标准目录 + 各 `README.md` + 任务大盘 `docs/tasks/project-tasks.md`（FE-001~007 待规划、FE-010~013 已完成、FE-014 规范正文入仓已完成、FE-015 治理评审整改待规划）。
+2. 新建六标准目录 + 各 `README.md` + 任务大盘 `docs/tasks/project-tasks.md`（FE-001~007 待规划、FE-010~013 已完成、FE-014 规范正文入仓已完成、FE-015 治理评审整改已完成）。
 3. 私有目录正文迁入 `docs/`：`.workbuddy/knowledge` 4 份 → `docs/reference/ai-knowledge/`；`.zcode/plans` 6 份 → `docs/archived/ai-sessions/zcode-plans/`（逐文件 SHA-256 一致，仅修 1 处相对链接）。
 4. 新建治理脚本与 pre-commit（警告模式）、`docs/specs/ai-agents/` 五张角色卡。
 5. `.gitignore` 补私有目录标记块，明确「docs 全量入库」。
@@ -250,7 +272,7 @@
 | --- | --- |
 | FE-005 `: any` 清理 | 待规划，按模块分批 |
 | FE-014 规范正文入仓（v1.1） | 已完成（2026-11-16） |
-| FE-015 治理评审整改（死指针 1 处 / 断链 3 条 / 规范 §9 范围） | 已执行（见 `apex-scaffold/docs/plans/2026-11-16-governance-alignment-plan.md`） |
+| FE-015 治理评审整改（死指针 1 处 / 断链 3 条 / 规范 §9 范围 / 离线归档条款） | 已完成（2026-11-16，见 `docs/records/2026-11-16-governance-alignment-remediation.md`） |
 | 图表基线 | 本仓无独立 SVG/MMD；后续新增按 §3.5 执行 |
 | 插件（OpenAPI/GitHub 等） | 待用户授权后安装，非治理必需 |
 
