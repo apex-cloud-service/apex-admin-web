@@ -58,6 +58,7 @@
 | 15 | 脚本 | **新增一键预检 `scripts/dev/apex-preflight.sh`**（与后端同款，自动识别前端仓）：检查分支=dev、工作区、远端对齐、附录 A 哈希、origin 与 SSH 443、记忆台账、治理脚本及自检、node 与 `build` 脚本、三支一致性 | 本条提交 | 实测 `OK=16 WARN=1 FAIL=0`；只读脚本，不改文件 |
 | 16 | 治理 | **分支保护清单** `docs/guides/github-branch-protection.md`（唯一正文在后端 `docs/05-operations/`）：`master`/`test` 禁直推/禁强推/禁删除 + 线性历史；`dev` 只禁强推与删除；本仓特有注意：**不要**把 `npm run build`（含 vue-tsc）挂成 status check；规范 §5.3 增指引 | 本条提交 | 匿名 API 403、`gh` 未登录 → 需网页或 PAT 开启 |
 | 17 | 治理 | **`dev` 分支治理一致性评审（前端）**：本仓判定表、偏差归属 D-02/D-03/D-04/D-06/D-07/D-08、允许差异（无编号目录）、前端特有注意（不挂 `npm run build` 为 status check）；唯一正文在后端 `docs/reviews/` | 本条提交 | 实测：无 `.github`（无 CI）、`AGENTS.md` 第 0 章缺台账/分支条款、任务盘止于 FE-015、`.gitignore` 四组重复；`verify-docs`/`check-doc-refs` 均 0 项、红线无阻断 |
+| 18 | 治理 | **整改 B1+B2（关闭 D-03/D-08/D-04）**：`AGENTS.md` 第 0 章新增 `0.8 记忆台账、分支模型与工具链`；规范 §5.3 默认分支改为既成事实；知识库 README 增加「维护口径」（台账强制登记、其余为派生视图）；任务盘补 FE-016~FE-021 | 本条提交 | 验收：`tail -n 712 AGENTS.md \| shasum -a 256` = `ae5e19db…53a` **不变**；任务盘 6 列对齐 |
 
 ---
 

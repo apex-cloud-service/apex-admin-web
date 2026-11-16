@@ -92,6 +92,15 @@ bash scripts/governance/audit-frontend-rules.sh   # 前端红线静态扫描（�
 
 脚本用法与实现说明见 `scripts/governance/README.md`；提交前钩子启用方式：`git config core.hooksPath .githooks`（`.githooks/pre-commit` 只警告不阻断）。
 
+### 0.8 记忆台账、分支模型与工具链（2026-11-16 增补）
+
+1. **变更记忆台账（强制）**：任何改动必须写入 `docs/reference/ai-knowledge/04-change-memory.md`（append-only，六字段：编号/类型/改动/提交/要点/证据）。提交信息必须含 `memory:` 标记并指向条目。校验：`bash scripts/governance/check-memory-sync.sh`（默认只警告，`--strict` 才阻断），已接入 `.githooks/pre-commit` 第 0 步与 `.githooks/commit-msg`。
+2. **分支模型**：`dev` 为日常开发分支，**所有改动在 `dev` 提交**；`master` 为生产、`test` 为验收，仅在发布时以 `--ff-only` 从 `dev` 合入（开启分支保护后改走 PR + Rebase and merge）；远端只保留 `dev`/`master`/`test`，`main` 已于 2026-11-16 删除。
+3. **许可**：MIT（根 `LICENSE` + `package.json` `"license": "MIT"`）。
+4. **工具链与预检**：开工先跑 `bash scripts/dev/apex-preflight.sh`（默认全量 / `--fast` / `--commit` / `--strict` 四模式），`FAIL>0` 不得提交。
+5. **分支保护**：`master`/`test` 目标规则与开启步骤见 `docs/guides/github-branch-protection.md`（唯一正文在后端 `docs/05-operations/github-branch-protection.md`）。
+6. 本节与 `docs/specs/project-governance.md` §5.3/§5.4 同步维护；冲突以本文件为准。
+
 ---
 
 ## 附录 A：原始仓库开发规范（原文完整保留，未删改）

@@ -27,6 +27,12 @@
 | FE-013 | P1 | 治理自检脚本与 pre-commit 钩子 | 已完成 | 2026-11-16 | `scripts/governance/`、`.githooks/pre-commit` |
 | FE-014 | P3 | 规范正文入仓并补工具目录/忽略规则条款 | 已完成 | 2026-11-16 | `docs/specs/project-governance.md`、`AGENTS.md` 0.1/0.3/0.7、`scripts/governance/README.md` |
 | FE-015 | P2 | 治理评审整改（前端项：死指针 1 处、断链 3 条、规范 §9 范围、离线归档条款） | 已完成 | 主控 | 2026-11-16 | `verify-docs.sh` 通过、`check-doc-refs.sh` 0 项 | `docs/records/2026-11-16-governance-alignment-remediation.md` |
+| FE-016 | P1 | 许可统一 MIT（`LICENSE` + `package.json` `"license": "MIT"`） | 已完成 | 2026-11-16 | `LICENSE`、`package.json`；验收：`npm run build` 不受影响、两仓许可一致 |
+| FE-017 | P1 | 变更记忆台账 `04-change-memory.md` + 规范 §5.4 强制登记（六字段、append-only） | 已完成 | 2026-11-16 | `docs/reference/ai-knowledge/04-change-memory.md`；验收：提交带 `memory:` 标记（`check-memory-sync.sh` 0 项） |
+| FE-018 | P1 | 台账校验脚本 + `pre-commit`/`commit-msg` 钩子 + 一键预检 `apex-preflight.sh` | 已完成 | 2026-11-16 | `scripts/governance/check-memory-sync.sh`、`.githooks/`、`scripts/dev/apex-preflight.sh`；验收：预检 `OK=16 WARN=1 FAIL=0` |
+| FE-019 | P1 | 分支模型 `dev`/`master`/`test`（删除 `main`）与保护清单成文 | 已完成 | 2026-11-16 | `docs/guides/github-branch-protection.md`；**规则开启待网页操作或 PAT**（匿名 API 403） |
+| FE-020 | P1 | `dev` 分支一致性评审（D-02/03/04/06/07/08）与整改批次 B1/B2/B3/B5/B6 | 已完成 | 2026-11-16 | `docs/reviews/2026-11-16-dev-branch-governance-audit.md`、`docs/plans/2026-11-16-dev-alignment-remediation-plan.md` |
+| FE-021 | P1 | 整改 B1：`AGENTS.md` 0.8 + 规范 §5.3 口径 + 知识库维护口径 | 已完成 | 2026-11-16 | `AGENTS.md`、`docs/specs/project-governance.md`、`docs/reference/ai-knowledge/README.md`；验收：附录 A 哈希 `ae5e19db…53a` 不变 |
 
 ## 3. 阻塞与风险登记
 
