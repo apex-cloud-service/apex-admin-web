@@ -12,7 +12,7 @@
 | FE-003 | 新增 3 个主链路 spec，全量 E2E 转绿 | `e2e/workflow.spec.ts`、`e2e/tenant.spec.ts`、`e2e/office-approval.spec.ts`、`e2e/helpers.ts`（`MENUS_FULL`/`MENUS_WITH_TENANT`） | `npx playwright test --workers=1` → **12 passed（46.5s）**；`reports/e2e-results.xml` |
 | FE-004 | 6 个未注册页面中 5 个是子组件，1 个未接线 | `docs/notes/2026-11-16-orphan-views.md` | 67 页面 / 61 可路由；`PlatformSelector.vue` 全仓 0 引用 |
 | FE-005 | `any` 第一批收敛 | `src/mock/index.ts`（新增 `MockRequestOptions`）、`src/utils/xss-protection.ts`（`unknown`） | `: any` 51 → 35；`npm run build` 通过（`vue-tsc --noEmit && vite build`，39.75s） |
-| FE-006 | 私有目录指针桩已清 | 删除 `.workbuddy/knowledge/MIGRATED.md`、`.zcode/plans/MIGRATED.md` | `ls` 两目录为空；全仓无指向私有目录的链接（历史正文提及按 §3.6 豁免） |
+| FE-006 | 私有目录指针桩已清 | 删除 WorkBuddy 知识目录与 ZCode 计划目录下的 2 个 `MIGRATED.md` 指针桩 | 两私有目录已空；全仓无指向私有目录的链接（历史正文提及按 §3.6 豁免） |
 | FE-007 | 无独立图表资产，无孤立文件 | `docs/notes/2026-11-16-chart-assets.md` | `docs` 内 `.mmd` 0、`.svg` 0；Mermaid 内嵌 27 处 / 8 篇 |
 
 ## 2. 测试报告
