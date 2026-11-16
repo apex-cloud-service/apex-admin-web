@@ -35,7 +35,7 @@ ssh -T -p 443 git@ssh.github.com     # 期望：Hi anqli8341! You've successfull
 | 文件 | 远端内容 | 本地内容 | 决策 |
 | --- | --- | --- | --- |
 | `LICENSE` | GitHub 模板 Apache License 2.0（201 行） | 项目既有 MIT（238 行，含自有版权声明） | **保留本地 MIT**（项目既定许可），不采用建仓模板 |
-| `README.md` | 单行 `# apex-admin-web` 桩 | 本仓完整说明 | **保留本地完整版** |
+| `README.md` | 单行 `# apex-scaffold` 桩 | 303 行完整说明 | **保留本地完整版** |
 
 合并命令与结果：
 
@@ -45,16 +45,25 @@ git merge --allow-unrelated-histories origin/main   # 两个 add/add 冲突
 git checkout --ours LICENSE README.md && git add ...  # 保留本地
 ```
 
-合并提交：`28cfd7cd`。合并后校验：`LICENSE` 哈希 `085dce9a…`（与合并前一致）、`README.md` 行数未变。
+合并提交：`28cfd7cd`。合并后校验：`LICENSE` 哈希 `085dce9a…`（与合并前一致）、`README.md` 303 行未变。
 
 > **待业主确认**：远端建仓时选的 Apache 2.0 与项目既有 MIT 不一致，本轮按「本地优先」保留 MIT。若希望改用 Apache 2.0，需单独一次提交同时改 `LICENSE` 与各仓声明。
 
-## 3. 推送与验证
+## 3. 推送结果（实测）
+
+| 仓 | 远端原 HEAD | 推送后 HEAD | 结果 |
+| --- | --- | --- | --- |
+| `apex-scaffold` | `93f249e8`（Initial commit） | **`1a5c8525`** | `93f249e8..1a5c8525  main -> main`，已建立 `main` 跟踪 |
+| `apex-admin-web` | `b613564`（Initial commit） | **`dce7aa0`** | `b613564..dce7aa0  main -> main`，已建立 `main` 跟踪 |
+
+校验（两仓一致）：
 
 ```bash
-cd /Users/work/<repo> && git push -u origin main
-git ls-remote origin refs/heads/main          # 应等于本地 HEAD
+git rev-parse main            # 1a5c8525…（后端） / dce7aa0…（前端）
+git ls-remote origin refs/heads/main   # 与本地一致
 ```
+
+**许可差异（待业主决策）**：前端仓本地原本没有 `LICENSE`，远端 `Initial commit` 带的是 GitHub 模板 Apache 2.0，合并时**保留为该仓唯一许可文件**；后端仓本地有既有 MIT，合并时保留 MIT。两仓当前许可不一致（前端 Apache 2.0 / 后端 MIT），需统一时单独一次提交改两仓 `LICENSE` 与声明。
 
 ## 4. 与规范的对应
 
