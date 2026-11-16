@@ -70,6 +70,7 @@
 | 27 | 2026-11-16 | 治理 | **更正 #26**：新增条目误把「证据」与「影响面」写在同一格（6 格），已拆为 7 格与表头一致 | 本条提交 | 校验：`04-change-memory.md` 条目列数异常 0 | 仅文档，不改代码 |
 | 28 | 2026-11-16 | 类型 | **FE-005 第一批 `any` 收敛**：`src/mock/index.ts` 新增 `MockRequestOptions` 接口（url/type/body），13 处 `(options: any)` 全部替换，并补 `options.body ?? '{}'`、`url.split('/').pop() ?? ''` 空值安全；`src/utils/xss-protection.ts` 的 `sanitizeJson` 返回值与内部 `cleanValue`、`cleaned` 由 `any` 改 `unknown`/`Record<string, unknown>` | 本条提交 | `grep -rn ": any" src | wc -l` 51 → 35；`npm run build` 通过（`vue-tsc --noEmit` 0 error + vite build 39.75s） | 仅类型声明与空值兜底，运行期行为不变；业务页面零改动 |
 | 29 | 2026-11-16 | 测试 | **FE-003 E2E 扩展**：新增 `e2e/workflow.spec.ts`（流程监控三 Tab + 待办 list/total 口径）、`e2e/tenant.spec.ts`（租户列表 + 查询回传）、`e2e/office-approval.spec.ts`（待办渲染 + 已办 Tab）；`e2e/helpers.ts` 增 `MENUS_FULL`/`MENUS_WITH_TENANT` 菜单夹具并让 `mockBackend` 支持自定义菜单 | 本条提交 | `npx playwright test --workers=1` → 12 passed（46.5s，4 → 7 个 spec、9 → 12 个用例）；报告 `reports/e2e-results.xml` | 仅测试代码，不触碰 `src` 业务代码 |
+| 30 | 2026-11-16 | 文档 | **FE-001/002/004/006/007 收口**：新增 `docs/notes/2026-11-16-doc-dedup-audit.md`（段落级/行级 0 重复）、`-orphan-views.md`（67 页面/6 未注册：5 子组件 + 1 未接线）、`-chart-assets.md`（0 个 .mmd/.svg，27 处 Mermaid 内嵌）；`03-contract-map.md` 增 §0 关联文档、§2.1 逐文件分页口径、§5 与 docs/api 核对记录（更正办公审批为 list/total）；清除 2 个私有目录指针桩；7 张卡改「已完成」并回填产出 | 本条提交 | `docs/notes`、`docs/records`、`docs/tasks` 索引可达；`bash scripts/governance/verify-docs.sh` 通过；E2E 12 passed 与 build 结果见 `docs/records/2026-11-16-fe-tasks-batch.md` | 文档与索引；业务代码零改动 |
 
 
 

@@ -9,13 +9,8 @@
 
 | ID | 优先级 | 任务 | 状态 | 负责 | 验收标准 | 关联 |
 | --- | --- | --- | --- | --- | --- | --- |
-| FE-001 | P2 | `docs/reference/ai-knowledge` 与 `docs/api`、`docs/architecture` 去重收敛：同源结论只保留一份，其余改为交叉链接 | 待规划 | 待定 | 无重复段落；索引可达；`verify-docs.sh` 通过 | `docs/reference/ai-knowledge/README.md` |
-| FE-002 | P2 | 契约映射表核对：`03-contract-map.md` 中的后端端点与 `docs/api/` 逐条对照，补 `page/size` 与 `pageNum/pageSize` 口径标注 | 待规划 | 待定 | 每条端点注明分页口径与响应字段名 | `docs/api/README.md` |
-| FE-003 | P2 | E2E 覆盖扩展：现有 4 个 spec（auth / dynamic-menu / token-refresh）之外，补工作流、租户、办公审批主链路 | 待规划 | 待定 | `npm run test:e2e` 全绿，用例登记在本表 | `e2e/` |
-| FE-004 | P3 | 孤儿页面盘点：75 个 `.vue` 中未在 `src/router/dynamic.ts#VIEW_REGISTRY` 注册的页面清单化 | 待规划 | 待定 | 输出清单到 `docs/notes/`，标明「文件存在≠路由可用」 | `src/router/dynamic.ts` |
-| FE-005 | P3 | `any` 收敛：统计业务代码中 `any` 使用点，分批替换为显式类型 | 待规划 | 待定 | `grep -c ": any"` 逐批下降，`npm run build` 通过 | `src/types/` |
-| FE-006 | P3 | AI 私有目录指针桩清理：`docs` 迁移完成后，`.workbuddy/knowledge`、`.zcode/plans` 中的指针文件在无引用时可移除 | 待规划 | 待定 | 全仓无指向私有目录的链接 | 本表 FE-010/011 |
-| FE-007 | P3 | 文档图表资产体检：确认 `docs/architecture` 中的时序图/状态机图源文件与导出件成对存在 | 待规划 | 待定 | 无孤立 `.mmd`/`.svg` | `docs/architecture/` |
+
+（2026-11-16：本轮 7 张卡 `FE-001`~`FE-007` 已全部完成并移入 §2；新增任务须先立卡再动手。）
 
 ## 2. 本期已完成（治理基线）
 
@@ -36,6 +31,13 @@
 | FE-022 | P1 | 整改 B3：新增前端最小 CI（`.github/workflows/ci.yml`，文档门禁 4 脚本 + `npm ci && build`） | 已完成 | 2026-11-16 | `.github/workflows/ci.yml`；验收：YAML 解析通过、本地预演 4 脚本全通过 |
 | FE-023 | P2 | 整改 B5：`.gitignore` 去重为单一私有目录区块（含注释独占一行的补正） | 已完成 | 2026-11-16 | `.gitignore`；验收：`check-ignore` 命中、无未跟踪私有目录 |
 | FE-024 | P1 | 整改 B6：GitHub 分支保护「档 1」 | 已完成 | 2026-11-16 | 转 public 后三支 `PUT /protection` 全部成功（禁强推+禁删除，`master`/`test` 加对话解决）；绕钩子实测服务端拒绝删支/强推。见 `docs/guides/github-branch-protection.md` |
+| FE-001 | P2 | `docs/reference/ai-knowledge` 与 `docs/api`、`docs/architecture` 去重收敛：同源结论只保留一份，其余改为交叉链接 | 已完成 | 2026-11-16 | `docs/notes/2026-11-16-doc-dedup-audit.md`（段落级/行级复核 0 重复）；`03-contract-map.md` 增 §0 关联文档、`ai-knowledge/README.md` 增权威边界 |
+| FE-002 | P2 | 契约映射表核对：`03-contract-map.md` 中的后端端点与 `docs/api/` 逐条对照，补 `page/size` 与 `pageNum/pageSize` 口径标注 | 已完成 | 2026-11-16 | `03-contract-map.md` 增 §2.1 分页口径逐文件对照 + §5 与 `docs/api/README.md` 核对记录（含 1 处按源码更正：办公审批为 `list/total`） |
+| FE-003 | P2 | E2E 覆盖扩展：现有 4 个 spec（auth / dynamic-menu / token-refresh）之外，补工作流、租户、办公审批主链路 | 已完成 | 2026-11-16 | 新增 `e2e/workflow.spec.ts`、`tenant.spec.ts`、`office-approval.spec.ts`（helpers 增 MENUS_FULL/MENUS_WITH_TENANT）；`npx playwright test --workers=1` **12 passed** |
+| FE-004 | P3 | 孤儿页面盘点：75 个 `.vue` 中未在 `src/router/dynamic.ts#VIEW_REGISTRY` 注册的页面清单化 | 已完成 | 2026-11-16 | `docs/notes/2026-11-16-orphan-views.md`：67 页面中 6 未注册（5 子组件 + 1 未接线页 `PlatformSelector.vue`），只盘点不删 |
+| FE-005 | P3 | `any` 收敛：统计业务代码中 `any` 使用点，分批替换为显式类型 | 已完成 | 2026-11-16 | `src/mock/index.ts` 增 `MockRequestOptions`（13 处 `any` 清零）、`src/utils/xss-protection.ts` 3 处改 `unknown`；全仓 `: any` 51 → 35；`npm run build` 通过 |
+| FE-006 | P3 | AI 私有目录指针桩清理：`docs` 迁移完成后，`.workbuddy/knowledge`、`.zcode/plans` 中的指针文件在无引用时可移除 | 已完成 | 2026-11-16 | 移除私有目录 2 个指针桩（`.workbuddy/knowledge`、`.zcode/plans`）；全仓无指向私有目录的链接 |
+| FE-007 | P3 | 文档图表资产体检：确认 `docs/architecture` 中的时序图/状态机图源文件与导出件成对存在 | 已完成 | 2026-11-16 | `docs/notes/2026-11-16-chart-assets.md`：docs 内 0 个 `.mmd`/`.svg`，27 处 Mermaid 内嵌，无孤立资产 |
 
 ## 3. 阻塞与风险登记
 

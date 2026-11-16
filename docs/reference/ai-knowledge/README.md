@@ -41,3 +41,8 @@
 4. 不复制 `AGENTS.md` 大段正文；冲突时以代码为准，并回改本库。
 5. 不放任何密钥、令牌、真实环境口令。
 6. **每次改动都要在 [04 变更流水台账](04-change-memory.md) 追加一条**（六字段：日期/类型/摘要/提交/证据/影响面），规则见 `docs/specs/project-governance.md` §5.4。
+
+## 权威边界（FE-001，2026-11-16）
+
+- 接口契约以 [`docs/api/README.md`](../../api/README.md) 为准；架构与状态机以 [`docs/architecture/overview.md`](../../architecture/overview.md) 为准。
+- 本目录 `01–05` 只做**上手速查与映射**，不承载可替代上述两处的正文；发现重复时保留权威处正文、其余改为链接（复核结论见 [`docs/notes/2026-11-16-doc-dedup-audit.md`](../../notes/2026-11-16-doc-dedup-audit.md)）。
