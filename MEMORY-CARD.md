@@ -1,7 +1,8 @@
 # 记忆卡 · apex-admin-web（管理后台前端）
 
 > **用法**：接手前端或需要改页面时先读本卡（约 3 分钟），细节按文末指针进入 `AGENTS.md` 与 `docs/`。
-> **基线**：2026-11-14 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`b67a152` 已提交）
+> **基线**：2026-11-16 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`dev` 分支）
+> **仓库基线**：默认工作分支 **`dev`**（长期分支 `master`/`dev`/`test`，`main` 已删除）· 远端 `origin` = `git@github.com:apex-cloud-service/apex-admin-web.git`（固定 SSH 443）· 许可 **MIT**（`package.json` 已声明）
 > **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-11-10）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
 
 ## 1. 一句话
@@ -119,9 +120,11 @@ src/
 | 认证与路由详解 | `docs/architecture/auth-and-routing.md` |
 | 接口文档索引 | `docs/api/README.md` |
 | 部署与代理 | `docs/guides/deployment.md`、`vite.config.ts`、`docker/nginx.conf` |
+| **变更流水台账（每次改动登记）** | `docs/reference/ai-knowledge/04-change-memory.md` |
 
 ## 9. 维护规则
 
 - 结构变化（新增业务目录、契约前缀变更、新增构建/校验脚本）当天更新本卡。
+- **变更必登记**：任何改动都要在 `docs/reference/ai-knowledge/04-change-memory.md` 追加一条（六字段：日期/类型/摘要/提交/证据/影响面），提交信息末行写 `memory: 04-change-memory.md#<条目>`；规则见 `docs/specs/project-governance.md` §5.4。
 - 与后端契约相关的结论，必须能指到具体 Router 或 `src/api/*.ts`。
 - 本卡只留结论与指针，细节写 `AGENTS.md` 与 `docs/`。

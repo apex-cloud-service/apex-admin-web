@@ -2,7 +2,7 @@
 
 > **定位**：前端仓的「事实层 + 导航层」。只写结论、现状、指针、陷阱，不复制 `AGENTS.md` 与 `docs/` 的正文。
 > **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-10-30）> `docs/` > 本库 > `MEMORY-CARD.md`
-> **基线**：2026-11-01 实测 · v1.2.0 · 工作树干净
+> **基线**：2026-11-16 实测 · v1.2.0 · 工作树干净 · 默认工作分支 `dev`
 
 ## 一、这个库解决什么问题
 
@@ -29,6 +29,7 @@
 | [01-current-state.md](01-current-state.md) | 技术栈、目录与规模、构建验证命令、能力覆盖与已知缺口 | 每次功能批次后 |
 | [02-conventions-and-pitfalls.md](02-conventions-and-pitfalls.md) | 硬约束、分页/权限/会话规则、高频故障排查 | 新增约束或踩坑后 |
 | [03-contract-map.md](03-contract-map.md) | 前端 API 模块 ↔ 后端路径前缀 ↔ 响应/分页口径对照 | 后端契约变更时 |
+| [04-change-memory.md](04-change-memory.md) | **变更流水台账**：每次改动的摘要/提交/证据/影响面（append-only） | **每次改动** |
 
 ## 四、维护规则
 
@@ -37,3 +38,4 @@
 3. 与后端契约相关的结论，回指 `apex-scaffold` 的具体 Router/Handler 或 `docs/03-api/API_ROUTES.md`。
 4. 不复制 `AGENTS.md` 大段正文；冲突时以代码为准，并回改本库。
 5. 不放任何密钥、令牌、真实环境口令。
+6. **每次改动都要在 [04 变更流水台账](04-change-memory.md) 追加一条**（六字段：日期/类型/摘要/提交/证据/影响面），规则见 `docs/specs/project-governance.md` §5.4。

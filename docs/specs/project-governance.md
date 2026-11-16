@@ -238,6 +238,44 @@ git branch test master && git push -u origin test
 
 ---
 
+### 5.4 记忆文档同步（强制）
+
+**规则**：**任何改动都必须写入本仓的记忆文档**，与改动同一次提交完成，不允许「先提交、以后再补」。
+
+**记忆文档清单（本仓）**
+
+| 文件 | 角色 | 何时必须更新 |
+| --- | --- | --- |
+| `docs/reference/ai-knowledge/04-change-memory.md` | **变更流水台账**（append-only） | **每一次改动**都追加一条 |
+| `MEMORY-CARD.md` | 一页式记忆卡（结论 + 指针） | 结构性变化（页面/路由/依赖/契约前缀/分支/许可变化） |
+| `docs/reference/ai-knowledge/01`–`03` | 现状 / 约定与陷阱 / 契约映射快照 | 该篇描述的结论发生变化时 |
+| `docs/records/<日期>-<主题>.md` | 事件级完整复盘 | 复杂改动（跨模块、跨仓、有踩坑或决策） |
+
+**台账一条的必填六字段**：`日期` · `类型`（代码/文档/脚本/许可/分支/远端/治理）· `摘要`（做了什么 + 为什么）· `提交`（短哈希）· `证据`（实测命令与输出、校验脚本结果）· `影响面`（是否影响页面/接口/构建）。
+
+**提交时的强制动作**
+
+1. 提交信息末行写 `memory: 04-change-memory.md#<条目编号>`；无记忆更新的纯机械改动写 `memory: n/a（原因）`。
+2. 提交前对照下表自检：
+
+| 改动类型 | 除台账外还要动的记忆文档 |
+| --- | --- |
+| 新增/删除页面、改路由或组件结构 | `MEMORY-CARD.md` §3、`01-current-state.md` |
+| 改依赖、构建命令、`vite` 配置 | `MEMORY-CARD.md` §2、`02-conventions-and-pitfalls.md` |
+| 改接口路径/请求响应结构 | `03-contract-map.md` + 台账（**必须与后端契约同步核对**） |
+| 改治理脚本 / 分支策略 / 许可 | 本篇（`docs/specs/project-governance.md`）+ 台账 |
+| 改远端 / 分支结构 | `MEMORY-CARD.md` 基线行、台账 |
+
+3. 周期校验（每周一次）：
+   ```bash
+   python3 ../../.workbuddy/ops/maintain.py status   # 若本机存在该运维脚本
+   bash scripts/governance/verify-docs.sh
+   bash scripts/governance/check-doc-refs.sh
+   git log --oneline -10 | grep -c "memory:"
+   ```
+
+**禁止**：① 把私有目录（`.workbuddy/`、`.zcode/`、`.trae/`、`.trae-cn/`）内容抄进受控记忆文档；② 只写「已完成」不写证据；③ 删除或改写历史条目——记错时追加 `更正 #n` 条目。
+
 ## 6. 编码红线（前端）
 
 | 编号 | 红线 | 依据 |
