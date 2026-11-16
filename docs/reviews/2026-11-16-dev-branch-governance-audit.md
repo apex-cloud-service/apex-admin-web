@@ -43,3 +43,16 @@
 2. 保护升到「档 2（Require PR + 线性历史）」后，`dev → master` 需用 **Rebase and merge**，`master` 与 `dev` 不再同点，属预期代价。
 
 > 完整方法、判定口径、后端偏差与复现命令：见后端 `docs/reviews/2026-11-16-dev-branch-governance-audit.md`。
+
+## 5. 整改结果（2026-11-16 执行后回填）
+
+| 编号 | 状态 | 落地证据 |
+| --- | --- | --- |
+| D-02 | **已关闭** | 新增 `.github/workflows/ci.yml`（4 治理脚本 + `npm ci && build`），YAML 解析通过 |
+| D-03 | **已关闭** | `AGENTS.md` 第 0 章新增 `0.8`；附录 A 哈希 `ae5e19db…53a` 未变 |
+| D-04 | **已关闭** | 任务盘补 `FE-016`~`FE-024` |
+| D-06 | **已关闭** | `.gitignore` 去重为单一私有目录区块，并补正行尾注释缺陷 |
+| D-07 | **待执行（凭据阻塞）** | 无 `gh` 登录、无 token，需网页或 PAT 按清单开启「档 1」 |
+| D-08 | **已关闭** | 知识库 README 增「维护口径」（台账强制、其余为派生视图） |
+
+收尾：`apex-preflight --fast` `FAIL=0`、`verify-docs`/`check-doc-refs` 0 项、三支同点并已推送。

@@ -63,6 +63,7 @@
 | 20 | 治理 | **整改 B3（关闭 D-02）**：新增 `.github/workflows/ci.yml`（`docs-and-rules` job 跑 4 个治理脚本 + `build` job 跑 `npm ci && npm run build`），触发 `master/test/dev`、PR `master/test`、支持手动触发 | 本条提交 | 验收：`ruby -ryaml` 解析通过；本地预演 4 个治理脚本全通过；首次推送 `dev` 即验证触发 |
 | 21 | 脚本 | **B5 补正**：`.gitignore` 行尾注释不被 git 识别（`.workbuddy/  # 注释` 会被当作含 `#` 的规则，导致私有目录未被忽略、`git status` 出现 `?? .workbuddy/`），改为「注释独占一行 + 规则单列」 | 本条提交 | 验收：`git check-ignore -v .workbuddy` 命中 84 行；`git status --porcelain` 无 `?? .trae/` 等私有目录 |
 | 22 | 治理 | 任务盘登记整改批次 B1/B2/B3/B5 完成与 B6 待执行（FE-021~FE-024），B6 阻塞原因写入验收列 | 本条提交 | 与代码/文档提交一一对应，状态列与实际一致 |
+| 23 | 治理 | 评审报告与整改批次回填执行结果（D-02/03/04/06/08 关闭；D-07 待凭据） | 本条提交 | 与 FE-022~FE-024 一致；收尾 `FAIL=0` |
 
 ---
 
