@@ -11,6 +11,13 @@
 import Mock from 'mockjs'
 import type { Document, Chart, ChartData, PageResponse } from '@/types'
 
+/** Mock 请求回调参数（mockjs 传入的 options 结构化定义） */
+interface MockRequestOptions {
+  url: string
+  type: string
+  body: string | null
+}
+
 /** 是否启用 Mock（仅开发环境） */
 const MOCK_ENABLED = import.meta.env.DEV
 
@@ -54,7 +61,7 @@ function generateDocument(id?: string): Document {
 const documentDatabase: Document[] = Array.from({ length: 50 }, () => generateDocument())
 
 /** GET /admin-api/v1/documents - 分页查询文档列表 */
-Mock.mock(/\/admin-api\/v1\/documents(\?.*)?$/, 'get', (options: any) => {
+Mock.mock(/\/admin-api\/v1\/documents(\?.*)?$/, 'get', (options: MockRequestOptions) => {
   const url = new URL(options.url, 'http://localhost')
   const page = parseInt(url.searchParams.get('page') || '1')
   const size = parseInt(url.searchParams.get('size') || '20')
@@ -105,8 +112,8 @@ Mock.mock(/\/admin-api\/v1\/documents(\?.*)?$/, 'get', (options: any) => {
 })
 
 /** GET /admin-api/v1/documents/{id} - 查询文档详情 */
-Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+$/, 'get', (options: any) => {
-  const id = options.url.split('/').pop()
+Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+$/, 'get', (options: MockRequestOptions) => {
+  const id = (options.url.split('/').pop() ?? '')
   const doc = documentDatabase.find(d => d.id === id) || generateDocument(id)
   
   return {
@@ -117,8 +124,8 @@ Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+$/, 'get', (options: any) =>
 })
 
 /** POST /admin-api/v1/documents - 创建文档 */
-Mock.mock(/\/admin-api\/v1\/documents$/, 'post', (options: any) => {
-  const body = JSON.parse(options.body)
+Mock.mock(/\/admin-api\/v1\/documents$/, 'post', (options: MockRequestOptions) => {
+  const body = JSON.parse(options.body ?? '{}')
   const newDoc = generateDocument()
   Object.assign(newDoc, body)
   documentDatabase.unshift(newDoc)
@@ -131,9 +138,9 @@ Mock.mock(/\/admin-api\/v1\/documents$/, 'post', (options: any) => {
 })
 
 /** PUT /admin-api/v1/documents/{id} - 更新文档 */
-Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+$/, 'put', (options: any) => {
-  const id = options.url.split('/').pop().split('?')[0]
-  const body = JSON.parse(options.body)
+Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+$/, 'put', (options: MockRequestOptions) => {
+  const id = (options.url.split('/').pop() ?? '').split('?')[0]
+  const body = JSON.parse(options.body ?? '{}')
   const index = documentDatabase.findIndex(d => d.id === id)
   
   if (index !== -1) {
@@ -150,8 +157,8 @@ Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+$/, 'put', (options: any) =>
 })
 
 /** DELETE /admin-api/v1/documents/{id} - 删除文档 */
-Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+$/, 'delete', (options: any) => {
-  const id = options.url.split('/').pop()
+Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+$/, 'delete', (options: MockRequestOptions) => {
+  const id = (options.url.split('/').pop() ?? '')
   const index = documentDatabase.findIndex(d => d.id === id)
   
   if (index !== -1) {
@@ -166,9 +173,9 @@ Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+$/, 'delete', (options: any)
 })
 
 /** PUT /admin-api/v1/documents/{id}/status - 更新文档状态 */
-Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+\/status$/, 'put', (options: any) => {
+Mock.mock(/\/admin-api\/v1\/documents\/[a-zA-Z0-9-]+\/status$/, 'put', (options: MockRequestOptions) => {
   const id = options.url.split('/')[5]
-  const body = JSON.parse(options.body)
+  const body = JSON.parse(options.body ?? '{}')
   const index = documentDatabase.findIndex(d => d.id === id)
   
   if (index !== -1) {
@@ -312,7 +319,7 @@ function generateChartData(chartId: string, chartType: string): ChartData {
 const chartDatabase: Chart[] = Array.from({ length: 30 }, () => generateChart())
 
 /** GET /admin-api/v1/charts - 分页查询图表列表 */
-Mock.mock(/\/admin-api\/v1\/charts(\?.*)?$/, 'get', (options: any) => {
+Mock.mock(/\/admin-api\/v1\/charts(\?.*)?$/, 'get', (options: MockRequestOptions) => {
   const url = new URL(options.url, 'http://localhost')
   const page = parseInt(url.searchParams.get('page') || '1')
   const size = parseInt(url.searchParams.get('size') || '20')
@@ -361,8 +368,8 @@ Mock.mock(/\/admin-api\/v1\/charts(\?.*)?$/, 'get', (options: any) => {
 })
 
 /** GET /admin-api/v1/charts/{id} - 查询图表详情 */
-Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+(?!\/data)$/, 'get', (options: any) => {
-  const id = options.url.split('/').pop()
+Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+(?!\/data)$/, 'get', (options: MockRequestOptions) => {
+  const id = (options.url.split('/').pop() ?? '')
   const chart = chartDatabase.find(c => c.id === id) || generateChart(id)
   
   return {
@@ -373,7 +380,7 @@ Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+(?!\/data)$/, 'get', (options: 
 })
 
 /** GET /admin-api/v1/charts/{id}/data - 查询图表数据 */
-Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+\/data$/, 'get', (options: any) => {
+Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+\/data$/, 'get', (options: MockRequestOptions) => {
   const id = options.url.split('/')[5]
   const chart = chartDatabase.find(c => c.id === id)
   const chartType = chart?.chartType || 'line'
@@ -387,8 +394,8 @@ Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+\/data$/, 'get', (options: any)
 })
 
 /** POST /admin-api/v1/charts - 创建图表 */
-Mock.mock(/\/admin-api\/v1\/charts$/, 'post', (options: any) => {
-  const body = JSON.parse(options.body)
+Mock.mock(/\/admin-api\/v1\/charts$/, 'post', (options: MockRequestOptions) => {
+  const body = JSON.parse(options.body ?? '{}')
   const newChart = generateChart()
   Object.assign(newChart, body)
   chartDatabase.unshift(newChart)
@@ -401,9 +408,9 @@ Mock.mock(/\/admin-api\/v1\/charts$/, 'post', (options: any) => {
 })
 
 /** PUT /admin-api/v1/charts/{id} - 更新图表 */
-Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+(?!\/status)$/, 'put', (options: any) => {
-  const id = options.url.split('/').pop().split('?')[0]
-  const body = JSON.parse(options.body)
+Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+(?!\/status)$/, 'put', (options: MockRequestOptions) => {
+  const id = (options.url.split('/').pop() ?? '').split('?')[0]
+  const body = JSON.parse(options.body ?? '{}')
   const index = chartDatabase.findIndex(c => c.id === id)
   
   if (index !== -1) {
@@ -420,8 +427,8 @@ Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+(?!\/status)$/, 'put', (options
 })
 
 /** DELETE /admin-api/v1/charts/{id} - 删除图表 */
-Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+$/, 'delete', (options: any) => {
-  const id = options.url.split('/').pop()
+Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+$/, 'delete', (options: MockRequestOptions) => {
+  const id = (options.url.split('/').pop() ?? '')
   const index = chartDatabase.findIndex(c => c.id === id)
   
   if (index !== -1) {
@@ -436,9 +443,9 @@ Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+$/, 'delete', (options: any) =>
 })
 
 /** PUT /admin-api/v1/charts/{id}/status - 更新图表状态 */
-Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+\/status$/, 'put', (options: any) => {
+Mock.mock(/\/admin-api\/v1\/charts\/[a-zA-Z0-9-]+\/status$/, 'put', (options: MockRequestOptions) => {
   const id = options.url.split('/')[5]
-  const body = JSON.parse(options.body)
+  const body = JSON.parse(options.body ?? '{}')
   const index = chartDatabase.findIndex(c => c.id === id)
   
   if (index !== -1) {

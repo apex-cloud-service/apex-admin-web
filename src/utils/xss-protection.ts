@@ -158,18 +158,18 @@ export function sanitizeHtml(
 /**
  * 验证 JSON 输入，防止注入
  */
-export function sanitizeJson(input: string): any {
+export function sanitizeJson(input: string): unknown {
   try {
     const parsed = JSON.parse(input)
     
     // 递归清理对象中的字符串值
-    function cleanValue(value: any): any {
+    function cleanValue(value: unknown): unknown {
       if (typeof value === 'string') {
         return escapeHtml(value)
       } else if (Array.isArray(value)) {
         return value.map(cleanValue)
       } else if (typeof value === 'object' && value !== null) {
-        const cleaned: any = {}
+        const cleaned: Record<string, unknown> = {}
         for (const [key, val] of Object.entries(value)) {
           cleaned[escapeHtml(key)] = cleanValue(val)
         }

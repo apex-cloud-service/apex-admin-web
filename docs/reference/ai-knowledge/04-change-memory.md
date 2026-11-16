@@ -68,6 +68,7 @@
 | 25 | 2026-11-16 | 治理 | **B6 闭环（前端侧）**：转 public 后三支保护全部开启（禁强推+禁删除，master/test 加对话解决）；指引副本补「平台限制说明与最终结论」；`.githooks/pre-push` 保留为第二道防线 | 本条提交 | 三支 `GET /protection` 均 200 且 `force=false del=false` | 仅保护文档/任务盘/台账，不改代码 |
 | 26 | 2026-11-16 | 治理 | **对齐修复**：台账补 `日期` 列（25 条回填，`摘要`/`证据` 原文未改）；任务盘 `FE-015` 错列修正（多插的「负责」列并入验收/产出）；`FE-024` 状态去加粗回归五状态字面值 | 本条提交 | 表格列一致性校验异常 0；`verify-docs.sh` 0 项；`check-doc-refs.sh` 0 项 | 仅文档，不改代码 |
 | 27 | 2026-11-16 | 治理 | **更正 #26**：新增条目误把「证据」与「影响面」写在同一格（6 格），已拆为 7 格与表头一致 | 本条提交 | 校验：`04-change-memory.md` 条目列数异常 0 | 仅文档，不改代码 |
+| 28 | 2026-11-16 | 类型 | **FE-005 第一批 `any` 收敛**：`src/mock/index.ts` 新增 `MockRequestOptions` 接口（url/type/body），13 处 `(options: any)` 全部替换，并补 `options.body ?? '{}'`、`url.split('/').pop() ?? ''` 空值安全；`src/utils/xss-protection.ts` 的 `sanitizeJson` 返回值与内部 `cleanValue`、`cleaned` 由 `any` 改 `unknown`/`Record<string, unknown>` | 本条提交 | `grep -rn ": any" src | wc -l` 51 → 35；`npm run build` 通过（`vue-tsc --noEmit` 0 error + vite build 39.75s） | 仅类型声明与空值兜底，运行期行为不变；业务页面零改动 |
 
 
 
