@@ -1,0 +1,289 @@
+# 项目任务管理规范（apex-admin-web · 规范正文）
+
+| 项 | 值 |
+| --- | --- |
+| 文档版本 | v1.1（2026-11-16 增补版） |
+| 生效日期 | 2026-11-16 |
+| 适用范围 | apex-admin-web 全部目录、全部参与者（人 + 任意 AI 智能体） |
+| 权威关系 | 本文件与 `AGENTS.md` 第 0 章同源：`AGENTS.md` 为入口索引，本文件为可独立阅读的完整正文；技术事实以 `AGENTS.md` 附录 A 与代码为准 |
+| 维护人 | 主控智能体（默认 Trae）；变更需在 `docs/records/` 留痕 |
+
+---
+
+## 1. 设计原则
+
+1. **可追溯**：任何改动都能回答「哪个任务、谁批的、验收怎么过的」。
+2. **不散落**：业务文档只有一个家 —— `docs/`；AI 私有目录只放工具自身的配置与缓存。
+3. **不打架**：多个 AI 工具并存时，靠「目录边界 + 单一正文」避免各自一份口径。
+4. **不破坏**：改造优先「新增 + 留指针」，禁止「移动 + 删原件」；功能改动与文档治理不同批提交。
+
+---
+
+## 2. 任务体系
+
+### 2.1 优先级（四档，无第五档）
+
+| 级别 | 判定标准 | 响应要求 |
+| --- | --- | --- |
+| **P0** | 线上白屏/登录不可用/构建失败/数据错误/安全漏洞 | 立即停止其他任务，当天修复 |
+| **P1** | 阻塞他人任务、接口契约不兼容、踩编码红线 | 当期迭代内完成 |
+| **P2** | 功能增强、性能优化、可维护性技术债 | 排期执行 |
+| **P3** | 文档完善、可读性、工具链与体验优化 | 有空档时执行 |
+
+> 不许出现「紧急/一般」等模糊表述，统一映射到 P0–P3。
+
+### 2.2 五状态流转
+
+```text
+待规划 → 执行中 → 待复核 → 已完成
+                    ↘ 搁置（需写明搁置原因与复活条件）
+```
+
+- 状态值只有这五个，禁止自造（如「进行中」「待办」「Done」）。
+- `待复核` 必须指定复核人（人或另一 AI 角色，见 §4.4）。
+- `搁置` 必须写：原因、复活条件、最迟复核日期。
+
+### 2.3 命名与拆卡
+
+- 任务命名：`【Px】模块-动作对象｜关联单号（可选）`，例：`【P1】router-补齐 VIEW_REGISTRY 注册`。
+- **单任务单职责**：一个会话只承接一件独立交付任务；新需求新建条目，禁止在同一会话叠加。
+- 拆卡规则：跨 `src/api` / `src/views` / `src/stores` / `src/router` 多个中枢目录的改动，必须按目录拆卡。
+- 禁止「顺手重构」：任何非任务目标的改动，登记为独立卡。
+
+### 2.4 任务卡必填字段
+
+| 字段 | 要求 |
+| --- | --- |
+| 编号 | `FE-nnn`，不复用、不跳号占位 |
+| 优先级 | P0–P3 |
+| 目标 | 一句话，动词开头，≤40 字 |
+| 状态 | 五状态之一 |
+| 验收标准 | **可执行**（命令 + 期望结果），如 `npm run build` 0 error、页面路径可达、e2e 通过 |
+| 影响面 | 文件/目录清单，标注是否触碰中枢文件（`VIEW_REGISTRY`、`utils/auth.ts`、`utils/request.ts`） |
+| 执行说明 | 可选，写角色卡引用或关键约束 |
+
+### 2.5 完成判定（DoD，缺一不可）
+
+1. 改动完成且仅覆盖任务目标。
+2. 本地验证通过：`npx vue-tsc --noEmit`；涉及逻辑改另跑 `npm run build`。
+3. 不违反第 6 章红线。
+4. 文档与索引同步（新增文档已登记 `docs/README.md`）。
+5. 在 `docs/records/` 留一条变更记录（日期 + 任务号 + 改了什么 + 怎么验的）。
+
+### 2.6 大盘维护权
+
+- `docs/tasks/project-tasks.md` 只由主控智能体写入；其余智能体只读，完成后**回报**主控更新状态。
+- 并行会话冲突：以「先写盘者为准」，后者必须 rebase 自身状态变更，禁止整表覆盖。
+
+---
+
+## 3. 文档收口
+
+### 3.1 六个标准目录（新产出归位）
+
+| 目录 | 用途 | 唯一入口 |
+| --- | --- | --- |
+| `docs/tasks/` | 任务大盘、迭代清单 | `docs/tasks/project-tasks.md` |
+| `docs/specs/` | 需求规格、技术方案、契约设计、本规范正文 | `docs/specs/README.md` |
+| `docs/plans/` | 实施计划、重构拆解、迁移计划 | `docs/plans/README.md` |
+| `docs/records/` | 变更记录、改造留痕、缺陷复盘 | `docs/records/README.md` |
+| `docs/reviews/` | 方案评审、代码评审结论 | `docs/reviews/README.md` |
+| `docs/notes/` | 调研、对接备忘、风险纪要 | `docs/notes/README.md` |
+
+### 3.2 既有目录继续有效
+
+`docs/api`、`docs/architecture`、`docs/features`、`docs/guides`、`docs/reference`、`docs/archived` 保持原位、原名、原内容；新产出按职责归位，属于既有分类的**放回既有分类**，不强行搬迁。
+
+### 3.3 唯一正文原则
+
+- 同一结论只存一份正文，其余位置用链接引用（禁止复制多份）。
+- 迁移文档必须：先建新版 → 校验一致（SHA-256）→ 修链接 → 删原件 → 原目录留 `MIGRATED.md` 指针。
+
+### 3.4 命名规范
+
+| 类型 | 命名 |
+| --- | --- |
+| 方案/规格 | `YYYY-MM-DD-主题.md` |
+| 计划 | `YYYY-MM-DD-主题-plan.md` |
+| 记录 | `YYYY-MM-DD-主题.md` |
+| 评审 | `YYYY-MM-DD-主题-review.md` |
+| 笔记 | `主题.md`（短名，无需日期） |
+
+### 3.5 图表资产保护（刚性）
+
+1. 架构图、UML、时序图、业务流程图、状态机图：**禁止删除、禁止覆盖、禁止重绘替代**。
+2. **禁止为「目录整齐」批量移动**图表文件（会打断既有引用）。
+3. 更新图表：新增版本文件（`_v2`）并在 `docs/records/` 写明差异与受影响引用。
+4. 源文件与导出件成对（`.mmd` ↔ `.svg`）；新增图必须两者齐备。
+5. 本仓现状：`docs/` 无独立 SVG/MMD，图表以内嵌 Mermaid 形式存在于 md 中；后续新增按上述执行。
+
+---
+
+## 4. 多智能体协作
+
+### 4.1 工具对应目录与允许内容
+
+| 工具 | 私有目录 | 允许存放 | 禁止存放 |
+| --- | --- | --- | --- |
+| Trae | `.trae/` | 规则镜像、技能定义、缓存索引 | 方案、计划、报告、知识库正文 |
+| WorkBuddy | `.workbuddy/` | memory、automations、RAG/ops 脚本与索引 | 同上 |
+| ZCode | `.zcode/` | 会话计划缓存、ignore 配置 | 同上（计划正文须进 `docs/plans/` 或归档） |
+| Qoder | `.qoder/` | 配置、缓存 | 同上 |
+| Codex | `.codex/` | 配置、缓存 | 同上 |
+| Claude | `.claude/` | 配置、agents 定义 | 同上 |
+| 其他/未来 | 新增隐藏目录 | 配置、缓存、规则镜像 | 同上 |
+
+### 4.2 隔离规则
+
+1. 每个智能体只读写**自身**私有目录；禁止跨 AI 修改他人私有目录（含删除、重命名）。
+2. `docs/` 对所有智能体**可读可写**，但写入必须遵循 §2.6 大盘维护权与 §3 归位规则。
+3. 私有目录内的规则文件只能是 `AGENTS.md` / 本规范的**镜像**，冲突时以仓库内文件为准。
+4. 新增 AI 工具：只新增目录 + 放置规则镜像（内容写「见 `AGENTS.md` 第 0 章与 `docs/specs/project-governance.md`」），不改本规范。
+
+### 4.3 交接协议
+
+一个会话结束前必须交付三样：① 已更新任务状态；② `docs/records/` 一条记录；③ 明确的「下一步建议」。缺任一项视为未交付。
+
+### 4.4 角色卡（跨工具通用）
+
+`docs/specs/ai-agents/` 定义五个角色的可粘贴规范，供任意工具复用：
+
+| 角色 | 文件 | 职责 |
+| --- | --- | --- |
+| R1 任务规划 | `ai-agents/r1-task-planner.md` | 需求 → 任务卡 + 验收标准 |
+| R2 前端实现 | `ai-agents/r2-frontend-implementer.md` | 按红线写页面/组件/API/状态 |
+| R3 契约守门 | `ai-agents/r3-ui-contract-guard.md` | 审路由注册、接口契约、错误态、权限点 |
+| R4 测试回归 | `ai-agents/r4-test-runner.md` | 类型检查、构建、e2e |
+| R5 评审 | `ai-agents/r5-reviewer.md` | 提交前评审 + 跑治理脚本 |
+
+> 复核人默认由 R5 承担；不得由提交者自审自放。
+
+---
+
+## 5. 版本控制与忽略规则
+
+### 5.1 `.gitignore` 三条硬规则
+
+1. **`docs/` 必须全量入库**，禁止出现任何忽略 `docs` 的规则（含通配写法）。
+2. AI 私有目录**整体忽略**：`.workbuddy/`、`.trae/`、`.trae-html-share-packages/`、`.zcode/`、`.qoder/`、`.codex/`、`.claude/`、`.agents/`、`.ai/`。
+3. 忽略项必须带注释说明「为什么忽略、正文在哪」，禁止裸 `*.md` 之类模糊规则。
+
+### 5.2 提交纪律
+
+- 一次提交只做一类改动：`docs(governance): …` / `chore(scripts): …` / `feat(...)` / `fix(...)`，禁止混提。
+- 提交前钩子：`git config core.hooksPath .githooks`（每人执行一次），`.githooks/pre-commit` **只警告不阻断**。
+- 禁止 `git reset --hard`、禁止 `push -f` 覆盖他人工作；回滚用 `git revert`。
+- 他人未提交改动（`git status` 中非本轮产物）**不得清理、不得覆盖、不得加入本次提交**。
+
+### 5.3 分支
+
+主线 `main`；改动走短分支后合并，禁止长期分叉。文档治理类改动可在 `main` 小步提交。
+
+---
+
+## 6. 编码红线（前端）
+
+| 编号 | 红线 | 依据 |
+| --- | --- | --- |
+| F1 | 只用 `<script setup lang="ts">`，禁 Options API | `AGENTS.md` 0.5.2 |
+| F2 | 禁新建 Axios 实例，统一 `src/utils/request.ts` | 0.5.3 |
+| F3 | 会话键只经 `src/utils/auth.ts`，禁 `localStorage` 直读直写 | 0.5.4 |
+| F4 | 新页面必须注册 `VIEW_REGISTRY` | 0.5.5 |
+| F5 | 禁新增 `any` 兜底；确需时注释说明原因 | 0.5.6 |
+| F6 | 技术栈不得擅自升级/替换 | 0.5.1 |
+| F7 | 接口调用集中在 `src/api/*.ts`，页面不直写 URL | 附录 A |
+| F8 | 注释沿用 `docs/reference/comment-style.md`，禁止死代码注释 | 0.5.7 |
+| F9 | 不在源码里堆长文档，说明进 `docs/` | 0.5.8 |
+| F10 | 不为过检查放宽 `lint`/`tsc` 配置或加 `@ts-ignore` | 0.6.5 |
+
+红线违规 = P1 任务，登记后当迭代修，不得「下次一起改」。
+
+---
+
+## 7. 变更纪律与回滚
+
+1. 先登记任务，再动手；改造可评审、可回滚、可分批。
+2. 涉及路由注册、权限码、令牌刷新、租户头、分页口径、上传链路的**功能改动**，先在 `docs/specs/` 出方案。
+3. 文档治理与功能改动**禁止同批提交**。
+4. 回滚三步：`git revert <sha>` → 跑 `verify-docs.sh` → 在 `docs/records/` 记录回滚原因。
+5. 每次改造必须能在 `docs/records/` 找到「改了哪些文件、怎么验的、怎么回滚」。
+
+---
+
+## 8. 工具与脚本
+
+| 脚本 | 作用 | 用法 |
+| --- | --- | --- |
+| `scripts/governance/verify-docs.sh` | 六目录/索引/任务大盘/私有目录边界/规模快照 | `bash scripts/governance/verify-docs.sh` |
+| `scripts/governance/audit-frontend-rules.sh` | 越权 Axios、绕过 `auth.ts`、`: any` 规模、`script setup` 覆盖 | `bash scripts/governance/audit-frontend-rules.sh [--strict]` |
+| `.githooks/pre-commit` | 治理范围改动时跑自检 + 图表删除告警 + 大文件提醒 | `git config core.hooksPath .githooks` |
+
+脚本说明见 `scripts/governance/README.md`；`--strict` 才产生非零退出码，默认只警告。
+
+---
+
+## 9. 本次执行记录（2026-11-16）
+
+### 9.1 做了什么
+
+1. `AGENTS.md`：前置新增第 0 章，原文整体下移为附录 A（`tail -n 712` 哈希 `ae5e19db…53a` 与原文件一致）。
+2. 新建六标准目录 + 各 `README.md` + 任务大盘 `docs/tasks/project-tasks.md`（FE-001~007 待规划、FE-010~013 已完成）。
+3. 私有目录正文迁入 `docs/`：`.workbuddy/knowledge` 4 份 → `docs/reference/ai-knowledge/`；`.zcode/plans` 6 份 → `docs/archived/ai-sessions/zcode-plans/`（逐文件 SHA-256 一致，仅修 1 处相对链接）。
+4. 新建治理脚本与 pre-commit（警告模式）、`docs/specs/ai-agents/` 五张角色卡。
+5. `.gitignore` 补私有目录标记块，明确「docs 全量入库」。
+6. 本文档（规范正文）与 `docs/records/2026-11-16-docs-governance.md`（执行留痕）入仓。
+
+### 9.2 回归证据
+
+| 项 | 结果 |
+| --- | --- |
+| 基线 46 个 docs 文件 | 45 个逐字节一致；`docs/README.md` 纯追加（34 行新增、0 删除） |
+| AGENTS.md 原文 | 712 行 / `ae5e19db9675ad33556faae36ea7007fa2011fefa7cdb35ee703bccec49db53a` 一致 |
+| 业务代码 | `src/` 与构建配置 0 文件改动 |
+| 治理自检 | `verify-docs.sh` 0 问题；`audit-frontend-rules.sh` 无阻断 |
+| 技术债实测 | `: any` 51 处（FE-005）、越权 Axios 0、绕过 `auth.ts` 0 |
+
+### 9.3 未完成与后续
+
+| 项 | 状态 |
+| --- | --- |
+| FE-005 `: any` 清理 | 待规划，按模块分批 |
+| 图表基线 | 本仓无独立 SVG/MMD；后续新增按 §3.5 执行 |
+| 插件（OpenAPI/GitHub 等） | 待用户授权后安装，非治理必需 |
+
+---
+
+## 10. 验收清单（复制即用）
+
+```markdown
+- [ ] 任务已在大盘登记，优先级 P0–P3，验收标准可执行
+- [ ] 改动只覆盖任务目标，无顺手重构
+- [ ] 新文档已归位六标准目录并登记 docs/README.md
+- [ ] 未删除/未覆盖任何既有文档与图表
+- [ ] 私有目录未新增业务正文
+- [ ] .gitignore 未出现任何忽略 docs 的规则
+- [ ] bash scripts/governance/verify-docs.sh 通过
+- [ ] bash scripts/governance/audit-frontend-rules.sh 无阻断
+- [ ] npx vue-tsc --noEmit 通过（涉及逻辑改动再加 npm run build）
+- [ ] docs/records/ 已留变更记录
+- [ ] 复核人（R5）已给出 APPROVE / REQUEST_CHANGES
+```
+
+---
+
+## 11. 附：目录样例
+
+```text
+apex-admin-web/
+├── AGENTS.md                      # 入口索引：第 0 章 + 附录 A（原文）
+├── docs/
+│   ├── tasks/project-tasks.md     # 任务大盘（唯一写入口）
+│   ├── specs/
+│   │   ├── project-governance.md  # 本文件（规范正文）
+│   │   └── ai-agents/             # R1–R5 角色卡
+│   ├── plans/  records/  reviews/  notes/
+│   ├── reference/ai-knowledge/    # 迁入的知识库 + PROVENANCE
+│   └── archived/ai-sessions/zcode-plans/  # 迁入的会话计划
+├── scripts/governance/            # 自检脚本 + README
+└── .githooks/pre-commit           # 警告模式钩子
+```

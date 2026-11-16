@@ -166,3 +166,44 @@ apex-admin-web/
 
 **最后更新**: 2026-11-13  
 **维护者**: Apex Admin Web Team
+
+---
+
+## 🏛 项目治理与任务管理（2026-11-16 增补）
+
+本区块为治理规范新增的入口索引，原有文档分类（架构 / API / 指南 / 功能 / 参考 / 归档）**保持不变**。
+
+### 规范与规则
+
+- [项目治理规范（AGENTS.md 第 0 章）](../AGENTS.md) - 文档收口、任务体系、多智能体隔离、编码红线
+- [任务大盘](tasks/project-tasks.md) - 全量任务、优先级、状态与验收标准（唯一可信源）
+
+### 新增标准目录
+
+| 目录 | 用途 | 入口 |
+| --- | --- | --- |
+| `docs/tasks/` | 任务大盘与迭代任务 | [tasks/README](tasks/README.md) |
+| `docs/specs/` | 需求与技术方案（评审后实施） | [specs/README](specs/README.md) |
+| `docs/plans/` | 实施与迁移计划 | [plans/README](plans/README.md) |
+| `docs/records/` | 变更、改造、缺陷留痕 | [records/README](records/README.md) |
+| `docs/reviews/` | 方案评审、代码评审记录 | [reviews/README](reviews/README.md) |
+| `docs/notes/` | 调研、对接备忘、风险纪要 | [notes/README](notes/README.md) |
+
+### 规范正文（完整、可独立阅读）
+
+- [项目任务管理规范](specs/project-governance.md) — 优先级与五状态、文档收口、多智能体目录映射、`.gitignore` 规则、前端红线 F1–F10、执行记录、验收清单
+- [AI 角色卡 R1–R5](specs/ai-agents/README.md) — 需求拆解 / 前端实现 / 契约守门 / 测试回归 / 评审
+
+### 迁入的历史资料（自 AI 私有目录迁出，内容零删改）
+
+- [AI 协作知识库](reference/ai-knowledge/README.md) - 原 `.workbuddy/knowledge`：当前状态、约定与坑、契约映射
+- [ZCode 会话计划归档](archived/ai-sessions/zcode-plans/README.md) - 原 `.zcode/plans`：六份会话计划原始文本
+
+### 治理自检
+
+```bash
+bash scripts/governance/verify-docs.sh        # 目录、索引、任务大盘、私有目录边界
+bash scripts/governance/audit-frontend-rules.sh   # 前端红线扫描（默认警告模式）
+```
+
+脚本用法与判据见 [scripts/governance/README.md](../scripts/governance/README.md)；配合 `.githooks/pre-commit`（`git config core.hooksPath .githooks`）在提交前自动提示。

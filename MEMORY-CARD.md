@@ -114,7 +114,7 @@ src/
 | 想知道 | 去哪 |
 | --- | --- |
 | 开发入口与全部约束 | `AGENTS.md`（§1 约束、§10 排障表） |
-| 项目知识库 | `.workbuddy/knowledge/README.md` |
+| 项目知识库 | `docs/reference/ai-knowledge/README.md` |
 | 后端契约源 | `/Users/work/apex-scaffold` 的 Router/Handler 与 `docs/03-api/API_ROUTES.md` |
 | 认证与路由详解 | `docs/architecture/auth-and-routing.md` |
 | 接口文档索引 | `docs/api/README.md` |
