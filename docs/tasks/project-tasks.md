@@ -35,7 +35,7 @@
 | FE-021 | P1 | 整改 B1：`AGENTS.md` 0.8 + 规范 §5.3 口径 + 知识库维护口径 | 已完成 | 2026-11-16 | `AGENTS.md`、`docs/specs/project-governance.md`、`docs/reference/ai-knowledge/README.md`；验收：附录 A 哈希 `ae5e19db…53a` 不变 |
 | FE-022 | P1 | 整改 B3：新增前端最小 CI（`.github/workflows/ci.yml`，文档门禁 4 脚本 + `npm ci && build`） | 已完成 | 2026-11-16 | `.github/workflows/ci.yml`；验收：YAML 解析通过、本地预演 4 脚本全通过 |
 | FE-023 | P2 | 整改 B5：`.gitignore` 去重为单一私有目录区块（含注释独占一行的补正） | 已完成 | 2026-11-16 | `.gitignore`；验收：`check-ignore` 命中、无未跟踪私有目录 |
-| FE-024 | P1 | 整改 B6：GitHub 分支保护「档 1」 | **阻塞（平台限制）+ 本地补偿已完成** | 2026-11-16 | 实测 `PUT .../protection` → 403（private + Free）；已加 `.githooks/pre-push`（4 用例通过）。解锁需业主决定：转公开 或 升级 Pro/Team。见 `docs/guides/github-branch-protection.md` |
+| FE-024 | P1 | 整改 B6：GitHub 分支保护「档 1」 | **已完成** | 2026-11-16 | 转 public 后三支 `PUT /protection` 全部成功（禁强推+禁删除，`master`/`test` 加对话解决）；绕钩子实测服务端拒绝删支/强推。见 `docs/guides/github-branch-protection.md` |
 
 ## 3. 阻塞与风险登记
 
