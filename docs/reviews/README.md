@@ -9,3 +9,14 @@
 4. 后续动作及对应任务 ID
 
 历史评审材料仍保留在 `docs/archived/project-reports/`，不搬迁。
+
+## 跨仓评审（正文在 apex-scaffold）
+
+两仓共用的治理评审只有一份正文，避免双份口径：
+
+| 日期 | 对象 | 结论 | 正文位置 |
+| --- | --- | --- | --- |
+| 2026-11-16 | 前后端两仓治理规范对齐（前端 `1455fbc` / 后端 `14f6bc2a`） | 有条件通过 | `apex-scaffold/docs/reviews/2026-11-16-governance-alignment-review.md` |
+
+配套整改方案：`apex-scaffold/docs/plans/2026-11-16-governance-alignment-plan.md`（待业主确认）。
+本仓相关整改项：`database-config.md:153` 死指针、`docs/archived/project-reports/` 3 条断链、规范 §9 任务范围。

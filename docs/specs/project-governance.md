@@ -227,7 +227,7 @@
 ### 9.1 做了什么
 
 1. `AGENTS.md`：前置新增第 0 章，原文整体下移为附录 A（`tail -n 712` 哈希 `ae5e19db…53a` 与原文件一致）。
-2. 新建六标准目录 + 各 `README.md` + 任务大盘 `docs/tasks/project-tasks.md`（FE-001~007 待规划、FE-010~013 已完成）。
+2. 新建六标准目录 + 各 `README.md` + 任务大盘 `docs/tasks/project-tasks.md`（FE-001~007 待规划、FE-010~013 已完成、FE-014 规范正文入仓已完成、FE-015 治理评审整改待规划）。
 3. 私有目录正文迁入 `docs/`：`.workbuddy/knowledge` 4 份 → `docs/reference/ai-knowledge/`；`.zcode/plans` 6 份 → `docs/archived/ai-sessions/zcode-plans/`（逐文件 SHA-256 一致，仅修 1 处相对链接）。
 4. 新建治理脚本与 pre-commit（警告模式）、`docs/specs/ai-agents/` 五张角色卡。
 5. `.gitignore` 补私有目录标记块，明确「docs 全量入库」。
@@ -248,6 +248,8 @@
 | 项 | 状态 |
 | --- | --- |
 | FE-005 `: any` 清理 | 待规划，按模块分批 |
+| FE-014 规范正文入仓（v1.1） | 已完成（2026-11-16） |
+| FE-015 治理评审整改（死指针 1 处 / 断链 3 条 / 规范 §9 范围） | 已执行（见 `apex-scaffold/docs/plans/2026-11-16-governance-alignment-plan.md`） |
 | 图表基线 | 本仓无独立 SVG/MMD；后续新增按 §3.5 执行 |
 | 插件（OpenAPI/GitHub 等） | 待用户授权后安装，非治理必需 |
 

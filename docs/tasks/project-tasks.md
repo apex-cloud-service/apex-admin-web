@@ -8,6 +8,7 @@
 ## 1. 活跃任务
 
 | ID | 优先级 | 任务 | 状态 | 负责 | 验收标准 | 关联 |
+| FE-015 | P2 | 治理评审整改（前端项：死指针 1 处、断链 3 条、规范 §9 范围） | 待规划 | 主控 | `verify-docs.sh` 通过、断链 0 | `apex-scaffold/docs/reviews/2026-11-16-governance-alignment-review.md` |
 | --- | --- | --- | --- | --- | --- | --- |
 | FE-001 | P2 | `docs/reference/ai-knowledge` 与 `docs/api`、`docs/architecture` 去重收敛：同源结论只保留一份，其余改为交叉链接 | 待规划 | 待定 | 无重复段落；索引可达；`verify-docs.sh` 通过 | `docs/reference/ai-knowledge/README.md` |
 | FE-002 | P2 | 契约映射表核对：`03-contract-map.md` 中的后端端点与 `docs/api/` 逐条对照，补 `page/size` 与 `pageNum/pageSize` 口径标注 | 待规划 | 待定 | 每条端点注明分页口径与响应字段名 | `docs/api/README.md` |
