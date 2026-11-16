@@ -62,6 +62,7 @@
 | 19 | 脚本 | **整改 B5（关闭 D-06）**：`.gitignore` 合并重复项为单一「AI 私有目录」区块（9 类各 1 条带注释），移除工具链段重复目录与重复构建产物 | 本条提交 | 验收：去重检查为空；`git check-ignore docs/README.md` 无命中；`verify-docs` 0 项 |
 | 20 | 治理 | **整改 B3（关闭 D-02）**：新增 `.github/workflows/ci.yml`（`docs-and-rules` job 跑 4 个治理脚本 + `build` job 跑 `npm ci && npm run build`），触发 `master/test/dev`、PR `master/test`、支持手动触发 | 本条提交 | 验收：`ruby -ryaml` 解析通过；本地预演 4 个治理脚本全通过；首次推送 `dev` 即验证触发 |
 | 21 | 脚本 | **B5 补正**：`.gitignore` 行尾注释不被 git 识别（`.workbuddy/  # 注释` 会被当作含 `#` 的规则，导致私有目录未被忽略、`git status` 出现 `?? .workbuddy/`），改为「注释独占一行 + 规则单列」 | 本条提交 | 验收：`git check-ignore -v .workbuddy` 命中 84 行；`git status --porcelain` 无 `?? .trae/` 等私有目录 |
+| 22 | 治理 | 任务盘登记整改批次 B1/B2/B3/B5 完成与 B6 待执行（FE-021~FE-024），B6 阻塞原因写入验收列 | 本条提交 | 与代码/文档提交一一对应，状态列与实际一致 |
 
 ---
 

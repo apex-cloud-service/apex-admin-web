@@ -33,6 +33,9 @@
 | FE-019 | P1 | 分支模型 `dev`/`master`/`test`（删除 `main`）与保护清单成文 | 已完成 | 2026-11-16 | `docs/guides/github-branch-protection.md`；**规则开启待网页操作或 PAT**（匿名 API 403） |
 | FE-020 | P1 | `dev` 分支一致性评审（D-02/03/04/06/07/08）与整改批次 B1/B2/B3/B5/B6 | 已完成 | 2026-11-16 | `docs/reviews/2026-11-16-dev-branch-governance-audit.md`、`docs/plans/2026-11-16-dev-alignment-remediation-plan.md` |
 | FE-021 | P1 | 整改 B1：`AGENTS.md` 0.8 + 规范 §5.3 口径 + 知识库维护口径 | 已完成 | 2026-11-16 | `AGENTS.md`、`docs/specs/project-governance.md`、`docs/reference/ai-knowledge/README.md`；验收：附录 A 哈希 `ae5e19db…53a` 不变 |
+| FE-022 | P1 | 整改 B3：新增前端最小 CI（`.github/workflows/ci.yml`，文档门禁 4 脚本 + `npm ci && build`） | 已完成 | 2026-11-16 | `.github/workflows/ci.yml`；验收：YAML 解析通过、本地预演 4 脚本全通过 |
+| FE-023 | P2 | 整改 B5：`.gitignore` 去重为单一私有目录区块（含注释独占一行的补正） | 已完成 | 2026-11-16 | `.gitignore`；验收：`check-ignore` 命中、无未跟踪私有目录 |
+| FE-024 | P1 | 整改 B6：GitHub 分支保护「档 1」（`master`/`test`/`dev` 禁强推+禁删除） | 待执行 | 2026-11-16 | `docs/guides/github-branch-protection.md`；**阻塞：无 token/`gh` 未登录，需网页操作或 PAT** |
 
 ## 3. 阻塞与风险登记
 
