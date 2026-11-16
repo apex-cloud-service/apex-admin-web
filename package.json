@@ -1,6 +1,7 @@
 {
   "name": "apex-admin-web",
   "version": "1.2.0",
+  "license": "MIT",
   "private": true,
   "description": "Apex Scaffold 管理后台前端（前后端分离）— Vue3 + Vite + TypeScript + Pinia + Element Plus",
   "type": "module",
