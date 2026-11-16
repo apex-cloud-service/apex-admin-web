@@ -15,7 +15,7 @@ export default defineConfig({
   retries: 1,
   forbidOnly: !!process.env.CI,
   reporter: [
-    ['junit', { outputFile: 'reports/e2e-results.xml' }],
+    ['junit', { outputFile: 'reports/e2e/e2e-results.xml' }],
     ['list'],
   ],
   use: {

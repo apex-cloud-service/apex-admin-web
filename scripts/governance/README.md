@@ -109,3 +109,20 @@ done
 ```
 
 > 命名规则、27 张清单与两个已踩过的语法坑（边标签 `|`、节点标签 `${}`/`/` 开头）见 `docs/diagrams/README.md`。
+
+## 8. `check-doc-layout.sh`（目录结构规范化自检，2026-11-16 新增）
+
+| 断言 | 内容 |
+| --- | --- |
+| 1 | `docs/` 下 13 个一级目录**都有 `README.md`** |
+| 2 | 一级目录在脚本 `EXPECTED` 白名单内（新增目录要同步脚本） |
+| 3 | `docs/README.md` 的「🗂 目录总览」覆盖全部一级目录 |
+| 4 | 仓库根目录无散落业务 Markdown（白名单：门面 + 许可） |
+| 5 | `reports/` 已按测试类型分层（`e2e`/`unit`/`coverage`/`lighthouse`/`stress`）+ `reports/README.md` 存在（`audit` 可选） |
+| 阻断 | 默认警告（exit 0），`--strict` 有问题 exit 1 |
+| 接入 | `verify-docs.sh` 第 10 项 |
+
+```bash
+bash scripts/governance/check-doc-layout.sh            # 明细
+bash scripts/governance/check-doc-layout.sh --strict   # CI
+```

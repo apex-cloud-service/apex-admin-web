@@ -48,9 +48,11 @@ coverage-html/
 # HTML、lcov 等生成物体积大且可随时重建，不入库。
 # E2E（Playwright）JUnit 结果与单元测试同口径入库；lighthouse/stress 生成物不入库。
 reports/*
-!reports/test-results.xml
-!reports/test-results.json
-!reports/e2e-results.xml
+# 入库白名单：目录说明 + 机器可读汇总件（其余全部可重建、不入库）
+!reports/README.md
+!reports/e2e/e2e-results.xml
+!reports/unit/test-results.xml
+!reports/unit/test-results.json
 !reports/coverage/
 reports/coverage/*
 !reports/coverage/coverage-summary.json

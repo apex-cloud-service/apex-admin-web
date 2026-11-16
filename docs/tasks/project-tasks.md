@@ -16,6 +16,7 @@
 
 | ID | 优先级 | 任务 | 状态 | 完成日期 | 产出 |
 | --- | --- | --- | --- | --- | --- |
+| FE-025 | P1 | 目录规范化：reports 按测试类型分层 + docs 目录总览 + 4 个一级目录 README + 结构自检 | 已完成 | 2026-11-16 | 验收：`check-doc-layout.sh` 5 条断言全 OK（13 个 docs 目录 README 齐全且被总览覆盖、reports 已分层）、`verify-docs.sh` 10 项 0 问题、`check-doc-refs.sh` 0 断链、`check-diagram-assets.sh` 27/27、`npm run build` 46.50s、`npx playwright test` 12 passed 且 junit 落 `reports/e2e/e2e-results.xml`；产出：`reports/README.md`、`docs/{architecture,features,guides,reference}/README.md`、`scripts/governance/check-doc-layout.sh`、规范 §7.5、`docs/plans|records/2026-11-16-directory-normalization*.md` |
 | FE-010 | P1 | 建立治理基线：AGENTS.md 增补第 0 章（原文附录 A 逐字保留） | 已完成 | 2026-11-16 | `AGENTS.md` |
 | FE-011 | P1 | 建立 `docs/{tasks,specs,plans,records,reviews,notes}` 标准目录与索引 | 已完成 | 2026-11-16 | `docs/README.md` 及各目录 README |
 | FE-012 | P1 | 迁移私有目录业务文档：`.workbuddy/knowledge` → `docs/reference/ai-knowledge`；`.zcode/plans` → `docs/archived/ai-sessions/zcode-plans`（内容逐字节校验后移除原件，保留指针） | 已完成 | 2026-11-16 | 迁移记录见 `docs/records/` |

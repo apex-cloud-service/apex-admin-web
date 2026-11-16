@@ -12,7 +12,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "test:report": "vitest run --coverage --coverage.reportsDirectory=reports/coverage --coverage.reporter=text --coverage.reporter=json --coverage.reporter=json-summary --coverage.reporter=html --coverage.reporter=lcov --reporter=default --reporter=junit --outputFile.junit=reports/test-results.xml --reporter=json --outputFile.json=reports/test-results.json && node scripts/quality/normalize-test-report.mjs",
+    "test:report": "vitest run --coverage --coverage.reportsDirectory=reports/coverage --coverage.reporter=text --coverage.reporter=json --coverage.reporter=json-summary --coverage.reporter=html --coverage.reporter=lcov --reporter=default --reporter=junit --outputFile.junit=reports/unit/test-results.xml --reporter=json --outputFile.json=reports/unit/test-results.json && node scripts/quality/normalize-test-report.mjs",
     "test:e2e": "playwright test",
     "test:perf": "vite build && node scripts/performance/perf-check.mjs",
     "test:stress": "node scripts/performance/stress-test.mjs",
@@ -20,7 +20,7 @@
     "verify:deploy": "bash scripts/verify/post-deploy-check.sh",
     "analyze": "vite build && open dist/stats.html",
     "generate:api": "openapi-generator-cli generate",
-    "audit": "npm audit --json | npm-audit-html --output ./reports/audit.html",
+    "audit": "npm audit --json | npm-audit-html --output ./reports/audit/audit.html",
     "audit:fix": "npm audit fix"
   },
   "dependencies": {

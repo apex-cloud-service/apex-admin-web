@@ -78,6 +78,14 @@ else
   warn "缺少 scripts/governance/check-diagram-assets.sh"
 fi
 
+echo "== 10. 目录结构规范化（docs README / 总览覆盖 / 根目录 / reports 分层）=="
+if [ -f scripts/governance/check-doc-layout.sh ]; then
+  layout=$(bash scripts/governance/check-doc-layout.sh 2>&1)
+  if echo "$layout" | grep -q "自检通过"; then pass "目录结构规范（13 个 docs 一级目录均有 README 且被总览覆盖，reports 已分层）"; else warn "目录结构有问题：$(echo "$layout" | grep '\[WARN\]' | tr '\n' ' ')"; fi
+else
+  warn "缺少 scripts/governance/check-doc-layout.sh"
+fi
+
 echo
 if [ "$FAIL" -eq 0 ]; then
   echo "✅ 文档治理自检通过（0 项问题）"

@@ -66,9 +66,9 @@ function normalizeJson(file, indent = 0) {
 }
 
 let changed = 0
-if (normalizeJunit(path.join(REPORTS, 'test-results.xml'))) changed++
+if (normalizeJunit(path.join(REPORTS, 'unit', 'test-results.xml'))) changed++
 // 用例报告体积大（数十万字符），压缩为单行以免产生海量行级 diff
-if (normalizeJson(path.join(REPORTS, 'test-results.json'))) changed++
+if (normalizeJson(path.join(REPORTS, 'unit', 'test-results.json'))) changed++
 // 覆盖率摘要供人阅读与 CI 比对，保留缩进
 if (normalizeJson(path.join(REPORTS, 'coverage', 'coverage-summary.json'), 2)) changed++
 

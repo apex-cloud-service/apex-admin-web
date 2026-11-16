@@ -305,6 +305,18 @@ git branch test master && git push -u origin test
 4. 回滚三步：`git revert <sha>` → 跑 `verify-docs.sh` → 在 `docs/records/` 记录回滚原因。
 5. 每次改造必须能在 `docs/records/` 找到「改了哪些文件、怎么验的、怎么回滚」。
 
+### 7.5 目录总览与「一个主题一个家」（2026-11-16 增补）
+
+| 规则 | 内容 |
+| --- | --- |
+| 唯一索引 | `docs/README.md` 的「🗂 目录总览」是 13 个一级目录的唯一索引；新增目录必须先登记该表 |
+| 必带 README | `docs/` 下每个一级目录必须有 `README.md`（用途 / 收什么 / 不收什么·新去向 / 索引） |
+| 一个主题一个家 | 架构 → `docs/architecture/`；接口 → `docs/api/`；功能 → `docs/features/`；操作 → `docs/guides/`；测试命令 → `docs/reference/testing.md`；图表源 → `docs/diagrams/` |
+| 测试报告分层 | `reports/{e2e,unit,coverage,lighthouse,stress,audit}/`，文件名固定；只有机器可读汇总件入库（见 `reports/README.md`） |
+| 根目录洁净 | 根目录只放门面/许可文档；业务 Markdown 一律进 `docs/` |
+| 机器校验 | `scripts/governance/check-doc-layout.sh`（`verify-docs.sh` 第 10 项） |
+
+
 ---
 
 ## 8. 工具与脚本
@@ -315,6 +327,7 @@ git branch test master && git push -u origin test
 | `scripts/governance/audit-frontend-rules.sh` | 越权 Axios、绕过 `auth.ts`、`: any` 规模、`script setup` 覆盖 | `bash scripts/governance/audit-frontend-rules.sh [--strict]` |
 | `scripts/governance/check-doc-refs.sh` | 活文档私有路径残留 + Markdown 断链（含白名单豁免） | `bash scripts/governance/check-doc-refs.sh [--strict]` |
 | `scripts/governance/check-diagram-assets.sh` | 图表资产配对：`docs/**/*.mmd` 必须有同名 `.svg` | `bash scripts/governance/check-diagram-assets.sh [--strict]` |
+| `scripts/governance/check-doc-layout.sh` | 目录结构：docs 一级目录 README、总览覆盖、根目录散落、reports 分层 | `bash scripts/governance/check-doc-layout.sh [--strict]` |
 | `.githooks/pre-commit` | 治理范围改动时跑自检 + 图表删除告警 + 大文件提醒 | `git config core.hooksPath .githooks` |
 
 脚本说明见 `scripts/governance/README.md`；`--strict` 才产生非零退出码，默认只警告。

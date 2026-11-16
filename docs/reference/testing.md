@@ -1,5 +1,6 @@
 # 测试指南
 
+> 报告目录规范见 [reports/README.md](../../reports/README.md)；
 > 依据 [vitest.config.ts](../../vitest.config.ts)、[playwright.config.ts](../../playwright.config.ts)、[package.json](../../package.json) 与 `src/**/__tests__/`、`src/api/*.test.ts`、`e2e/` 当前实现核对（2026-11-13）。历史全量执行结果见[测试报告（2026-11-05）](../archived/project-reports/test-report-2026-11-05.md)与[测试报告（2026-11-13）](../archived/project-reports/test-report-2026-11-13.md)。
 
 ## 1. 技术选型与现状
@@ -13,7 +14,7 @@
 | E2E | Playwright ^1.63.0：`playwright.config.ts` + `e2e/`（`npm run test:e2e`）；webServer 起 Vite 开发服务，后端接口在用例内经 `page.route` 打桩，不依赖真实后端；首次运行须 `npx playwright install chromium` |
 | 性能/压测 | `npm run test:perf`（Lighthouse desktop，构建产物基线口径）、`npm run test:stress`（autocannon 静态服务两档并发）；业务接口压测属后端/网关范畴 |
 | 覆盖率 | v8 provider（`@vitest/coverage-v8`），报告 text/json/html/lcov（`npm run test:coverage`） |
-| 报告产物 | `npm run test:report` 输出 JUnit XML + JSON + 覆盖率（text/html/lcov + `coverage-summary.json` 摘要）到 `reports/`；脚本末尾调用 `scripts/quality/normalize-test-report.mjs` 归一化路径与主机名；机器可读结果（含 `e2e-results.xml`）入库，HTML/lcov/lighthouse/stress 生成物不入库 |
+| 报告产物 | `npm run test:report` 输出 JUnit XML + JSON 到 `reports/unit/`、覆盖率（text/html/lcov + `coverage-summary.json` 摘要）到 `reports/coverage/`；脚本末尾调用 `scripts/quality/normalize-test-report.mjs` 归一化路径与主机名；机器可读结果（含 `e2e-results.xml`）入库，HTML/lcov/lighthouse/stress 生成物不入库 |
 | CI | 无（本地执行） |
 
 ## 2. 常用命令
@@ -22,7 +23,7 @@
 npm run test            # watch 模式运行全部用例
 npm run test:ui         # Vitest UI 面板
 npm run test:coverage   # 覆盖率报告（v8，输出 coverage/）
-npm run test:report     # 单次运行 + JUnit/JSON/HTML/lcov 报告，输出 reports/（自动归一化后仅机器可读结果入库）
+npm run test:report     # 单次运行 + JUnit/JSON 输出 reports/unit/、HTML/lcov 输出 reports/coverage/（归一化后仅机器可读结果入库）
 npx vitest run          # CI 式单次运行（不 watch）
 npx vitest run src/utils/__tests__/request.spec.ts   # 指定文件
 npm run test:e2e        # Playwright E2E（6 条核心链路用例）
@@ -109,7 +110,7 @@ describe('auth-config api', () => {
 
 ```bash
 npm run test:coverage     # 输出到 coverage/
-npm run test:report      # 输出到 reports/（JUnit + JSON + HTML/lcov）
+npm run test:report      # 输出到 reports/unit/（JUnit + JSON）与 reports/coverage/（HTML/lcov）
 ```
 
 - Provider：v8（依赖 `@vitest/coverage-v8`，须与 `vitest` 主版本一致）；

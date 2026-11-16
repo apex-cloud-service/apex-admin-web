@@ -1,0 +1,38 @@
+<testsuites id="" name="" tests="12" failures="0" skipped="0" errors="0" time="44.721904">
+<testsuite name="auth.spec.ts" timestamp="2026-11-16T08:01:30.616Z" hostname="chromium" tests="3" failures="0" skipped="0" time="40.004" errors="0">
+<testcase name="认证与路由守卫 › 未登录访问受保护路由跳转登录页并携带回跳地址" classname="auth.spec.ts" time="9.464">
+</testcase>
+<testcase name="认证与路由守卫 › 表单登录成功进入工作台并写入会话" classname="auth.spec.ts" time="14.678">
+</testcase>
+<testcase name="认证与路由守卫 › 退出登录清理会话并回到登录页" classname="auth.spec.ts" time="15.862">
+</testcase>
+</testsuite>
+<testsuite name="dynamic-menu.spec.ts" timestamp="2026-11-16T08:01:30.616Z" hostname="chromium" tests="2" failures="0" skipped="0" time="34.979" errors="0">
+<testcase name="动态菜单与路由 › 登录后渲染菜单树，点击子菜单进入动态页面" classname="dynamic-menu.spec.ts" time="16.477">
+</testcase>
+<testcase name="动态菜单与路由 › 动态路由支持 URL 直达（刷新后守卫重新注册）" classname="dynamic-menu.spec.ts" time="18.502">
+</testcase>
+</testsuite>
+<testsuite name="office-approval.spec.ts" timestamp="2026-11-16T08:01:30.616Z" hostname="chromium" tests="2" failures="0" skipped="0" time="35.487" errors="0">
+<testcase name="办公审批主链路 › 待办审批列表渲染标题/发起人/当前节点" classname="office-approval.spec.ts" time="19.6">
+</testcase>
+<testcase name="办公审批主链路 › 已办审批 Tab 可切换" classname="office-approval.spec.ts" time="15.887">
+</testcase>
+</testsuite>
+<testsuite name="tenant.spec.ts" timestamp="2026-11-16T08:01:30.616Z" hostname="chromium" tests="2" failures="0" skipped="0" time="28.449" errors="0">
+<testcase name="租户主链路 › 租户列表渲染编码/名称/状态" classname="tenant.spec.ts" time="14.317">
+</testcase>
+<testcase name="租户主链路 › 租户查询表单按编码过滤后重新请求" classname="tenant.spec.ts" time="14.132">
+</testcase>
+</testsuite>
+<testsuite name="token-refresh.spec.ts" timestamp="2026-11-16T08:01:30.616Z" hostname="chromium" tests="1" failures="0" skipped="0" time="9.211" errors="0">
+<testcase name="令牌无感刷新 › 401 触发单飞刷新且原请求重放成功" classname="token-refresh.spec.ts" time="9.211">
+</testcase>
+</testsuite>
+<testsuite name="workflow.spec.ts" timestamp="2026-11-16T08:01:30.616Z" hostname="chromium" tests="2" failures="0" skipped="0" time="25.07" errors="0">
+<testcase name="工作流主链路 › 进入流程监控页并切换三个 Tab" classname="workflow.spec.ts" time="13.159">
+</testcase>
+<testcase name="工作流主链路 › 待办任务列表按 list/total 口径渲染行数据" classname="workflow.spec.ts" time="11.911">
+</testcase>
+</testsuite>
+</testsuites>

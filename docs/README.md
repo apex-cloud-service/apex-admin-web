@@ -191,6 +191,32 @@ apex-admin-web/
 | `docs/notes/` | 调研、对接备忘、风险纪要 | [notes/README](notes/README.md) |
 | `docs/diagrams/` | 图表资产（`.mmd` 源 + 同名 `.svg`） | [diagrams/README](diagrams/README.md) |
 
+### 🗂 目录总览（全部一级目录，2026-11-16 增补）
+
+本表是 `docs/` 的**唯一目录索引**：新增文档先查此表定去向；新增目录必须同步登记本表与 `scripts/governance/check-doc-layout.sh`。
+
+| 目录 | 内容 | 性质 | 收新内容 | 入口 |
+| --- | --- | --- | --- | --- |
+| `docs/architecture/` | 总体架构、认证与路由、领域/状态机（图已资产化） | 架构 | 是 | [README](architecture/README.md) |
+| `docs/api/` | 按业务域整理的接口文档（与 `src/api/*.ts` 对齐） | 接口 | 是 | [README](api/README.md) |
+| `docs/features/` | 单功能实现说明（上传、数据库配置、图表管理等） | 功能 | 是 | [README](features/README.md) |
+| `docs/guides/` | 操作指南（部署、联调、Mock、分支保护等） | 指南 | 是 | [README](guides/README.md) |
+| `docs/reference/` | 参考手册（测试命令、注释风格、工具包）+ `ai-knowledge/` | 参考（受控） | 是（`ai-knowledge/` 强制台账） | [README](reference/README.md) |
+| `docs/diagrams/` | 图表资产：`.mmd` 源 + 同名 `.svg`（27 对） | 资产 | 是（必须成对） | [README](diagrams/README.md) |
+| `docs/tasks/` | 任务大盘（唯一任务登记处） | 规范六目录 | 是（强制） | [README](tasks/README.md) |
+| `docs/specs/` | 规范正文与角色卡 | 规范六目录 | 是 | [README](specs/README.md) |
+| `docs/plans/` | 方案/计划 | 规范六目录 | 是 | [README](plans/README.md) |
+| `docs/records/` | 执行记录与验收证据 | 规范六目录 | 是 | [README](records/README.md) |
+| `docs/reviews/` | 评审记录 | 规范六目录 | 是 | [README](reviews/README.md) |
+| `docs/notes/` | 调研备忘（可升格为正式文档） | 规范六目录 | 是 | [README](notes/README.md) |
+| `docs/archived/` | 历史归档（`project-reports/`、`ai-sessions/`） | 归档（只读） | 否 | [README](archived/README.md) |
+
+**三条归置规则**
+
+1. 新产出只进「收新内容 = 是」的目录；归档区只读、不追加。
+2. 同一主题只一个权威落点：架构 → `architecture/`；接口 → `api/`；功能 → `features/`；操作 → `guides/`；测试命令 → `reference/testing.md`；图表源 → `diagrams/`。
+3. 图表必须 `.mmd` + 同名 `.svg` 成对提交（`check-diagram-assets.sh` 校验），正文引用 `.svg` 并保留「图源」链接。
+
 ### 规范正文（完整、可独立阅读）
 
 - [项目任务管理规范](specs/project-governance.md) — 优先级与五状态、文档收口、多智能体目录映射、`.gitignore` 规则、前端红线 F1–F10、执行记录、验收清单

@@ -12,3 +12,9 @@
 
 计划模板：每步必须写「改动范围 / 验证命令 / 回滚动作」。
 | 2026-11-16 | `dev` 分支一致性整改（前端 B1/B2/B3/B5/B6） | **待业主确认**（未执行） | [2026-11-16-dev-alignment-remediation-plan.md](./2026-11-16-dev-alignment-remediation-plan.md) |
+
+## 2026-11-16 增补
+
+| 日期 | 主题 | 状态 | 文件 |
+| --- | --- | --- | --- |
+| 2026-11-16 | 目录规范化（docs 总览 / 一级目录 README / reports 分层 / 结构自检） | 已执行 | [2026-11-16-directory-normalization-plan.md](./2026-11-16-directory-normalization-plan.md) |

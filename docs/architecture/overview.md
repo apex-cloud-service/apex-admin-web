@@ -90,7 +90,7 @@
 | 产物分析 | `npm run analyze` | rollup-plugin-visualizer |
 | 性能测试 | `npm run test:perf`（Lighthouse desktop） | 构建产物静态基线口径，报告输出 `./reports/lighthouse`（`scripts/performance/lighthouse-test.sh` 为其底层脚本） |
 | 压力测试 | `npm run test:stress`（autocannon） | 静态服务两档并发承载基线，报告输出 `./reports/stress`；业务接口压测属后端/网关范畴 |
-| 依赖安全 | `scripts/security/security-scan.sh`、`npm run audit` | `npm run audit` 输出 JSON + HTML 到 `./reports/audit.html`；security-scan.sh 控制台输出 npm audit 结果，其中仅 snyk 为可选步骤（未安装自动跳过），npm-check-updates 经 npx 无条件执行 |
+| 依赖安全 | `scripts/security/security-scan.sh`、`npm run audit` | `npm run audit` 输出 JSON + HTML 到 `./reports/audit/audit.html`（见 [`reports/README.md`](../../reports/README.md)）；security-scan.sh 控制台输出 npm audit 结果，其中仅 snyk 为可选步骤（未安装自动跳过），npm-check-updates 经 npx 无条件执行 |
 | 上线验证 | `npm run verify:deploy` | `scripts/verify/post-deploy-check.sh`（C1–C13 检查项，需 `BASE_URL`） |
 | API 契约 | `npm run generate:api` | openapi-generator-cli（typescript-axios）；当前 `src/api/*.ts` 为手写封装，生成目录不参与运行时 |
 
