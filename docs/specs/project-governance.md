@@ -189,13 +189,13 @@
 
 **远端与离线归档（本仓当前 `git remote` = 0）**：
 
-1. 未配置远端时，全部历史只存在于本机 → **每周做一次离线归档**：
+1. 未配置远端（或推送受阻）时，全部历史只存在于本机 → **每周做一次离线归档**（用 `git archive`，避免把 `dist/`、`node_modules/` 打进包）：
    ```bash
    cd /Users/work/apex-admin-web
    ts=$(date +%Y%m%d); mkdir -p /Users/work/backup
-   tar -czf /Users/work/backup/apex-admin-web-$ts.tar.gz --exclude=.git .
-   shasum -a 256 /Users/work/backup/apex-admin-web-$ts.tar.gz >> /Users/work/backup/SHA256SUMS.txt
+   git archive --format=tar.gz --prefix=apex-admin-web/ -o /Users/work/backup/apex-admin-web-$ts.tar.gz main
    git bundle create /Users/work/backup/apex-admin-web-$ts.bundle main
+   cd /Users/work/backup && shasum -a 256 apex-admin-web-$ts.tar.gz >> SHA256SUMS.txt
    ```
 2. 归档件（tar.gz + bundle）须异地/异盘至少一份；`SHA256SUMS.txt` 用于校验完整性。
 3. 拿到远端地址后**先 push**：`git remote add origin <url> && git push -u origin main`；禁止 `push -f`。
