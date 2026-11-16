@@ -48,6 +48,82 @@ export const MENUS = [
   },
 ]
 
+/** 扩展菜单树夹具：系统管理（用户/租户）+ 工作流 + 办公审批（FE-003 主链路用例使用） */
+export const MENUS_FULL = [
+  ...MENUS,
+  {
+    id: 2,
+    parentId: 0,
+    menuName: '工作流',
+    menuType: 0,
+    path: '/workflow',
+    icon: 'Share',
+    visible: 1,
+    status: 1,
+    children: [
+      {
+        id: 21,
+        parentId: 2,
+        menuName: '流程监控',
+        menuType: 1,
+        path: 'monitor',
+        component: 'workflow/monitor/index',
+        perms: 'workflow:monitor:list',
+        visible: 1,
+        status: 1,
+        children: [],
+      },
+    ],
+  },
+  {
+    id: 3,
+    parentId: 0,
+    menuName: '办公协同',
+    menuType: 0,
+    path: '/office',
+    icon: 'OfficeBuilding',
+    visible: 1,
+    status: 1,
+    children: [
+      {
+        id: 31,
+        parentId: 3,
+        menuName: '审批中心',
+        menuType: 1,
+        path: 'approval',
+        component: 'office/approval/index',
+        perms: 'office:approval:list',
+        visible: 1,
+        status: 1,
+        children: [],
+      },
+    ],
+  },
+]
+
+/** 租户管理菜单（挂在系统管理目录下） */
+export const MENUS_WITH_TENANT = [
+  {
+    ...MENUS[0],
+    children: [
+      ...MENUS[0].children,
+      {
+        id: 12,
+        parentId: 1,
+        menuName: '租户管理',
+        menuType: 1,
+        path: 'tenant',
+        component: 'system/tenant/index',
+        perms: 'system:tenant:list',
+        visible: 1,
+        status: 1,
+        children: [],
+      },
+    ],
+  },
+  ...MENUS.slice(1),
+]
+
 /** 通用分页空数据（PageResponse 契约） */
 export const EMPTY_PAGE = { list: [], total: 0, pageNum: 1, pageSize: 20, pages: 0 }
 
@@ -55,7 +131,7 @@ export const EMPTY_PAGE = { list: [], total: 0, pageNum: 1, pageSize: 20, pages:
 const API_PREFIX = /^https?:\/\/[^/]+\/(api|admin-api|auth|integration|oauth2)\//
 
 /** 后端接口兜底路由：未显式 mock 的接口返回空成功，吸收页面并行请求噪音 */
-export async function mockBackend(page: Page): Promise<void> {
+export async function mockBackend(page: Page, options: { menus?: unknown } = {}): Promise<void> {
   await page.route(API_PREFIX, (route) =>
     route.fulfill({
       status: 200,
@@ -87,7 +163,7 @@ export async function mockBackend(page: Page): Promise<void> {
     route.fulfill({ status: 200, contentType: 'application/json', body: ok([{ id: 1, code: 'system:user:list', name: '用户查询' }]) }),
   )
   await page.route(/\/admin-api\/v1\/menus/, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: ok(MENUS) }),
+    route.fulfill({ status: 200, contentType: 'application/json', body: ok(options.menus ?? MENUS) }),
   )
   await page.route(/\/admin-api\/v1\/users/, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: ok(EMPTY_PAGE) }),
