@@ -25,7 +25,7 @@ export class ApiError extends Error {
     public code: number,
     public message: string,
     public traceId?: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message)
     this.name = ErrorType.API
@@ -59,7 +59,7 @@ export class ValidationError extends Error {
   constructor(
     message: string,
     public field?: string,
-    public value?: any
+    public value?: unknown
   ) {
     super(message)
     this.name = ErrorType.VALIDATION
@@ -182,18 +182,18 @@ export function handleError(error: unknown, options: ErrorHandlerOptions = {}): 
  * 异步函数错误包装器
  * 自动捕获并处理异步函数中的错误
  */
-export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
-  fn: T,
+export function withErrorHandling<A extends unknown[], R>(
+  fn: (...args: A) => Promise<R>,
   options?: ErrorHandlerOptions
-): T {
-  return (async (...args: Parameters<T>) => {
+): (...args: A) => Promise<R> {
+  return (async (...args: A) => {
     try {
       return await fn(...args)
     } catch (error) {
       handleError(error, options)
       throw error
     }
-  }) as T
+  }) as (...args: A) => Promise<R>
 }
 
 /**

@@ -12,7 +12,7 @@ import type { PageResponse } from '@/types'
 /** CRUD 接口适配器：由调用方接入具体业务的 API 函数 */
 export interface CrudApi<T> {
   /** 分页查询列表 */
-  list: (params: any) => Promise<PageResponse<T>>
+  list: (params: Record<string, unknown>) => Promise<PageResponse<T>>
   /** 创建记录 */
   create: (data: Partial<T>) => Promise<T>
   /** 按 ID 更新记录 */
@@ -73,7 +73,7 @@ export function useCrud<T>(api: CrudApi<T>, options: UseCrudOptions = {}) {
    * @param params 额外查询参数（可覆盖默认分页参数）
    * @returns 无返回值；请求失败向上抛出，成功仅更新 list/total
    */
-  const query = async (params: any = {}) => {
+  const query = async (params: Record<string, unknown> = {}) => {
     loading.value = true
     try {
       const res = await api.list({

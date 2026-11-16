@@ -215,13 +215,13 @@ export function maskPlateNumber(plateNumber: string): string {
  */
 export function maskBatch<T extends Record<string, any>>(
   data: T,
-  rules: Record<string, (value: any) => string>
+  rules: Record<string, (value: string) => string>
 ): T {
   const result = { ...data } as any
   
   for (const [field, maskFn] of Object.entries(rules)) {
     if (result[field]) {
-      result[field] = maskFn(result[field])
+      result[field] = maskFn(result[field] as string)
     }
   }
   
