@@ -26,7 +26,7 @@
 | FE-012 | P1 | 迁移私有目录业务文档：`.workbuddy/knowledge` → `docs/reference/ai-knowledge`；`.zcode/plans` → `docs/archived/ai-sessions/zcode-plans`（内容逐字节校验后移除原件，保留指针） | 已完成 | 2026-11-16 | 迁移记录见 `docs/records/` |
 | FE-013 | P1 | 治理自检脚本与 pre-commit 钩子 | 已完成 | 2026-11-16 | `scripts/governance/`、`.githooks/pre-commit` |
 | FE-014 | P3 | 规范正文入仓并补工具目录/忽略规则条款 | 已完成 | 2026-11-16 | `docs/specs/project-governance.md`、`AGENTS.md` 0.1/0.3/0.7、`scripts/governance/README.md` |
-| FE-015 | P2 | 治理评审整改（前端项：死指针 1 处、断链 3 条、规范 §9 范围、离线归档条款） | 已完成 | 主控 | 2026-11-16 | `verify-docs.sh` 通过、`check-doc-refs.sh` 0 项 | `docs/records/2026-11-16-governance-alignment-remediation.md` |
+| FE-015 | P2 | 治理评审整改（前端项：死指针 1 处、断链 3 条、规范 §9 范围、离线归档条款） | 已完成 | 2026-11-16 | 验收：`verify-docs.sh` 通过、`check-doc-refs.sh` 0 项；产出：`docs/records/2026-11-16-governance-alignment-remediation.md` |
 | FE-016 | P1 | 许可统一 MIT（`LICENSE` + `package.json` `"license": "MIT"`） | 已完成 | 2026-11-16 | `LICENSE`、`package.json`；验收：`npm run build` 不受影响、两仓许可一致 |
 | FE-017 | P1 | 变更记忆台账 `04-change-memory.md` + 规范 §5.4 强制登记（六字段、append-only） | 已完成 | 2026-11-16 | `docs/reference/ai-knowledge/04-change-memory.md`；验收：提交带 `memory:` 标记（`check-memory-sync.sh` 0 项） |
 | FE-018 | P1 | 台账校验脚本 + `pre-commit`/`commit-msg` 钩子 + 一键预检 `apex-preflight.sh` | 已完成 | 2026-11-16 | `scripts/governance/check-memory-sync.sh`、`.githooks/`、`scripts/dev/apex-preflight.sh`；验收：预检 `OK=16 WARN=1 FAIL=0` |
@@ -35,7 +35,7 @@
 | FE-021 | P1 | 整改 B1：`AGENTS.md` 0.8 + 规范 §5.3 口径 + 知识库维护口径 | 已完成 | 2026-11-16 | `AGENTS.md`、`docs/specs/project-governance.md`、`docs/reference/ai-knowledge/README.md`；验收：附录 A 哈希 `ae5e19db…53a` 不变 |
 | FE-022 | P1 | 整改 B3：新增前端最小 CI（`.github/workflows/ci.yml`，文档门禁 4 脚本 + `npm ci && build`） | 已完成 | 2026-11-16 | `.github/workflows/ci.yml`；验收：YAML 解析通过、本地预演 4 脚本全通过 |
 | FE-023 | P2 | 整改 B5：`.gitignore` 去重为单一私有目录区块（含注释独占一行的补正） | 已完成 | 2026-11-16 | `.gitignore`；验收：`check-ignore` 命中、无未跟踪私有目录 |
-| FE-024 | P1 | 整改 B6：GitHub 分支保护「档 1」 | **已完成** | 2026-11-16 | 转 public 后三支 `PUT /protection` 全部成功（禁强推+禁删除，`master`/`test` 加对话解决）；绕钩子实测服务端拒绝删支/强推。见 `docs/guides/github-branch-protection.md` |
+| FE-024 | P1 | 整改 B6：GitHub 分支保护「档 1」 | 已完成 | 2026-11-16 | 转 public 后三支 `PUT /protection` 全部成功（禁强推+禁删除，`master`/`test` 加对话解决）；绕钩子实测服务端拒绝删支/强推。见 `docs/guides/github-branch-protection.md` |
 
 ## 3. 阻塞与风险登记
 
