@@ -185,7 +185,7 @@
 
 ### 5.3 分支与远端
 
-主线 `main`；改动走短分支后合并，禁止长期分叉。文档治理类改动可在 `main` 小步提交。
+主线 **`master`**（2026-11-16 由 `main` 重命名）；改动走短分支后合并，禁止长期分叉。文档治理类改动可在 `master` 小步提交。远端默认分支需在 GitHub Settings → General → Default branch 设为 `master`。
 
 **远端与离线归档（`origin` = `git@github.com:apex-cloud-service/apex-admin-web.git`，SSH 走 443）**：
 
@@ -193,19 +193,19 @@
    ```bash
    cd /Users/work/apex-admin-web
    ts=$(date +%Y%m%d); mkdir -p /Users/work/backup
-   git archive --format=tar.gz --prefix=apex-admin-web/ -o /Users/work/backup/apex-admin-web-$ts.tar.gz main
-   git bundle create /Users/work/backup/apex-admin-web-$ts.bundle main
+   git archive --format=tar.gz --prefix=apex-admin-web/ -o /Users/work/backup/apex-admin-web-$ts.tar.gz master
+   git bundle create /Users/work/backup/apex-admin-web-$ts.bundle master
    cd /Users/work/backup && shasum -a 256 apex-admin-web-$ts.tar.gz >> SHA256SUMS.txt
    ```
 2. 归档件（tar.gz + bundle）须异地/异盘至少一份；`SHA256SUMS.txt` 用于校验完整性。
-3. 推送纪律：`git push -u origin main`；**禁止 `push -f`**。本机 22 端口被网络阻断，仓库内固定走 443：
+3. 推送纪律：`git push -u origin master`；**禁止 `push -f`**。本机 22 端口被网络阻断，仓库内固定走 443：
    ```bash
    git config core.sshCommand "ssh -o Hostname=ssh.github.com -p 443"
    ssh -T -p 443 git@ssh.github.com      # 期望回 Hi <账号>! You've successfully authenticated...
    ```
    私钥若带口令，先 `ssh-add --apple-use-keychain ~/.ssh/<key>`（非交互环境无法解密带口令私钥）。
-4. 远端若已有另一条历史（如建仓时的 `Initial commit`）：先 `git fetch origin && git ls-tree -r --name-only origin/main` 读清内容，再 `git merge --allow-unrelated-histories origin/main`，冲突保留本地完整版；**不得 force push**。
-5. 「合并到 main」：有远端即「提交 + push」；推送受阻时等价于「在 `main` 上提交 + 生成 bundle 归档」（见 `docs/records/2026-11-16-github-remote-onboarding.md`）。
+4. 远端若已有另一条历史（如建仓时的 `Initial commit`）：先 `git fetch origin && git ls-tree -r --name-only origin/master` 读清内容，再 `git merge --allow-unrelated-histories origin/master`，冲突保留本地完整版；**不得 force push**。
+5. 「合并到 `master`」：有远端即「提交 + push」；推送受阻时等价于「在 `master` 上提交 + 生成 bundle 归档」（见 `docs/records/2026-11-16-github-remote-onboarding.md`）。
 
 ---
 
