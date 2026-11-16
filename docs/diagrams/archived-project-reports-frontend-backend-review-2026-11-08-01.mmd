@@ -1,0 +1,5 @@
+flowchart LR
+    A[前端调用面<br>38 个 api 模块 / 全部视图] --> B["第一跳：开发代理 / 生产反代<br>vite.config.ts + docker/nginx.conf"]
+    B --> C["第二跳：网关路由<br>apex-gateway 11 组路由 + PUBLIC_PATHS 白名单 + /internal 403"]
+    C --> D["第三跳：服务端点<br>auth/system/file/office/workflow/integration/masking/job 8 个运行模块"]
+    D -.契约字段.-> E[分页口径 / DTO 字段名 / 裸数组语义]

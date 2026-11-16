@@ -1,0 +1,114 @@
+classDiagram
+    class Result~T~ {
+        +number code
+        +string msg
+        +T data
+        +string traceId
+    }
+    class PageResponse~T~ {
+        +T[] list
+        +number total
+        +number pageNum
+        +number pageSize
+        +number pages
+        +boolean hasNext
+    }
+
+    class AdminUser {
+        +string id
+        +string nickname
+        +string avatarUrl
+        +string phone
+        +number status
+        +AdminRole[] roles
+    }
+    class AdminRole {
+        +string id
+        +string name
+        +string code
+    }
+    class MenuNode {
+        +number id
+        +number parentId
+        +string menuName
+        +number menuType
+        +string path
+        +string component
+        +string perms
+        +number visible
+        +number status
+        +MenuNode[] children
+    }
+    class DeptNode {
+        +number id
+        +number parentId
+        +string name
+        +number orderNum
+        +string leader
+        +number status
+        +DeptNode[] children
+    }
+
+    class TenantInfo {
+        +number id
+        +string tenantCode
+        +string tenantName
+        +string packageCode
+        +string expireTime
+        +string status
+        +number maxUsers
+        +number maxStorageMb
+        +number version
+    }
+    class TenantPackage {
+        +number id
+        +string packageCode
+        +string packageName
+        +number[] menuIds
+        +string[] permissionCodes
+        +string[] features
+        +number status
+        +number version
+    }
+    class CapabilityInfo {
+        +string code
+        +string name
+        +string center
+        +string component
+        +string[] openScopes
+    }
+
+    class WorkflowInstance {
+        +number id
+        +number definitionId
+        +string processCode
+        +string title
+        +string status
+        +number initiatorId
+        +string businessKey
+        +string currentNodeId
+        +boolean suspended
+    }
+    class WorkflowTask {
+        +number id
+        +number instanceId
+        +string taskName
+        +string status
+        +number assigneeId
+        +string assigneeName
+    }
+    class OfficeBindingResponse {
+        +number id
+        +number userId
+        +string platform
+        +string externalUserId
+        +string status
+        +number version
+    }
+
+    AdminUser "1" o-- "0..*" AdminRole : roles
+    MenuNode "1" --> "0..*" MenuNode : children
+    DeptNode "1" --> "0..*" DeptNode : children
+    TenantInfo ..> TenantPackage : packageCode 引用套餐
+    TenantPackage ..> CapabilityInfo : features 订阅（空集合=未订阅）
+    WorkflowInstance "1" *-- "0..*" WorkflowTask : tasks（实例详情聚合）

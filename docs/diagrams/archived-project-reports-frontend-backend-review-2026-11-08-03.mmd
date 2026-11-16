@@ -1,0 +1,14 @@
+flowchart TB
+    subgraph FE[前端（本仓库）]
+        COMP["NotificationCenter 组件（新）<br>铃铛 + 未读角标 + 通知面板"]
+        HOOK["utils/notification-stream.ts（新）<br>fetch 流式 SSE 客户端"]
+        API["api/notification.ts（新）<br>inbox / unread-count / read / read-all"]
+    end
+    subgraph BE[后端 apex-system]
+        SSE["GET /api/v1/notifications/stream"]
+        REST["/api/v1/notifications/** REST"]
+    end
+    COMP -->|"60s 轮询 + 推送触发刷新"| API
+    COMP --> HOOK
+    HOOK -->|"Authorization + Accept: text/event-stream"| SSE
+    API --> REST

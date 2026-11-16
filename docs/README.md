@@ -16,6 +16,7 @@
 - [总体架构](architecture/overview.md) - 技术栈、分层架构、请求时序、部署架构、质量保障
 - [认证与路由架构](architecture/auth-and-routing.md) - 登录、令牌无感刷新、OAuth2/PKCE、动态路由全流程图
 - [领域模型与状态机图](architecture/domain-and-state-diagrams.md) - 核心领域模型类图、工作流实例/租户生命周期/办公绑定状态机、我的事项与数据总览聚合时序图
+- [图表资产（Mermaid 源 + SVG）](diagrams/README.md) - 27 张图的 `.mmd` 源与同名 `.svg` 导出件、重导出命令与语法注意点
 
 ### API 文档
 
@@ -188,6 +189,7 @@ apex-admin-web/
 | `docs/records/` | 变更、改造、缺陷留痕 | [records/README](records/README.md) |
 | `docs/reviews/` | 方案评审、代码评审记录 | [reviews/README](reviews/README.md) |
 | `docs/notes/` | 调研、对接备忘、风险纪要 | [notes/README](notes/README.md) |
+| `docs/diagrams/` | 图表资产（`.mmd` 源 + 同名 `.svg`） | [diagrams/README](diagrams/README.md) |
 
 ### 规范正文（完整、可独立阅读）
 

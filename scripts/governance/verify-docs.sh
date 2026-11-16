@@ -47,7 +47,7 @@ for d in .workbuddy/knowledge .zcode/plans .trae/documents .qoder .codex; do
   if [ -n "$bad" ]; then warn "私有目录疑似存放业务正文：$(echo "$bad" | tr '\n' ' ')"; else pass "$d 边界合规"; fi
 done
 
-echo "== 5. 文档规模快照 =="
+echo "== 5. 文档规模快照（含独立图表资产） =="
 TOTAL=$(find docs -type f | wc -l | tr -d ' ')
 MD=$(find docs -type f -name "*.md" | wc -l | tr -d ' ')
 SVG=$(find docs -type f -name "*.svg" | wc -l | tr -d ' ')
@@ -68,6 +68,14 @@ if [ "${REFS:-0}" -gt 0 ]; then
   warn "check-doc-refs 发现 ${REFS} 项（明细见 bash scripts/governance/check-doc-refs.sh）"
 else
   pass "活文档无私有路径残留、无断链"
+fi
+
+echo "== 9. 图表资产配对（.mmd ↔ 同名 .svg）=="
+if [ -f scripts/governance/check-diagram-assets.sh ]; then
+  out=$(bash scripts/governance/check-diagram-assets.sh 2>&1 | tail -2)
+  if echo "$out" | grep -q "缺失 0"; then pass "图表配对完整（${out//$'\n'/ }）"; else warn "图表配对有缺口：$(echo "$out" | tr '\n' ' ')"; fi
+else
+  warn "缺少 scripts/governance/check-diagram-assets.sh"
 fi
 
 echo

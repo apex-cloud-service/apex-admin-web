@@ -1,0 +1,12 @@
+stateDiagram-v2
+    [*] --> ACTIVE : createTenant（套餐必选，可同时创建管理员）
+
+    ACTIVE --> DISABLED : disable
+    DISABLED --> ACTIVE : enable
+    ACTIVE --> FROZEN : freeze
+    FROZEN --> ACTIVE : unfreeze
+    ACTIVE --> DEACTIVATED : deactivate
+    DEACTIVATED --> ARCHIVED : archive
+
+    DEACTIVATED --> [*]
+    ARCHIVED --> [*]

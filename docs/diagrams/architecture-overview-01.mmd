@@ -1,0 +1,33 @@
+flowchart TB
+    subgraph Browser["浏览器"]
+        SPA["Apex Admin Web SPA<br/>(Vue 3 + Vite 构建产物)"]
+    end
+
+    subgraph Gateway["开发代理 (Vite) / 生产反代 (Nginx)"]
+        P0["WS 升级 = /api/v1/messages/ws<br/>SSE = /api/v1/notifications/stream"]
+        P1["/api/**"]
+        P2["/admin-api/**"]
+        P3["/oauth2/authorize、/oauth2/token、<br/>/oauth2/consent（仅 POST）"]
+        P4["/auth/v1/**、/auth/v2/**"]
+        P5["/integration/v1/**"]
+    end
+
+    subgraph Backend["Apex Scaffold 后端 (Spring Boot 3 WebFlux, :8080)"]
+        B1["业务接口 /api/v1/**<br/>认证 · 当前用户 · 文件 · Office 接入 · 站内信 · 通知中心"]
+        B2["管理接口 /admin-api/v1/**<br/>系统管理 · 监控 · 日志 · SSO · 代码生成器 · 认证配置 · 消息模板 · 组织同步"]
+        B3["办公业务 /api/office/**<br/>消息 · 审批 · 日历 · 文档操作"]
+        B4["工作流高级操作 /api/workflow/**<br/>回退 · 转办 · 委派 · 挂起 · 恢复"]
+        B5["平台与新增域<br/>/api/v2/** 租户 · 套餐 · 能力 · 总览 · 工作流定义 · 运维健康 · 会议室/同步向导/统一通知 · 文件分享<br/>/api/mfa/** · /api/ip-access-control/** · /api/v1/auth/audit-logs/**"]
+        B6["集成与物联网 /integration/v1/**<br/>连接器 · 凭据 · IoT 设备/规则（/internal/v1/** 内部端点网关 403）"]
+        B7["认证中心 /auth/v1|v2/**<br/>MFA 验证 · 在线会话 · 密码找回"]
+        B8["全文搜索服务"]
+        B9["第三方: 飞书 / 钉钉 / 企微 · OAuth2 提供商"]
+    end
+
+    SPA --> P0 & P1 & P2 & P3 & P4 & P5
+    P0 --> B1
+    P1 --> B1 & B3 & B4 & B5 & B9
+    P2 --> B2 & B5 & B8
+    P3 --> B9
+    P4 --> B7
+    P5 --> B6

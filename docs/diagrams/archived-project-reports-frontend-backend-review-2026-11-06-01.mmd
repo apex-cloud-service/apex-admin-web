@@ -1,0 +1,38 @@
+flowchart LR
+    subgraph FE["apex-admin-web 前端 API 调用面（33 个业务模块）"]
+        F1["认证 / 会话 / 安全<br/>auth · session · mfa · ip-access-control<br/>auth-audit · auth-config · sso · password-recovery · oauth2"]
+        F2["system 管理域<br/>user · system · database · generator<br/>monitor · log · search · file(通用上传)"]
+        F3["v2 平台域<br/>tenant · tenant-package · capability<br/>overview · operations · open-app"]
+        F4["file-service 域<br/>file(分片) · file-share · document · chart"]
+        F5["office 域<br/>message · notify · office-platform<br/>office-approval · calendar · document · sync-wizard · meeting-room"]
+        F6["workflow 域 workflow"]
+        F7["integration 域 integration · iot"]
+        F8["masking"]
+    end
+    subgraph GW["apex-gateway 路由（按声明顺序匹配）"]
+        R1["auth-domain<br/>/auth/v1|v2/** · /oauth2/** · /.well-known/**<br/>/api/v1/mfa/** · /api/mfa/** · /api/ip-access-control/**<br/>/api/v1/auth/configs/** · /api/v1/auth/audit-logs/**"]
+        R2["office-message(ws+http)<br/>/api/v1/messages·/**"]
+        R3["office-domain<br/>/api/v1|v2/office/** · /api/office/**<br/>/admin-api/v1/office|org/** · /admin-api/v1/message-templates"]
+        R4["file-domain<br/>/api/v1/file|files/** · /api/v1|admin-api/v1/documents/** · /admin-api/v1/charts/** · /api/v2/files|file-shares/**"]
+        R5["workflow-domain<br/>/api/v1/workflows/** · /api/v2/workflow-definitions/**<br/>/api/workflow/** · /admin-api/v1/workflows/**"]
+        R6["integration-domain<br/>/integration/v1/**"]
+        R7["masking-domain · job-domain"]
+        R8["system-domain 兜底<br/>/api/v1/** · /api/v2 显式枚举 · /admin-api/v1/**"]
+    end
+    AUTH["apex-auth-service"]
+    OFFICE["apex-office-service"]
+    FILE["apex-file-service"]
+    WF["apex-workflow-service"]
+    INT["apex-integration-service"]
+    SYSTEM["apex-system-service"]
+    F1 --> R1 --> AUTH
+    F5 --> R2 --> OFFICE
+    F5 --> R3 --> OFFICE
+    F4 --> R4 --> FILE
+    F6 --> R5 --> WF
+    F7 --> R6 --> INT
+    F8 --> R7
+    F2 --> R8
+    F3 --> R8 --> SYSTEM
+    R2 -. "system 消息读面被截胡(§7.1)" .-> SYSTEM
+    R8 -. "auth 只读 open-app 路由落此 404(§7.2)" .-> SYSTEM

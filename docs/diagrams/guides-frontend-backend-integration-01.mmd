@@ -1,0 +1,13 @@
+flowchart TD
+    A[填写数据库配置] --> B{表单校验}
+    B -->|失败| C[显示字段校验信息]
+    B -->|通过| D{选择操作}
+    D --> E[POST database/test]
+    D --> F[POST database/generate-config]
+    E --> G{success}
+    G -->|true| H[显示成功与版本]
+    G -->|false| I[显示 message]
+    F --> J[打开配置弹窗]
+    J --> K[YAML / env / Compose Tab]
+    A -.页面挂载.-> L[GET database/current]
+    L --> M[展示当前数据库信息]

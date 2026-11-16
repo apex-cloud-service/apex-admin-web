@@ -1,0 +1,9 @@
+flowchart LR
+    U[用户浏览器] -->|GET / 及静态资源| N[Nginx / 静态服务器<br/>托管 dist]
+    U -->|/api/** 业务接口| N
+    U -->|/admin-api/** 管理接口| N
+    U -->|/oauth2/authorize 与 /oauth2/token| N
+    U <.->|WS 升级 /api/v1/messages/ws| N
+    N -->|回退 index.html| U
+    N -->|proxy_pass| B[Apex Scaffold 后端 :8080<br/>健康检查 /api/v1/health]
+    N -->|/js/ /css/ /assets/ 等 30d immutable| U

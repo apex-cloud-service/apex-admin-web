@@ -1,0 +1,20 @@
+sequenceDiagram
+    autonumber
+    participant V as dashboard/index.vue
+    participant API as api/overview.ts
+    participant B as 后端聚合接口
+
+    V->>API: getCrossDomainOverview()
+    API->>B: GET /api/v2/overview（租户取可信上下文，权限 system:monitor:view）
+
+    alt 聚合成功
+        B-->>V: sources{file, workflow, integration}
+        V->>V: FIELD_LABELS 映射字段中文名（未登记 key 回退原字段名）
+        V->>V: 字节字段 formatBytes；数组值显示「N 项」；嵌套对象不展示
+        V->>V: source.result.status=UP → 「可用」，否则显示「降级」
+    else 整体失败
+        B-->>V: 请求错误
+        V->>V: 区块级失败态 + 「重试」按钮（重新 loadCrossOverview）
+    end
+
+    Note over V,B: 单源降级返回 sources.*.status=DEGRADED 属正常展示（对应内部端点不可达），不作为页面错误

@@ -1,0 +1,10 @@
+stateDiagram-v2
+    [*] --> PENDING : 平台授权登录（后端生成绑定申请）
+
+    PENDING --> APPROVED : review(approved=true, version)
+    PENDING --> REJECTED : review(approved=false, version)
+    APPROVED --> REVOKED : DELETE /bindings/{id}/unbind（version 乐观锁）
+
+    APPROVED --> [*]
+    REJECTED --> [*]
+    REVOKED --> [*]

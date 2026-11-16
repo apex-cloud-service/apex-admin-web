@@ -45,17 +45,9 @@
 
 ## 2. 架构与请求路径
 
-```mermaid
-flowchart LR
-    U[用户浏览器] -->|GET / 及静态资源| N[Nginx / 静态服务器<br/>托管 dist]
-    U -->|/api/** 业务接口| N
-    U -->|/admin-api/** 管理接口| N
-    U -->|/oauth2/authorize 与 /oauth2/token| N
-    U <.->|WS 升级 /api/v1/messages/ws| N
-    N -->|回退 index.html| U
-    N -->|proxy_pass| B[Apex Scaffold 后端 :8080<br/>健康检查 /api/v1/health]
-    N -->|/js/ /css/ /assets/ 等 30d immutable| U
-```
+![2. 架构与请求路径](../diagrams/guides-deployment-01.svg)
+
+> 图源：[guides-deployment-01.mmd](../diagrams/guides-deployment-01.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 - **前端页面/静态资源**：由静态服务器直接返回 `dist/` 内容，走同域相对路径。本仓库的 Nginx 配置对实际产物目录（`js/`、`css/`、`images/`、`fonts/`、`media/`、`assets/`）统一设置 30 天 `immutable` 缓存；其他静态服务器的缓存策略需单独配置。
 - **前端动态数据**：浏览器请求 `/api/*`（业务）、`/admin-api/*`（管理）以及 OAuth2 授权码登录的 `/oauth2/authorize`、`/oauth2/token`，由 Nginx 反向代理到后端。
@@ -365,18 +357,9 @@ apex-admin-web/
 
 ### 7.2 镜像设计
 
-```mermaid
-flowchart LR
-    SRC[源码 + .env.production] --> B1[构建阶段 node:18-alpine<br/>npm install / npm run build]
-    B1 --> DIST[dist]
-    DIST --> R1[运行阶段 nginx:1.27-alpine]
-    TPL[docker/nginx.conf 模板<br/>含 ${API_PROXY_PASS}] --> R1
-    ENV1[运行期环境变量<br/>API_PROXY_PASS / TZ] --> EP[docker-entrypoint.sh<br/>envsubst 渲染]
-    EP --> CONF[/etc/nginx/conf.d/default.conf]
-    R1 --> CONF
-    CONF --> UP[后端 upstream]
-    R1 --> HC[HEALTHCHECK<br/>wget http://127.0.0.1/]
-```
+![7.2 镜像设计](../diagrams/guides-deployment-02.svg)
+
+> 图源：[guides-deployment-02.mmd](../diagrams/guides-deployment-02.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 - **构建阶段** `node:18-alpine`：`npm install` → `npm run build`（含 vue-tsc 类型校验），
   产物 `dist/`；`VITE_API_BASE_URL` 通过 `--build-arg` 注入（默认空 = 同域相对路径）。

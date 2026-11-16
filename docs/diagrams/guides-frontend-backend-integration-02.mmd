@@ -1,0 +1,15 @@
+flowchart TD
+    A[进入数据源管理 Tab] --> B[GET datasources?pageNum&pageSize]
+    B --> C[读取 list / total]
+    C --> D[展示分页列表]
+    D --> E{用户操作}
+    E --> F[新增或编辑]
+    F --> G[填写 DataSourcePayload，密码必填]
+    G --> H[POST 或 PUT datasources]
+    H --> I[刷新列表]
+    E --> J[确认删除]
+    J -->|取消| D
+    J -->|确认| K[DELETE datasources/id]
+    K --> I
+    E --> L[GET datasources/id/metrics]
+    L --> M[展示连接池指标]

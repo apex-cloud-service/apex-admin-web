@@ -1,0 +1,19 @@
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant LP as 登录页
+    participant OA as 标准 OAuth2
+    participant OC as /oauth2/callback
+    participant OI as 办公平台接口能力
+    participant B as 后端
+    participant P as 平台(飞书/钉钉/企微)
+
+    U->>LP: 点击社交登录
+    LP->>OA: 构建授权 URL（state + PKCE）
+    OA->>P: 跳转标准 OAuth2 授权页
+    P-->>OC: 回调 code + state
+    OC->>B: POST /oauth2/token
+    B-->>OC: 会话令牌
+    OC->>LP: 保存会话并进入工作台
+    Note over OI,B: /api/v1/office/status、/api/v1/office/login<br/>及 /api/v1/office/callback 为独立办公平台接口能力
+    Note over OI,B: /office/callback 由独立公开回调页承接，<br/>不属于当前登录页社交入口链路

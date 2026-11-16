@@ -25,127 +25,25 @@
 
 前端为独立 SPA 工程，与后端 Apex Scaffold（Spring Boot 3 WebFlux）前后端分离，通过网关/代理按前缀分流。
 
-```mermaid
-flowchart TB
-    subgraph Browser["浏览器"]
-        SPA["Apex Admin Web SPA<br/>(Vue 3 + Vite 构建产物)"]
-    end
+![2. 系统总体架构](../diagrams/architecture-overview-01.svg)
 
-    subgraph Gateway["开发代理 (Vite) / 生产反代 (Nginx)"]
-        P0["WS 升级 = /api/v1/messages/ws<br/>SSE = /api/v1/notifications/stream"]
-        P1["/api/**"]
-        P2["/admin-api/**"]
-        P3["/oauth2/authorize、/oauth2/token、<br/>/oauth2/consent（仅 POST）"]
-        P4["/auth/v1/**、/auth/v2/**"]
-        P5["/integration/v1/**"]
-    end
-
-    subgraph Backend["Apex Scaffold 后端 (Spring Boot 3 WebFlux, :8080)"]
-        B1["业务接口 /api/v1/**<br/>认证 · 当前用户 · 文件 · Office 接入 · 站内信 · 通知中心"]
-        B2["管理接口 /admin-api/v1/**<br/>系统管理 · 监控 · 日志 · SSO · 代码生成器 · 认证配置 · 消息模板 · 组织同步"]
-        B3["办公业务 /api/office/**<br/>消息 · 审批 · 日历 · 文档操作"]
-        B4["工作流高级操作 /api/workflow/**<br/>回退 · 转办 · 委派 · 挂起 · 恢复"]
-        B5["平台与新增域<br/>/api/v2/** 租户 · 套餐 · 能力 · 总览 · 工作流定义 · 运维健康 · 会议室/同步向导/统一通知 · 文件分享<br/>/api/mfa/** · /api/ip-access-control/** · /api/v1/auth/audit-logs/**"]
-        B6["集成与物联网 /integration/v1/**<br/>连接器 · 凭据 · IoT 设备/规则（/internal/v1/** 内部端点网关 403）"]
-        B7["认证中心 /auth/v1|v2/**<br/>MFA 验证 · 在线会话 · 密码找回"]
-        B8["全文搜索服务"]
-        B9["第三方: 飞书 / 钉钉 / 企微 · OAuth2 提供商"]
-    end
-
-    SPA --> P0 & P1 & P2 & P3 & P4 & P5
-    P0 --> B1
-    P1 --> B1 & B3 & B4 & B5 & B9
-    P2 --> B2 & B5 & B8
-    P3 --> B9
-    P4 --> B7
-    P5 --> B6
-```
+> 图源：[architecture-overview-01.mmd](../diagrams/architecture-overview-01.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 站内信 WebSocket 与通知 SSE 都需要专用代理：Vite 开发代理 `/api` 已设 `ws: true`；Nginx 必须为 `= /api/v1/messages/ws` 单独配置 `Upgrade`/`Connection`（置于 `/api/` 之前），为 `= /api/v1/notifications/stream` 配置 SSE 精确匹配（buffering off），否则实时推送分别退化为 60 秒轮询兜底或被响应超时掐断。详见 [部署指南](../guides/deployment.md) §6.2/§6.3。
 
 ## 3. 前端分层架构
 
-```mermaid
-flowchart TB
-    subgraph Views["视图层 src/views"]
-        V1["system / monitor / data / office / workflow<br/>integration / iot<br/>(动态路由，VIEW_REGISTRY 解析)"]
-        V2["login / dashboard / oauth2 / office-callback<br/>(静态路由)"]
-    end
+![3. 前端分层架构](../diagrams/architecture-overview-02.svg)
 
-    subgraph Layout["布局与通用组件"]
-        L1["layouts/AdminLayout.vue<br/>侧边栏 · 顶栏 · 面包屑 · 主题切换 · 权限码告警"]
-        L2["components/<br/>Pagination · FileUpload(Enhanced)<br/>GlobalSearch · NotificationCenter · EmptyState"]
-    end
-
-    subgraph State["状态层"]
-        S1["stores/user.ts 用户会话"]
-        S2["stores/permission.ts 按钮权限"]
-        S3["stores/app.ts UI 偏好"]
-        S4["stores/office.ts 办公平台状态"]
-    end
-
-    subgraph Compose["组合式函数 src/composables"]
-        C1["useCrud · useTableConfig · useFormDraft · useBreakpoint<br/>（已实现，当前无页面调用点）<br/>useAgenda（工作台我的事项，AgendaPanel 调用）"]
-    end
-
-    subgraph Api["接口层 src/api"]
-        A1["按业务域拆分的类型化模块<br/>auth/user/system/monitor/office/workflow<br/>tenant/mfa/operations/masking/message/..."]
-    end
-
-    subgraph Infra["基础设施"]
-        I1["utils/request.ts<br/>Axios 封装 + Token 刷新"]
-        I2["utils/auth.ts 会话存取"]
-        I3["types/ 与后端 DTO 对齐"]
-        I4["settings.ts 常量收敛"]
-        I5["directives/permission.ts<br/>v-permission 指令"]
-    end
-
-    V1 & V2 --> L2
-    V1 & V2 --> S1 & S2 & S3 & S4
-    V1 & V2 --> C1
-    V1 & V2 & L2 & C1 --> A1
-    A1 --> I1
-    I1 --> I2 & I4
-    S1 & S2 --> I2
-    I1 --> I3
-```
+> 图源：[architecture-overview-02.mmd](../diagrams/architecture-overview-02.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 ## 4. 请求处理时序
 
 所有接口调用统一经过 [src/utils/request.ts](../../src/utils/request.ts)，禁止裸写 axios。
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant View as 页面/组件
-    participant Api as api 层函数
-    participant Req as utils/request.ts
-    participant BE as 后端服务
+![4. 请求处理时序](../diagrams/architecture-overview-03.svg)
 
-    View->>Api: 调用类型化函数（如 listMenuTree()）
-    Api->>Req: get/post/put/del(url, params)
-    Req->>Req: 请求拦截：注入 Authorization: Bearer <token>
-    Req->>BE: 发起 HTTP 请求（超时 30s）
-    BE-->>Req: HTTP 响应（包装响应、裸数组或文件数据）
-
-    alt HTTP 401 且满足自动刷新条件
-        Req->>BE: 共享刷新请求；成功后原请求最多重放一次
-        BE-->>Req: 刷新结果
-        Req-->>Api: 返回重放结果或抛出对应 ApiError
-    else HTTP / 网络 / 超时错误
-        Req--xApi: 转换并抛出 ApiError
-    else 响应含数字 code
-        alt code === 0
-            Req-->>Api: 解包返回 data
-            Api-->>View: Promise<T> 业务数据
-        else code !== 0
-            Req--xApi: 抛出 ApiError(message, code, traceId)
-        end
-    else 响应不含数字 code
-        Req-->>Api: 原样返回 response.data
-        Api-->>View: 裸数组、Blob 或其他原始响应
-    end
-```
+> 图源：[architecture-overview-03.mmd](../diagrams/architecture-overview-03.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 补充规则（见 request.ts 实现）：
 
@@ -171,26 +69,9 @@ sequenceDiagram
 
 三种形态，详细操作见 [部署指南](../guides/deployment.md)。
 
-```mermaid
-flowchart LR
-    subgraph Dev["开发环境 npm run dev (:5173)"]
-        V["Vite Dev Server<br/>host 0.0.0.0"] -->|proxy /api /admin-api /auth/v1\|v2 /integration/v1 /oauth2| D["VITE_API_PROXY_TARGET<br/>(默认 http://127.0.0.1:8080)"]
-    end
+![6. 部署架构](../diagrams/architecture-overview-04.svg)
 
-    subgraph Prod["生产环境（同域部署，推荐）"]
-        U["用户浏览器"] --> N["Nginx (前端静态资源 + 反代)"]
-        N -->|/ try_files → index.html| SPA["SPA 静态产物"]
-        N -->|/api/ /admin-api/ /auth/v1\|v2/ /integration/v1/ ^/oauth2/(authorize\|token)<br/>= /oauth2/consent 仅 POST| BE2["API_PROXY_PASS<br/>(默认 http://apex-scaffold:8080)"]
-        N -->|= /api/v1/messages/ws<br/>Upgrade + 3600s| BE2
-        N -->|= /api/v1/notifications/stream<br/>SSE buffering off| BE2
-        N -->|/assets/ 等产物目录 30 天 immutable| U
-    end
-
-    subgraph Docker["Docker 部署"]
-        DC["docker-compose.yml"] --> IMG["apex-admin-web 镜像<br/>两阶段: node:18 构建产物 → nginx:1.27 运行"]
-        IMG --> NET["外部网络 apex-scaffold_apex-network<br/>按服务名访问后端"]
-    end
-```
+> 图源：[architecture-overview-04.mmd](../diagrams/architecture-overview-04.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 要点：
 

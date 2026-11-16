@@ -537,16 +537,9 @@
 
 文档页提供删除清理记录与手动刷新/重试。`PENDING/PROCESSING/COMPLETED/FAILED` 分别表示待清理、处理中、最近一轮清理已确认、待重试；COMPLETED 不表示历史对象已物理擦除或永久无晚到索引任务。后台凭证保留以便定向复核。历史未知存储位置不自动猜测，具体恢复与租户范围配置以后端为准。
 
-```mermaid
-flowchart LR
-    A[确认删除] --> B[持久化删除意图并隐藏文档]
-    B --> C[后台清理任务]
-    C --> D{索引与对象清理确认?}
-    D -->|成功| E[COMPLETED 保留凭证]
-    D -->|失败或未知| F[FAILED 安全错误摘要]
-    F --> G[后台或手动重试]
-    G --> C
-```
+![2.30 知识库 [src/api/knowledge.ts](../../src/api/knowledge.ts)](../diagrams/api-README-01.svg)
+
+> 图源：[api-README-01.mmd](../diagrams/api-README-01.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 ### 2.31 自动生成接口
 

@@ -1,0 +1,24 @@
+sequenceDiagram
+    actor U as 操作用户
+    participant V as 数据库配置页
+    participant R as request.ts
+    participant B as 后端接口
+
+    U->>V: 打开数据库配置页
+    V->>R: getCurrentDatabaseInfo()
+    R->>B: GET /admin-api/v1/database/current
+    B-->>R: 当前数据库信息
+    R-->>V: CurrentDatabaseInfo
+
+    U->>V: 打开数据源管理 Tab
+    V->>R: listDataSources(pageNum, pageSize)
+    R->>B: GET /admin-api/v1/database/datasources
+    B-->>R: PageResponse<DataSourceInfo>
+    R-->>V: list / total
+
+    U->>V: 新增、编辑或删除数据源
+    V->>R: create / update / delete
+    R->>B: 对应 HTTP 请求
+    B-->>R: 业务结果
+    R-->>V: 成功或错误
+    V->>R: 重新查询数据源列表

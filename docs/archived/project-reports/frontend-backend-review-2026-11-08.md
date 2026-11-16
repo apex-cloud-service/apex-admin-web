@@ -20,13 +20,9 @@
 
 本轮采用**三跳核对**，比上轮多覆盖一跳「本地代理链」：
 
-```mermaid
-flowchart LR
-    A[前端调用面<br>38 个 api 模块 / 全部视图] --> B["第一跳：开发代理 / 生产反代<br>vite.config.ts + docker/nginx.conf"]
-    B --> C["第二跳：网关路由<br>apex-gateway 11 组路由 + PUBLIC_PATHS 白名单 + /internal 403"]
-    C --> D["第三跳：服务端点<br>auth/system/file/office/workflow/integration/masking/job 8 个运行模块"]
-    D -.契约字段.-> E[分页口径 / DTO 字段名 / 裸数组语义]
-```
+![2. 评审方法与范围](../diagrams/archived-project-reports-frontend-backend-review-2026-11-08-01.svg)
+
+> 图源：[archived-project-reports-frontend-backend-review-2026-11-08-01.mmd](../diagrams/archived-project-reports-frontend-backend-review-2026-11-08-01.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 - 第一跳为本轮新增：上轮核对到网关为止，未发现「vite/nginx 未反代 `/auth`、`/integration` 前缀」这类本地断点。
 - 核对材料：`src/api/*.ts` 全量 38 个文件（386 个导出函数）、`VIEW_REGISTRY` 47 键、网关三份配置源（application.yml / application-prod.yml / Nacos yaml）与契约测试、后端 8 个运行模块的 RouterFunction 清单、菜单/权限种子迁移 V85–V89。
@@ -69,13 +65,9 @@ flowchart LR
 
 ### 5.1 站内信模板编辑/删除 404（后端网关死角）
 
-```mermaid
-flowchart LR
-    FE["views/office/message 模板 Tab<br>PUT/DELETE /admin-api/v1/message-templates/{id}"] --> GW{网关}
-    GW -->|"谓词仅含精确路径<br>/admin-api/v1/message-templates"| OFFICE[apex-office-service<br>有实现 ✓]
-    GW -->|"/{id} 子路径未匹配<br>落入 system 兜底"| SYS[apex-system<br>无 message-template 路由 → 404 ✗]
-    style SYS stroke:#c0392b
-```
+![5.1 站内信模板编辑/删除 404（后端网关死角）](../diagrams/archived-project-reports-frontend-backend-review-2026-11-08-02.svg)
+
+> 图源：[archived-project-reports-frontend-backend-review-2026-11-08-02.mmd](../diagrams/archived-project-reports-frontend-backend-review-2026-11-08-02.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 - 根因：office-domain 谓词只登记了模板**列表/创建**两个裸路径，详情子路径（`GET /{templateCode}`、`PUT/DELETE /{templateId}`）落入 system-domain 兜底，而 11-07 `06c84f3f` 已把 office 能力从 system 收口移走，兜底目标不再有对应路由。
 - 前端影响：`views/office/message` 模板 Tab 的编辑与删除必然失败（列表/创建不受影响）。
@@ -158,22 +150,9 @@ API 调用失败分支的 `ElMessage.error(...)` 统一为 `showError(error, 默
 
 ### 9.1 前端实现
 
-```mermaid
-flowchart TB
-    subgraph FE[前端（本仓库）]
-        COMP["NotificationCenter 组件（新）<br>铃铛 + 未读角标 + 通知面板"]
-        HOOK["utils/notification-stream.ts（新）<br>fetch 流式 SSE 客户端"]
-        API["api/notification.ts（新）<br>inbox / unread-count / read / read-all"]
-    end
-    subgraph BE[后端 apex-system]
-        SSE["GET /api/v1/notifications/stream"]
-        REST["/api/v1/notifications/** REST"]
-    end
-    COMP -->|"60s 轮询 + 推送触发刷新"| API
-    COMP --> HOOK
-    HOOK -->|"Authorization + Accept: text/event-stream"| SSE
-    API --> REST
-```
+![9.1 前端实现](../diagrams/archived-project-reports-frontend-backend-review-2026-11-08-03.svg)
+
+> 图源：[archived-project-reports-frontend-backend-review-2026-11-08-03.mmd](../diagrams/archived-project-reports-frontend-backend-review-2026-11-08-03.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 - **API 模块** `src/api/notification.ts`：inbox（page/size + PageResponse）、unread-count、单条/全部已读四个 REST 端点；stream 不经 Axios 封装。
 - **SSE 客户端** `src/utils/notification-stream.ts`：**fetch + ReadableStream 自实现 SSE 分帧**（网关 `JwtSignatureFilter` 仅认 Authorization 头，原生 EventSource 无法自定义请求头）；解析器按 SSE 规范处理 event/data/注释行（心跳）与跨 chunk 缓冲；断线 5s→30s 退避重连（与站内信 WS 口径一致）；最后一个订阅者退订时 AbortController 中止。**关键契约**：请求须携带 `Accept: text/event-stream`——后端 `GlobalResponseTimeoutWebFilter` 按此头豁免 30s 全局响应超时，缺失时连接会在 30s 被服务端掐断。

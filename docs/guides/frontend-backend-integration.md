@@ -309,70 +309,21 @@ interface DataSourcePayload {
 
 ### 7.1 配置采集流程
 
-```mermaid
-flowchart TD
-    A[填写数据库配置] --> B{表单校验}
-    B -->|失败| C[显示字段校验信息]
-    B -->|通过| D{选择操作}
-    D --> E[POST database/test]
-    D --> F[POST database/generate-config]
-    E --> G{success}
-    G -->|true| H[显示成功与版本]
-    G -->|false| I[显示 message]
-    F --> J[打开配置弹窗]
-    J --> K[YAML / env / Compose Tab]
-    A -.页面挂载.-> L[GET database/current]
-    L --> M[展示当前数据库信息]
-```
+![7.1 配置采集流程](../diagrams/guides-frontend-backend-integration-01.svg)
+
+> 图源：[guides-frontend-backend-integration-01.mmd](../diagrams/guides-frontend-backend-integration-01.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 ### 7.2 数据源管理流程
 
-```mermaid
-flowchart TD
-    A[进入数据源管理 Tab] --> B[GET datasources?pageNum&pageSize]
-    B --> C[读取 list / total]
-    C --> D[展示分页列表]
-    D --> E{用户操作}
-    E --> F[新增或编辑]
-    F --> G[填写 DataSourcePayload，密码必填]
-    G --> H[POST 或 PUT datasources]
-    H --> I[刷新列表]
-    E --> J[确认删除]
-    J -->|取消| D
-    J -->|确认| K[DELETE datasources/id]
-    K --> I
-    E --> L[GET datasources/id/metrics]
-    L --> M[展示连接池指标]
-```
+![7.2 数据源管理流程](../diagrams/guides-frontend-backend-integration-02.svg)
+
+> 图源：[guides-frontend-backend-integration-02.mmd](../diagrams/guides-frontend-backend-integration-02.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 ### 7.3 页面与接口时序
 
-```mermaid
-sequenceDiagram
-    actor U as 操作用户
-    participant V as 数据库配置页
-    participant R as request.ts
-    participant B as 后端接口
+![7.3 页面与接口时序](../diagrams/guides-frontend-backend-integration-03.svg)
 
-    U->>V: 打开数据库配置页
-    V->>R: getCurrentDatabaseInfo()
-    R->>B: GET /admin-api/v1/database/current
-    B-->>R: 当前数据库信息
-    R-->>V: CurrentDatabaseInfo
-
-    U->>V: 打开数据源管理 Tab
-    V->>R: listDataSources(pageNum, pageSize)
-    R->>B: GET /admin-api/v1/database/datasources
-    B-->>R: PageResponse<DataSourceInfo>
-    R-->>V: list / total
-
-    U->>V: 新增、编辑或删除数据源
-    V->>R: create / update / delete
-    R->>B: 对应 HTTP 请求
-    B-->>R: 业务结果
-    R-->>V: 成功或错误
-    V->>R: 重新查询数据源列表
-```
+> 图源：[guides-frontend-backend-integration-03.mmd](../diagrams/guides-frontend-backend-integration-03.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 ## 8. 错误处理与安全边界
 

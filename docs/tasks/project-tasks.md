@@ -35,7 +35,7 @@
 | FE-002 | P2 | 契约映射表核对：`03-contract-map.md` 中的后端端点与 `docs/api/` 逐条对照，补 `page/size` 与 `pageNum/pageSize` 口径标注 | 已完成 | 2026-11-16 | `03-contract-map.md` 增 §2.1 分页口径逐文件对照 + §5 与 `docs/api/README.md` 核对记录（含 1 处按源码更正：办公审批为 `list/total`） |
 | FE-003 | P2 | E2E 覆盖扩展：现有 4 个 spec（auth / dynamic-menu / token-refresh）之外，补工作流、租户、办公审批主链路 | 已完成 | 2026-11-16 | 新增 `e2e/workflow.spec.ts`、`tenant.spec.ts`、`office-approval.spec.ts`（helpers 增 MENUS_FULL/MENUS_WITH_TENANT）；并行与串行均 **12 passed**（config 放宽 expect 15s + retries 1） |
 | FE-004 | P3 | 孤儿页面盘点：75 个 `.vue` 中未在 `src/router/dynamic.ts#VIEW_REGISTRY` 注册的页面清单化 | 已完成 | 2026-11-16 | `docs/notes/2026-11-16-orphan-views.md`：66 页面中 5 未注册（均为子组件）；未接线页 `PlatformSelector.vue` 已删除（0 引用、git 可恢复） |
-| FE-005 | P3 | `any` 收敛：统计业务代码中 `any` 使用点，分批替换为显式类型 | 已完成 | 2026-11-16 | `src/mock/index.ts` 增 `MockRequestOptions`（13 处 `any` 清零）、`src/utils/xss-protection.ts` 3 处改 `unknown`；全仓 `: any` 51 → 29（两批）；`npm run build` 通过 |
+| FE-005 | P3 | `any` 收敛：统计业务代码中 `any` 使用点，分批替换为显式类型 | 已完成 | 2026-11-16 | `src/mock/index.ts` 增 `MockRequestOptions`（13 处 `any` 清零）、`src/utils/xss-protection.ts` 3 处改 `unknown`；全仓 `: any` 51 → **0**（三批）；每批 `npm run build` 通过 |
 | FE-006 | P3 | AI 私有目录指针桩清理：`docs` 迁移完成后，`.workbuddy/knowledge`、`.zcode/plans` 中的指针文件在无引用时可移除 | 已完成 | 2026-11-16 | 移除私有目录 2 个指针桩（`.workbuddy/knowledge`、`.zcode/plans`）；全仓无指向私有目录的链接 |
 | FE-007 | P3 | 文档图表资产体检：确认 `docs/architecture` 中的时序图/状态机图源文件与导出件成对存在 | 已完成 | 2026-11-16 | `docs/notes/2026-11-16-chart-assets.md`：docs 内 0 个 `.mmd`/`.svg`，27 处 Mermaid 内嵌，无孤立资产 |
 

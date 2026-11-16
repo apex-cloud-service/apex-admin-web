@@ -1,0 +1,15 @@
+stateDiagram-v2
+    [*] --> RUNNING : startWorkflowInstance（businessKey 必填，固定 RUNNING）
+
+    RUNNING --> SUSPENDED : suspend（原因必填）
+    SUSPENDED --> RUNNING : resume（原因必填）
+
+    RUNNING --> APPROVED : 后端引擎驱动
+    RUNNING --> REJECTED : 后端引擎驱动
+    RUNNING --> CANCELLED : 后端引擎驱动
+    RUNNING --> TERMINATED : 后端引擎驱动
+
+    APPROVED --> [*]
+    REJECTED --> [*]
+    CANCELLED --> [*]
+    TERMINATED --> [*]

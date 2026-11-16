@@ -48,46 +48,9 @@
 
 ### 4.1 路由组映射总览
 
-```mermaid
-flowchart LR
-    subgraph FE["apex-admin-web 前端 API 调用面（33 个业务模块）"]
-        F1["认证 / 会话 / 安全<br/>auth · session · mfa · ip-access-control<br/>auth-audit · auth-config · sso · password-recovery · oauth2"]
-        F2["system 管理域<br/>user · system · database · generator<br/>monitor · log · search · file(通用上传)"]
-        F3["v2 平台域<br/>tenant · tenant-package · capability<br/>overview · operations · open-app"]
-        F4["file-service 域<br/>file(分片) · file-share · document · chart"]
-        F5["office 域<br/>message · notify · office-platform<br/>office-approval · calendar · document · sync-wizard · meeting-room"]
-        F6["workflow 域 workflow"]
-        F7["integration 域 integration · iot"]
-        F8["masking"]
-    end
-    subgraph GW["apex-gateway 路由（按声明顺序匹配）"]
-        R1["auth-domain<br/>/auth/v1|v2/** · /oauth2/** · /.well-known/**<br/>/api/v1/mfa/** · /api/mfa/** · /api/ip-access-control/**<br/>/api/v1/auth/configs/** · /api/v1/auth/audit-logs/**"]
-        R2["office-message(ws+http)<br/>/api/v1/messages·/**"]
-        R3["office-domain<br/>/api/v1|v2/office/** · /api/office/**<br/>/admin-api/v1/office|org/** · /admin-api/v1/message-templates"]
-        R4["file-domain<br/>/api/v1/file|files/** · /api/v1|admin-api/v1/documents/** · /admin-api/v1/charts/** · /api/v2/files|file-shares/**"]
-        R5["workflow-domain<br/>/api/v1/workflows/** · /api/v2/workflow-definitions/**<br/>/api/workflow/** · /admin-api/v1/workflows/**"]
-        R6["integration-domain<br/>/integration/v1/**"]
-        R7["masking-domain · job-domain"]
-        R8["system-domain 兜底<br/>/api/v1/** · /api/v2 显式枚举 · /admin-api/v1/**"]
-    end
-    AUTH["apex-auth-service"]
-    OFFICE["apex-office-service"]
-    FILE["apex-file-service"]
-    WF["apex-workflow-service"]
-    INT["apex-integration-service"]
-    SYSTEM["apex-system-service"]
-    F1 --> R1 --> AUTH
-    F5 --> R2 --> OFFICE
-    F5 --> R3 --> OFFICE
-    F4 --> R4 --> FILE
-    F6 --> R5 --> WF
-    F7 --> R6 --> INT
-    F8 --> R7
-    F2 --> R8
-    F3 --> R8 --> SYSTEM
-    R2 -. "system 消息读面被截胡(§7.1)" .-> SYSTEM
-    R8 -. "auth 只读 open-app 路由落此 404(§7.2)" .-> SYSTEM
-```
+![4.1 路由组映射总览](../diagrams/archived-project-reports-frontend-backend-review-2026-11-06-01.svg)
+
+> 图源：[archived-project-reports-frontend-backend-review-2026-11-06-01.mmd](../diagrams/archived-project-reports-frontend-backend-review-2026-11-06-01.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 前端 33 个模块的全部端点按上表落位核对，**全部经网关可达**；`/internal/**` 不在任何路由组，网关强制 403（含旧别名 `/internal/**`），前端也不应调用。
 
@@ -117,17 +80,9 @@ flowchart LR
 
 ### 7.1 通知中心：SSE 通道「有通道、无发布者」，system 消息读面被网关截胡
 
-```mermaid
-flowchart TD
-    L["应用事件监听器（注册/积分/订阅）<br/>apex-system/.../application/listener/"] -->|"只写库，不推 SSE"| DB[("SystemMessageRepository")]
-    SMR["SystemMessageRouter（system）<br/>GET /api/v1/messages/{inbox,unread-count}<br/>POST /{id}/read · /read-all"] -.-> DB
-    GW{"网关 office-message-http<br/>（声明先于 system 兜底）"}
-    SMR -. "经网关被截胡→office，永远不可达" .-> GW
-    PUB["NotificationPublisher<br/>生产代码零调用方（仅单测）"] -. "RocketMQ apex-notification-topic 广播" .-> LST["NotificationBroadcastListener<br/>（每实例）"]
-    LST --> SINK["NotificationService 进程内 Sinks<br/>按 tenantId+recipient 单播"]
-    SINK --> SSE["GET /api/v1/notifications/stream（system）<br/>网关可达 · 强制认证 · 事件 notification · 30s 心跳"]
-    SSE -. "无发布者→无推送内容" .-> FE["前端"]
-```
+![7.1 通知中心：SSE 通道「有通道、无发布者」，system 消息读面被网关截胡](../diagrams/archived-project-reports-frontend-backend-review-2026-11-06-02.svg)
+
+> 图源：[archived-project-reports-frontend-backend-review-2026-11-06-02.mmd](../diagrams/archived-project-reports-frontend-backend-review-2026-11-06-02.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 - 事实：`NotificationPublisher` 在生产代码中没有任何调用方（唯一引用是自身单测）；真正的站内通知写库方（`UserRegisteredEventListener`、`CreditEventListener`、`SubscriptionEventListener`）只写 `SystemMessageRepository`，不经过 SSE。system 的 `/api/v1/messages/{inbox,unread-count,{id}/read,read-all}` 四条读端点与 office 侧同前缀不同实现，经网关被 `office-message-http`（`Path=/api/v1/messages,/api/v1/messages/**`）按声明顺序截胡，实际不可达。
 - 前端影响：无（前端不调用这些端点，站内信走 office 契约正常）。**建议后端**：若产品需要「系统通知」进管理端，需先解决 system/office 消息前缀冲突（改路径或调谓词），并把业务事件接到 `NotificationPublisher`，之后前端再评估接入 SSE（可复用 `utils/message-socket.ts` 的重连模式另建 EventSource 封装）。

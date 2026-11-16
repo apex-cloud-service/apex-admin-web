@@ -1,0 +1,19 @@
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant LP as 登录页
+    participant OA as api/oauth2.ts
+    participant IdP as 第三方身份提供商
+    participant CB as /oauth2/callback
+    participant B as 后端
+
+    U->>LP: 点击第三方登录
+    LP->>OA: buildAuthUrl(config)
+    OA->>OA: 生成 state（一次性）与 codeVerifier<br/>（S256 PKCE），上下文暂存本地
+    OA-->>LP: 授权 URL
+    LP->>IdP: 跳转授权页
+    IdP-->>CB: 回调 ?code=xxx&state=xxx
+    CB->>OA: consumeAuthorization(state)<br/>校验 state 并取出 clientId/redirectUri/codeVerifier
+    CB->>B: POST /oauth2/token<br/>（表单编码，携带 code + code_verifier，不含 client_secret）
+    B-->>CB: LoginResult{accessToken, refreshToken}
+    CB->>CB: 保存会话并跳转回跳页或 /dashboard

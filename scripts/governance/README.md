@@ -18,8 +18,9 @@ bash scripts/governance/verify-docs.sh --strict   # 有问题 exit 1（可接 CI
 | 2 | 任务大盘口径 | `docs/tasks/project-tasks.md` 含 `P0–P3`、`待规划`、`FE-` |
 | 3 | 治理规范 | `AGENTS.md` 含第 0 章；`docs/README.md` 含治理索引 |
 | 4 | 私有目录边界 | `.workbuddy/knowledge`、`.zcode/plans` 等不得存放 >12 行业务正文（`MIGRATED.md` 除外） |
-| 5 | 文档规模快照 | 输出 `docs` 文件数与 md/svg/mmd 数量（本仓无独立图表） |
+| 5 | 文档规模快照 | 输出 `docs` 文件数与 md/svg/mmd 数量（图表为 `.mmd` + 同名 `.svg`，见 `docs/diagrams/`） |
 | 6 | 迁入索引可达 | `docs/reference/ai-knowledge/README.md`、`docs/archived/ai-sessions/zcode-plans/README.md` 存在 |
+| 9 | 图表资产配对 | 调 `check-diagram-assets.sh`；`.mmd` 必须有同名 `.svg`（27/27） |
 
 ## 2. audit-frontend-rules.sh — 前端红线扫描
 
@@ -38,7 +39,7 @@ bash scripts/governance/audit-frontend-rules.sh --strict   # 有阻断项 exit 1
 | 4 | `<script setup>` 覆盖 | `src` 下 `.vue` 未使用 `script setup` 即命中（`App.vue` 豁免） |
 | 5 | 死代码注释抽样 | 前 10 条，人工确认 |
 
-已知指标（2026-11-16）：越权 Axios 0、会话键绕过 0、`: any` 51 处、全部 `.vue` 已用 `script setup`。
+已知指标（2026-11-16 第三批）：越权 Axios 0、会话键绕过 0、**`: any` 0 处（仅 CSS `overflow-wrap: anywhere` 会被字面匹配，用 `grep -rnE ": any\b"` 可排除）**、全部 `.vue` 已用 `script setup`。
 
 ## 3. 与 pre-commit 的关系
 
@@ -83,3 +84,28 @@ bash scripts/governance/check-memory-sync.sh
 bash scripts/governance/check-memory-sync.sh --msg "$(cat .git/COMMIT_EDITMSG)"
 bash scripts/governance/check-memory-sync.sh --strict            # CI 用，缺登记即失败
 ```
+
+## 7. `check-diagram-assets.sh`（图表资产配对，2026-11-16 第三批新增）
+
+| 项 | 说明 |
+| --- | --- |
+| 目的 | 落实 FE-007：`docs/` 下每张 Mermaid 图都必须「`.mmd` 源 + 同名 `.svg` 导出件」成对存在 |
+| 查什么 | 遍历 `docs/**/*.mmd`，`${f%.mmd}.svg` 不存在即记为缺口 |
+| 输出 | `mmd 总数 N · 缺失 M`；缺失逐条打印 `[MISS]` |
+| 阻断 | 默认警告（exit 0），`--strict` 有缺口 exit 1 |
+| 接入 | `verify-docs.sh` 第 9 项；`.githooks/pre-commit` 间接覆盖 |
+
+```bash
+bash scripts/governance/check-diagram-assets.sh            # 警告
+bash scripts/governance/check-diagram-assets.sh --strict   # CI
+```
+
+重新导出（`mmdc` 10.9.1）：
+
+```bash
+for f in docs/diagrams/*.mmd; do
+  npx -y @mermaid-js/mermaid-cli@10.9.1 -q -i "$f" -o "${f%.mmd}.svg" -b white
+done
+```
+
+> 命名规则、27 张清单与两个已踩过的语法坑（边标签 `|`、节点标签 `${}`/`/` 开头）见 `docs/diagrams/README.md`。

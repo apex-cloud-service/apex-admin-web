@@ -1,0 +1,5 @@
+flowchart LR
+    FE["views/office/message 模板 Tab<br>PUT/DELETE /admin-api/v1/message-templates/{id}"] --> GW{网关}
+    GW -->|"谓词仅含精确路径<br>/admin-api/v1/message-templates"| OFFICE[apex-office-service<br>有实现 ✓]
+    GW -->|"/{id} 子路径未匹配<br>落入 system 兜底"| SYS[apex-system<br>无 message-template 路由 → 404 ✗]
+    style SYS stroke:#c0392b

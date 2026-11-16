@@ -1,0 +1,23 @@
+sequenceDiagram
+    autonumber
+    participant C as 业务请求
+    participant R as request.ts 拦截器
+    participant B as /auth/v1/refresh
+    participant S as 会话存储
+
+    C->>R: 请求返回 401
+    R->>R: 条件校验通过，标记 authRetried
+    alt 已有进行中的刷新（refreshPromise 非空）
+        Note over R: 并发 401 共享同一个刷新 Promise
+    else 首个触发
+        R->>B: POST refreshToken(refreshToken)
+        B-->>R: 裸 TokenPair{accessToken, refreshToken, expiresIn}
+        R->>S: setToken；若返回新 refreshToken 则一并更新
+    end
+    alt 刷新成功
+        R->>R: 重放原请求（更新 Authorization 头）
+        R-->>C: 返回重放结果
+    else 刷新失败
+        R->>S: clearSession()
+        R--xC: 跳转 /login?redirect=... 并抛出<br/>ApiError('登录状态已失效，请重新登录')
+    end

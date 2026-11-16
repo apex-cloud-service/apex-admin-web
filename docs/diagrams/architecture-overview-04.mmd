@@ -1,0 +1,18 @@
+flowchart LR
+    subgraph Dev["开发环境 npm run dev (:5173)"]
+        V["Vite Dev Server<br/>host 0.0.0.0"] -->|"proxy /api /admin-api /auth/v1&#124;v2 /integration/v1 /oauth2"| D["VITE_API_PROXY_TARGET<br/>(默认 http://127.0.0.1:8080)"]
+    end
+
+    subgraph Prod["生产环境（同域部署，推荐）"]
+        U["用户浏览器"] --> N["Nginx (前端静态资源 + 反代)"]
+        N -->|"/ try_files → index.html"| SPA["SPA 静态产物"]
+        N -->|"/api/ /admin-api/ /auth/v1&#124;v2/ /integration/v1/ ^/oauth2/(authorize&#124;token)<br/>= /oauth2/consent 仅 POST"| BE2["API_PROXY_PASS<br/>(默认 http://apex-scaffold:8080)"]
+        N -->|"= /api/v1/messages/ws<br/>Upgrade + 3600s"| BE2
+        N -->|"= /api/v1/notifications/stream<br/>SSE buffering off"| BE2
+        N -->|"/assets/ 等产物目录 30 天 immutable"| U
+    end
+
+    subgraph Docker["Docker 部署"]
+        DC["docker-compose.yml"] --> IMG["apex-admin-web 镜像<br/>两阶段: node:18 构建产物 → nginx:1.27 运行"]
+        IMG --> NET["外部网络 apex-scaffold_apex-network<br/>按服务名访问后端"]
+    end

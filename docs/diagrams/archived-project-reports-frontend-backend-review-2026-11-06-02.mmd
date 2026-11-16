@@ -1,0 +1,9 @@
+flowchart TD
+    L["应用事件监听器（注册/积分/订阅）<br/>apex-system/.../application/listener/"] -->|"只写库，不推 SSE"| DB[("SystemMessageRepository")]
+    SMR["SystemMessageRouter（system）<br/>GET /api/v1/messages/{inbox,unread-count}<br/>POST /{id}/read · /read-all"] -.-> DB
+    GW{"网关 office-message-http<br/>（声明先于 system 兜底）"}
+    SMR -. "经网关被截胡→office，永远不可达" .-> GW
+    PUB["NotificationPublisher<br/>生产代码零调用方（仅单测）"] -. "RocketMQ apex-notification-topic 广播" .-> LST["NotificationBroadcastListener<br/>（每实例）"]
+    LST --> SINK["NotificationService 进程内 Sinks<br/>按 tenantId+recipient 单播"]
+    SINK --> SSE["GET /api/v1/notifications/stream（system）<br/>网关可达 · 强制认证 · 事件 notification · 30s 心跳"]
+    SSE -. "无发布者→无推送内容" .-> FE["前端"]
