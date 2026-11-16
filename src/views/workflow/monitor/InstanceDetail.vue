@@ -230,7 +230,7 @@ const confirmSuspend = async () => {
     ElMessage.success('流程已挂起')
     suspendDialogVisible.value = false
     await loadDetail()
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '挂起失败')
   } finally {
     operationLoading.value = false
@@ -261,7 +261,7 @@ const confirmResume = async () => {
     ElMessage.success('流程已恢复')
     resumeDialogVisible.value = false
     await loadDetail()
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '恢复失败')
   } finally {
     operationLoading.value = false

@@ -348,7 +348,7 @@ const loadDocuments = async () => {
   loading.value = true
   try {
     allDocuments.value = (await getMyDocuments(userId)) || []
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '查询失败')
   } finally {
     loading.value = false
@@ -389,7 +389,7 @@ const handleCreateSubmit = async () => {
       ElMessage.success('创建成功')
       createDialogVisible.value = false
       await loadDocuments()
-    } catch (error: any) {
+    } catch (error) {
       showError(error, '创建失败')
     } finally {
       submitting.value = false
@@ -419,7 +419,7 @@ const handleCopySubmit = async () => {
     ElMessage.success('复制成功')
     copyDialogVisible.value = false
     await loadDocuments()
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '复制失败')
   } finally {
     submitting.value = false
@@ -434,7 +434,7 @@ const handleView = async (row: DocumentInfo) => {
   try {
     currentDocument.value = await getDocument(row.id)
     detailVisible.value = true
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '获取详情失败')
   }
 }
@@ -451,7 +451,7 @@ const handleDelete = async (row: DocumentInfo) => {
     await deleteDocument(row.id)
     ElMessage.success('删除成功')
     await loadDocuments()
-  } catch (error: any) {
+  } catch (error) {
     if (error !== 'cancel') {
       showError(error, '删除失败')
     }

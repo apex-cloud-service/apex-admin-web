@@ -113,15 +113,17 @@ const handleCallback = async () => {
     setTimeout(() => {
       router.push('/dashboard')
     }, 500)
-  } catch (err: any) {
+  } catch (err) {
     loading.value = false
+    // 统一把未知异常归一成文案，避免直接读 unknown 的属性
+    const errMsg = err instanceof Error ? err.message : String(err)
 
     // 判断是否需要审批
-    if (err.message?.includes('等待审批') || err.message?.includes('PENDING')) {
+    if (errMsg.includes('等待审批') || errMsg.includes('PENDING')) {
       needApproval.value = true
     } else {
       error.value = true
-      errorMessage.value = err.message || '登录失败，请重试'
+      errorMessage.value = errMsg || '登录失败，请重试'
     }
   }
 }

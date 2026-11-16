@@ -343,7 +343,7 @@ const handleQuery = async () => {
     
     // 同时加载所有事件用于日历显示
     await loadAllEvents()
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '查询失败')
   } finally {
     loading.value = false
@@ -408,7 +408,7 @@ const handleEdit = async (row: CalendarEvent) => {
     })
     currentEvent.value = event
     dialogVisible.value = true
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '加载事件详情失败')
   }
 }
@@ -419,7 +419,7 @@ const handleView = async (row: CalendarEvent) => {
     const event = await getCalendarEvent(row.id)
     currentEvent.value = event
     detailVisible.value = true
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '加载事件详情失败')
   }
 }
@@ -435,7 +435,7 @@ const handleDelete = async (row: CalendarEvent) => {
     await deleteCalendarEvent(row.id)
     ElMessage.success('删除成功')
     handleQuery()
-  } catch (error: any) {
+  } catch (error) {
     if (error !== 'cancel') {
       showError(error, '删除失败')
     }
@@ -472,7 +472,7 @@ const handleSubmit = async () => {
       }
       dialogVisible.value = false
       handleQuery()
-    } catch (error: any) {
+    } catch (error) {
       showError(error, '操作失败')
     } finally {
       submitting.value = false

@@ -172,18 +172,18 @@ const rollbackForm = ref({
 
 /** 转办表单数据 */
 const transferForm = ref({
-  newAssigneeId: undefined as number | undefined,
+  newAssigneeId: undefined as string | undefined,
   reason: ''
 })
 
 /** 委派表单数据 */
 const delegateForm = ref({
-  delegateToId: undefined as number | undefined,
+  delegateToId: undefined as string | undefined,
   reason: ''
 })
 
 /** 用户列表（用于转办和委派） */
-const userList = ref<Array<{ id: number; name: string }>>([])
+const userList = ref<Array<{ id: string; name: string }>>([])
 /** 前置节点列表 */
 const previousNodes = ref(props.previousNodes || [])
 
@@ -234,7 +234,7 @@ const confirmRollback = async () => {
     ElMessage.success('回退成功')
     rollbackVisible.value = false
     emit('success')
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '回退失败')
   } finally {
     loading.value = false
@@ -274,7 +274,7 @@ const confirmTransfer = async () => {
     ElMessage.success('转办成功')
     transferVisible.value = false
     emit('success')
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '转办失败')
   } finally {
     loading.value = false
@@ -314,7 +314,7 @@ const confirmDelegate = async () => {
     ElMessage.success('委派成功')
     delegateVisible.value = false
     emit('success')
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '委派失败')
   } finally {
     loading.value = false
@@ -335,9 +335,9 @@ const searchUsers = async (query: string) => {
   userSearchLoading.value = true
   try {
     const response = await listUsers({ keyword: query, page: 1, size: 20 })
-    userList.value = response.list.map((user: any) => ({
+    userList.value = response.list.map((user) => ({
       id: user.id,
-      name: user.nickname || user.phone
+      name: user.nickname || user.phone || ''
     }))
   } catch (error) {
     console.error('搜索用户失败', error)

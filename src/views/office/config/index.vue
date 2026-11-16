@@ -266,7 +266,7 @@ const handleSubmit = async () => {
       }
       dialogVisible.value = false
       await loadApps()
-    } catch (error: any) {
+    } catch (error) {
       showError(error, '操作失败')
     } finally {
       submitLoading.value = false
@@ -289,7 +289,7 @@ const handleDelete = async (platform: OfficePlatform) => {
     await deleteApp(platform, app.version)
     ElMessage.success('删除成功')
     await loadApps()
-  } catch (error: any) {
+  } catch (error) {
     if (error !== 'cancel') {
       showError(error, '删除失败')
     }

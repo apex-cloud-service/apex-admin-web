@@ -376,7 +376,7 @@ const handleTest = async () => {
     } else {
       ElMessage.error(result.message || '连接失败')
     }
-  } catch (error: any) {
+  } catch (error) {
     // 表单校验失败抛出的 Error 已由表单提示，无需重复展示
     if (error?.constructor?.name !== 'Error') {
       showError(error)

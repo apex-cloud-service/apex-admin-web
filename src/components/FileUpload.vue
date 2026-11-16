@@ -139,9 +139,11 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 /**
  * 上传成功回调
  */
-const handleSuccess: UploadProps['onSuccess'] = (response: any, uploadFile: any) => {
-  if (response.code === 0) {
-    const result: FileUploadResult = response.data
+const handleSuccess: UploadProps['onSuccess'] = (response, uploadFile: UploadUserFile) => {
+  // 后端响应为 Result{code,msg,data}，此处按契约收紧类型
+  const payload = response as { code: number; msg?: string; data: FileUploadResult }
+  if (payload.code === 0) {
+    const result: FileUploadResult = payload.data
     ElMessage.success('上传成功')
     
     // 更新文件列表中的URL（便于预览）
@@ -151,7 +153,7 @@ const handleSuccess: UploadProps['onSuccess'] = (response: any, uploadFile: any)
     
     emit('success', result)
   } else {
-    ElMessage.error(response.msg || '上传失败')
+    ElMessage.error(payload.msg || '上传失败')
     // 移除上传失败的文件
     const index = fileList.value.findIndex(f => f.uid === uploadFile.uid)
     if (index > -1) {

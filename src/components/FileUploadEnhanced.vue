@@ -498,7 +498,8 @@ const uploadProcessedFile = async (file: File): Promise<void> => {
     
     xhr.addEventListener('load', () => {
       if (xhr.status === 200) {
-        const response = JSON.parse(xhr.responseText)
+        // 后端 Result{code,msg,data}；此处按契约收类型，避免 any
+        const response = JSON.parse(xhr.responseText) as { code: number; msg?: string; data: FileUploadResult }
         if (response.code === 0) {
           uploadStatus.value = 'success'
           uploadProgressText.value = '上传成功！'
@@ -684,16 +685,18 @@ const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent): 
  * @param response 后端原始响应（未解包的 Result 结构）
  * @param uploadFile 触发本次上传的文件项
  */
-const handleSuccess: UploadProps['onSuccess'] = (response: any, uploadFile: UploadUserFile): void => {
+const handleSuccess: UploadProps['onSuccess'] = (response, uploadFile: UploadUserFile): void => {
+  // 后端响应为 Result{code,msg,data}，此处按契约收紧类型
+  const payload = response as { code: number; msg?: string; data: FileUploadResult }
   if (!props.enableCropper) {
-    if (response.code === 0) {
+    if (payload.code === 0) {
       uploadStatus.value = 'success'
       uploadProgressText.value = '上传成功！'
       setTimeout(() => {
         progressVisible.value = false
       }, 1000)
       
-      const result: FileUploadResult = response.data
+      const result: FileUploadResult = payload.data
       ElMessage.success('上传成功')
       
       if (uploadFile && result.url) {
@@ -708,7 +711,7 @@ const handleSuccess: UploadProps['onSuccess'] = (response: any, uploadFile: Uplo
         progressVisible.value = false
       }, 2000)
       
-      ElMessage.error(response.msg || '上传失败')
+      ElMessage.error(payload.msg || '上传失败')
       const index = fileList.value.findIndex(f => f.uid === uploadFile.uid)
       if (index > -1) {
         fileList.value.splice(index, 1)

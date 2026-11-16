@@ -340,8 +340,8 @@ export interface RollbackTaskPayload {
  * 用于将任务转交给其他人处理
  */
 export interface TransferTaskPayload {
-  /** 新的处理人ID */
-  newAssigneeId: number
+  /** 新的处理人ID（与 AdminUser.id 同为字符串，避免大整数精度丢失） */
+  newAssigneeId: string
   /** 转办原因 */
   reason: string
 }
@@ -352,8 +352,8 @@ export interface TransferTaskPayload {
  * 用于将任务委派给其他人代为处理
  */
 export interface DelegateTaskPayload {
-  /** 被委派人ID */
-  delegateToId: number
+  /** 被委派人ID（与 AdminUser.id 同为字符串，避免大整数精度丢失） */
+  delegateToId: string
   /** 委派原因 */
   reason: string
 }

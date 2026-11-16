@@ -203,7 +203,7 @@ const loadPlatformStats = async (platform: OfficePlatform) => {
 const loadData = async () => {
   try {
     apps.value = await listApps()
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '加载数据失败')
   }
   await Promise.allSettled(platforms.map((platform) => loadPlatformStats(platform)))

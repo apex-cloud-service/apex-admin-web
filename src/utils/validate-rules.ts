@@ -183,7 +183,7 @@ export const pattern = (regex: RegExp, message: string, trigger: string | string
  * 自定义验证器规则
  */
 export const validator = (
-  validatorFn: (rule: any, value: any, callback: (error?: Error) => void) => void,
+  validatorFn: NonNullable<FormItemRule['validator']>,
   trigger: string | string[] = 'blur'
 ): FormItemRule => ({
   validator: validatorFn,

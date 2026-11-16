@@ -239,7 +239,7 @@ const loadBindings = async () => {
     )
     bindings.value = data.list
     total.value = data.total
-  } catch (error: any) {
+  } catch (error) {
     showError(error, '加载失败')
   } finally {
     loading.value = false
@@ -301,7 +301,7 @@ const handleApprove = async (row: OfficeBindingResponse) => {
     ElMessage.success('批准成功')
     pagination.page = 1
     await loadBindings()
-  } catch (error: any) {
+  } catch (error) {
     if (error !== 'cancel') {
       showError(error, '批准失败')
     }
@@ -330,7 +330,7 @@ const handleReject = async (row: OfficeBindingResponse) => {
     ElMessage.success('拒绝成功')
     pagination.page = 1
     await loadBindings()
-  } catch (error: any) {
+  } catch (error) {
     if (error !== 'cancel') {
       showError(error, '拒绝失败')
     }
@@ -355,7 +355,7 @@ const handleUnbind = async (row: OfficeBindingResponse) => {
     ElMessage.success('解绑成功')
     pagination.page = 1
     await loadBindings()
-  } catch (error: any) {
+  } catch (error) {
     if (error !== 'cancel') {
       showError(error, '解绑失败')
     }
