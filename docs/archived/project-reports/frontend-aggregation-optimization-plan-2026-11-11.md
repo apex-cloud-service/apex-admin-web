@@ -4,7 +4,7 @@
 - 文档状态：**已实施（2026-11-11，P0-1/P0-2/P0-3/P1-1/P1-2 全部落地并通过 `npx vue-tsc --noEmit` 与 `npx vitest run` 验证；P2-1 另立项未实施）**。实施字段按 `types/` 实际定义校准，与本方案示例的差异：`WorkflowPendingTask.subtitle` 取 `assigneeName`、`AgendaItem.id` 为 `number | string`（日程为字符串事件 ID）、审批区块需当前用户身份构造 `approverId`。
 - 上游评审：[聚合评审与事项发现方案（2026-11-11）](frontend-aggregation-review-2026-11-11.md)（第 1–3 节结论与第 3 节边界约束全部适用于本方案）
 - 方案口径：数据源契约已在编制时逐一核对源码；标注「实施时校准」的字段以 `types/` 实际定义为准。
-- 修改约束：不动后端契约、不改路由注册表、不改请求层 `utils/request.ts`、遵守 [AGENTS.md](../../../../AGENTS.md) 全部约束。
+- 修改约束：不动后端契约、不改路由注册表、不改请求层 `utils/request.ts`、遵守 [AGENTS.md](../../../AGENTS.md) 全部约束。
 
 ## 1. 方案总览
 
@@ -366,6 +366,6 @@ export function useAgenda() {
 
 ## 11. 文档同步义务
 
-- 各步实施完成后，更新 [AGENTS.md](../../../../AGENTS.md) 阅读导航与排障表（如「工作台」「办公控制台」「我的事项」相关条目）；
+- 各步实施完成后，更新 [AGENTS.md](../../../AGENTS.md) 阅读导航与排障表（如「工作台」「办公控制台」「我的事项」相关条目）；
 - 上游评审文档第 4 节与本方案状态同步改为「已实施（部分/全部）」；
 - `docs/README.md` 导航状态说明同步更新。

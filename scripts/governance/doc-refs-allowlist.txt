@@ -3,8 +3,6 @@
 # 维护：新增豁免必须写理由注释；不得豁免 docs/ 下的现行规范与索引
 
 # —— 历史归档与历史报告（记录当时真实路径；docs/_archive/ 已整体豁免，此处为其它目录） ——
-docs/archived/project-reports/frontend-aggregation-optimization-plan-2026-11-11.md
-docs/archived/project-reports/frontend-aggregation-review-2026-11-11.md
 docs/records/2026-11-16-docs-governance.md
 
 # —— 迁移说明与来源证明（本身就描述旧路径） ——

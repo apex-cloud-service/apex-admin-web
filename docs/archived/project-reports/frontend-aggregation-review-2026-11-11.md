@@ -189,5 +189,5 @@ async function loadWorkflowPending(): Promise<AgendaSection> {
 
 ## 5. 文档同步义务
 
-- 已于 2026-11-11 实施并同步 [AGENTS.md](../../../../AGENTS.md) 的阅读导航与排障表；本文状态已更新为「已实施」。
+- 已于 2026-11-11 实施并同步 [AGENTS.md](../../../AGENTS.md) 的阅读导航与排障表；本文状态已更新为「已实施」。
 - 实施涉及跳转目标页面（如待办 Tab 定位参数）时，同步核对 `docs/architecture/auth-and-routing.md` 相关描述。
