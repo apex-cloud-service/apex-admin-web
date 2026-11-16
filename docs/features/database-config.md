@@ -150,5 +150,5 @@ apex-admin-web/
 ## 参考文档
 
 - 功能验证清单：`docs/guides/database-config-verification.md`
-- 后端方案文档：`apex-scaffold` 仓库 `.trae/documents/前端配置数据库多适配方案.md`
+- 后端方案文档：`apex-scaffold` 仓库 `docs/07-commercial/`（原 `.trae/documents/` 方案未入库，如需原文请联系后端维护人）
 - 前端规范：`AGENTS.md`
