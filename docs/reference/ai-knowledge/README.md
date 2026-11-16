@@ -30,6 +30,7 @@
 | [02-conventions-and-pitfalls.md](02-conventions-and-pitfalls.md) | 硬约束、分页/权限/会话规则、高频故障排查 | 新增约束或踩坑后 |
 | [03-contract-map.md](03-contract-map.md) | 前端 API 模块 ↔ 后端路径前缀 ↔ 响应/分页口径对照 | 后端契约变更时 |
 | [04-change-memory.md](04-change-memory.md) | **变更流水台账**：每次改动的摘要/提交/证据/影响面（append-only） | **每次改动** |
+| [05-agent-tooling.md](05-agent-tooling.md) | 本仓已装 Skill / Agent 清单与生效验证（唯一正文在后端 08 篇） | Skill/Agent 增删改时 |
 
 ## 四、维护规则
 
