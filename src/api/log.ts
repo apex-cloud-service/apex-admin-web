@@ -35,6 +35,7 @@ export interface BusinessLog {
   browser?: string
   operatingSystem?: string
   duration?: number
+  /** 状态：1=成功 0=失败（业务日志页按 1 判定成功；注意与登录日志的 0=成功 1=失败 口径相反） */
   status: number
   message?: string
 }

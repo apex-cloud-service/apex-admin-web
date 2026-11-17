@@ -171,7 +171,9 @@ export function getBaseChartOption(): EChartsOption {
 }
 
 /**
- * 合并图表配置
+ * 合并主题基础配置与自定义图表配置（浅合并）。
+ * 仅 textStyle/title/legend/tooltip/grid 五个键逐键合并；其余键（series/xAxis/yAxis/color 等）
+ * 由 customOption 整体覆盖基础值，需保留基础项时须在 customOption 中显式带上
  */
 export function mergeChartOption(
   customOption: EChartsOption
@@ -305,6 +307,8 @@ export const presetCharts = {
 
   /**
    * 仪表盘配置
+   * @param value 指标值（0-100 的百分比数值；min/max 固定 0~100，展示格式为 {value}%）
+   * @param title 标题（可选）
    */
   gauge: (value: number, title: string = ''): EChartsOption => {
     const theme = getTheme()

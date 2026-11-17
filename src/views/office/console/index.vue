@@ -1,10 +1,9 @@
 <!--
   办公平台控制台页面
   ------------------------------------------------------------------
-  功能：办公平台数据统计、消息推送统计、审批流程统计
-  
-  权限：
-    - office:console:view - 查看办公平台控制台
+  功能：平台配置状态总览、绑定统计（各平台绑定数/待审批数，走
+  /admin-api/v1/office/bindings/page 真实 total）、快捷入口与功能预告。
+  页面无按钮级 v-permission，可访问性由后端菜单驱动。
 -->
 <template>
   <div class="office-console-container">

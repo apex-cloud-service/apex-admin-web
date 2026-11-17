@@ -2,7 +2,7 @@
   定时任务分页查询
   ------------------------------------------------------------------
   定时任务分页查询页面，支持按任务名称、分组和状态筛选。
-  后端接口：GET /api/jobs/page
+  后端接口：GET /admin-api/v1/jobs/page（api/system.ts pageJobs）
 -->
 <template>
   <el-card shadow="never">
@@ -140,54 +140,28 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 定时任务分页查询页面
- * ------------------------------------------------------------------
- * 功能：
- * 1. 支持按任务名称、任务分组、任务状态进行筛选
- * 2. 分页展示定时任务列表
- * 3. 查看任务详情
- * 
- * API：
- * - GET /api/jobs/page - 分页查询定时任务
- */
 import { onMounted, reactive, ref } from 'vue'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
 import { pageJobs } from '@/api/system'
 import type { SysJob } from '@/types'
 
-/**
- * 查询表单参数
- */
 const queryForm = reactive({
   jobName: '',
   jobGroup: '',
   status: undefined as number | undefined
 })
 
-/**
- * 分页参数
- */
 const pagination = reactive({
   pageNum: 1,
   pageSize: 20,
   total: 0
 })
 
-/**
- * 表格数据
- */
 const tableData = ref<SysJob[]>([])
 
-/**
- * 加载状态
- */
 const loading = ref(false)
 
-/**
- * 详情弹窗
- */
 const detailDialog = reactive({
   visible: false,
   data: null as SysJob | null

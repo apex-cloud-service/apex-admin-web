@@ -343,6 +343,7 @@ const handleViewChart = async (row: Chart): Promise<void> => {
     chartDialogVisible.value = true
     // 对话框打开期间监听窗口尺寸变化，关闭时由 handleChartDialogClose 移除
     window.addEventListener('resize', handleChartResize)
+    // 延迟 100ms：等对话框 DOM 渲染且容器尺寸就绪后再初始化 ECharts
     setTimeout(async () => {
       await renderChart(row.id)
       chartLoading.value = false

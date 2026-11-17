@@ -12,7 +12,7 @@
   后端接口：
     - POST /api/v1/files/generic - 通用文件上传（FormData：file + sex）
     - POST /api/v1/file/chunk/init|upload|merge - 分片上传（启用 enableChunk 时）
-    - GET  /api/v1/file/chunk/status/{fileId} - 查询已上传分片
+    - GET  /api/v1/file/chunk/status/{fileId} - 查询已上传分片（本组件未调用，断点续传预留，见 api/file.ts）
 
   Props：
     - sex: 性别路由参数（0=男/AM，1=女/AF），随 FormData 上送
@@ -25,7 +25,7 @@
     - multiple: 是否允许多选
     - enableCompress: 是否自动压缩图片（超过宽高上限按 compressQuality 压缩）
     - enableCropper: 是否启用图片裁剪（裁剪确认后走独立 XHR 上传）
-    - enablePaste: 是否启用 Ctrl+V 粘贴图片上传（组件需持有焦点）
+    - enablePaste: 是否启用 Ctrl+V 粘贴图片上传（document 级监听，页面任意位置粘贴均可触发）
     - enableChunk: 是否启用分片上传（文件超过单发上限但不超过 chunkMaxSizeMB 时生效）
     - chunkMaxSizeMB: 分片上传允许的最大文件大小（MB，默认 500）
     - compressQuality: 压缩质量（0~1）
@@ -437,6 +437,7 @@ const handleCropperConfirm = async (): Promise<void> => {
   try {
     const canvas = cropperInstance.value.getCroppedCanvas()
     const blob = await new Promise<Blob | null>((resolve) => {
+      // 裁剪导出质量固定 0.9（不走 compressQuality：裁剪产物直接上传，不再二次压缩）
       canvas.toBlob(resolve, pendingFile!.type, 0.9)
     })
     
@@ -558,6 +559,7 @@ const uploadProcessedFile = async (file: File): Promise<void> => {
  * @param file 待上传的大文件
  */
 const uploadByChunks = async (file: File): Promise<void> => {
+  // 单片 5MB，随 init 请求上送 chunkSize，后端按该值做分片校验与合并
   const CHUNK_SIZE = 5 * 1024 * 1024
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
 
@@ -618,7 +620,8 @@ const uploadByChunks = async (file: File): Promise<void> => {
 /**
  * 上传前校验与预处理（el-upload before-upload）
  *
- * 校验大小与 MIME 类型；启用压缩时先压缩；启用裁剪时打开裁剪弹窗
+ * 校验大小与 MIME 类型；超过单发上限且 enableChunk 开启时改走 uploadByChunks 分片上传
+ * （返回 false 中断 el-upload 默认通道）；启用压缩时先压缩；启用裁剪时打开裁剪弹窗
  * 并返回 false 中断 el-upload 默认上传（改由裁剪确认后独立上传）。
  *
  * @param rawFile 待上传的原始文件
@@ -749,7 +752,7 @@ const handleRemove: UploadProps['onRemove'] = (file: UploadUserFile): void => {
 /** ========== 粘贴上传 ========== */
 
 /**
- * 粘贴上传处理（组件获得焦点时响应 paste 事件）
+ * 粘贴上传处理（根元素与 document 级监听共用：enablePaste 开启后页面任意位置粘贴均可触发）
  *
  * 从剪贴板提取图片文件，复用 beforeUpload 校验/压缩流程；
  * 未启用裁剪时直接走独立上传通道。

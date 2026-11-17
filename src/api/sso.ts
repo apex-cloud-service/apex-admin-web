@@ -14,8 +14,7 @@
  * - POST /admin-api/v1/sso/providers/{id}/test - 测试SSO连接
  * - GET /admin-api/v1/sso/providers/{id}/metadata - 获取SSO元数据
  * - GET /admin-api/v1/sso/sessions - SSO会话列表(裸数组)
- * - POST /admin-api/v1/sso/sessions/{id}/revoke - 撤销单个会话
- * - POST /admin-api/v1/sso/sessions/users/{userId}/revoke - 撤销用户全部会话
+ * - POST /admin-api/v1/sso/sessions/{id}/revoke - 撤销单个会话（按数字主键；批量撤销由前端并发调用单条实现）
  * - GET /admin-api/v1/sso/sessions/statistics - SSO会话统计
  * - GET /admin-api/v1/sso/audit-logs - SSO审计日志(裸数组)
  *

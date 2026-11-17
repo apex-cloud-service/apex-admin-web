@@ -137,7 +137,7 @@ export function handleError(error: unknown, options: ErrorHandlerOptions = {}): 
     if (error.code === 401) {
       message = '登录已过期，请重新登录'
       type = 'warning'
-      // 可以在这里触发登出逻辑
+      // 401 的会话清理与跳转由 utils/request.ts 拦截器统一处理，此处仅负责提示文案
     } else if (error.code === 403) {
       message = '无权访问该资源'
       type = 'warning'
@@ -180,7 +180,7 @@ export function handleError(error: unknown, options: ErrorHandlerOptions = {}): 
 
 /**
  * 异步函数错误包装器
- * 自动捕获并处理异步函数中的错误
+ * 自动捕获并统一提示异步函数中的错误；处理后仍抛出原错误，调用方仍需自行 catch
  */
 export function withErrorHandling<A extends unknown[], R>(
   fn: (...args: A) => Promise<R>,
@@ -197,7 +197,13 @@ export function withErrorHandling<A extends unknown[], R>(
 }
 
 /**
- * 网络请求重试
+ * 网络请求重试（可选指数退避）。
+ * @param requestFn 返回 Promise 的请求函数
+ * @param maxRetries 最大尝试次数（含首次调用，默认 3 = 首次 + 2 次重试）
+ * @param delay 重试基础间隔（毫秒，默认 1000；指数退避时为 delay × 2^已失败次数）
+ * @param exponentialBackoff 是否指数退避（默认 true）
+ * @returns 任一次尝试成功时的响应数据
+ * @throws ApiError 401/403/404 等不可重试错误立即抛出；全部尝试失败时抛出最后一次的原错误
  */
 export async function retryRequest<T>(
   requestFn: () => Promise<T>,

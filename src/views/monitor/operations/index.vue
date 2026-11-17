@@ -416,6 +416,7 @@ async function loadTrend(): Promise<void> {
     trend.value = await getHealthTrend({
       from: trendRange.value?.[0],
       to: trendRange.value?.[1],
+      // 200 点满足趋势图展示密度；后端上限 500（见 api/operations.ts）
       limit: 200,
     })
   } catch (error) {

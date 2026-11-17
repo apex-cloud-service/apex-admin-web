@@ -94,6 +94,12 @@
 
 | 43 | 2026-11-17 | 文档 | **复核要点清单与任务状态更正**：新增后端 `docs/reviews/2026-11-17-integration-review-checklist.md`（BE-036~BE-040 / FE-026 六项复核要点、可复跑验证命令、已知限制六条），前端 reviews 索引跨仓引用；FE-026 与后端 BE-036/BE-039 由「已完成」改回「待复核」——此前违反不得自审自放，更正为待独立复核 | 本条提交 | 后端 reviews README 已登记清单；两仓任务卡五张统一「待复核」；清单覆盖六个提交的复核要点与可复跑命令 | 仅文档；无代码变更 |
 
+| 44 | 2026-11-18 | 注释 | **全仓注释质量评审与整改**：220 文件按 comment-style.md 审计（P1×25/P2×9/P3×31），6 批整改 39 文件 63 处（仅注释行、零逻辑变更）：auth-config/open-app/sso 失真头注与未封装幽灵端点修正、auth/generator 两页 SFC 顶层「影子头注」删除并按 v-permission 实际值重写权限清单（原 `system:auth:view/edit` 全仓库不存在）、tenant-package 头注 features 空集合语义修正（原误写「全量放行」，正确为「未订阅」）、job/query 端点路径修正为 `/admin-api/v1/jobs/page`、BusinessLog/LoginAttempt 状态枚举按页面渲染口径注明（两者相反：1=成功 0=失败 vs 0=成功 1=失败）、utils 重试/浅合并/JSON 转义契约完整式补齐、上传组件粘贴监听改 document 级口径并标注未实现的进度/预览 | 未提交 | `npx vue-tsc --noEmit` 退出 0；`check:comments` 220 文件通过；`npx vitest run` 68 文件 **533 用例全绿**；复盘与范围外死代码清单见 `docs/records/2026-11-18-comment-quality-audit.md` | 仅注释行，运行期行为不变；范围外发现（死 CSS×3、auth 死弹窗、TaskActions 死文件、el-loading 存疑）移交任务大盘另立任务 |
+
+| 45 | 2026-11-18 | 清理 | **范围外死代码修复（#44 移交项落地）**：①login 死 CSS 两段删除（`.github-icon` 悬停块 + `.social-icon` 系列整段重复）；②monitor/dashboard 死 CSS 6 块删除（`.kv-list .ellipsis`/`.gateway-summary`/`.g-item`×3/`.c-warn`/`.c-danger`；`.kv-list` 本体有使用保留）；③auth「关联角色」死弹窗（绑定状态从未置 true）连同 `PermissionRole` 导入删除；④删除零引用死文件 `TaskActions.vue`（能力已由 monitor 待办 Tab 直调覆盖），AGENTS.md §7.3 改写为删除说明、§7.2 同步；⑤oauth2/callback 无效 `<el-loading>` 元素（EP 无此组件、原写法不渲染）改容器 `v-loading` + `element-loading-text`；⑥AgendaPanel 截断文案去硬编码「5 条」 | 未提交 | 全仓 grep 零残留引用；`vue-tsc` 退出 0；`check:comments` 219 文件（-1 为删除文件）；`vitest run` 68 文件 533 用例全绿；处置明细见 `docs/records/2026-11-18-comment-quality-audit.md` 追加段 | 删除项均零引用；callback 加载态由无效变实际可见；其余无行为变更 |
+
+| 46 | 2026-11-18 | 脚本 | **更正 #45 的预检守卫冲突**：`apex-preflight.sh` 的附录 A 哈希守卫（B1+B2 时代冻结 `ae5e19db…`/712 行）在 #45 修改 AGENTS.md §7.3/§7.2 后报 FAIL；本次修改系 AGENTS.md 自身 §10 维护条款要求的合法同步，基线**有意更新**为 700 行/`9e9f3cda…`（附录 A 因 §7.3 mermaid 移除缩短 12 行），并在脚本内加注日期与台账指针；此后该区域仍冻结，再改动须走台账登记 | 未提交 | 更新后 `apex-preflight.sh --fast` FAIL=0；`tail -n 700 AGENTS.md | shasum -a 256` = `9e9f3cda…` 与脚本一致 | 仅预检脚本基线常量与注释；守卫机制本身未变 |
+
 ---
 
 ## 4. 按类型检索

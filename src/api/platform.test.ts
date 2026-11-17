@@ -1,9 +1,10 @@
 /**
- * 租户套餐 / 能力 / 开放应用 / 集成 / IoT / 通知 / 会话 API 测试
+ * 租户套餐 / 能力 / 开放应用 / 集成 / IoT / 通知 / 会话 / 跨域聚合概览 API 测试
  * ------------------------------------------------------------------
  * 断言各新增 api 模块以正确的 HTTP 方法、路径与关键参数调用统一请求层。
  * 重点覆盖易错契约：套餐更新走无路径参数的 PUT、规则启停 enabled 为字符串、
- * 会话终止按会话唯一标识、能力用量 capability 必填、通知模板分页 pageNum/pageSize。
+ * 会话终止按会话唯一标识、能力用量 capability 必填、通知模板分页 pageNum/pageSize、
+ * 聚合概览走业务端 GET /api/v2/overview（非网关 403 的内部端点）。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

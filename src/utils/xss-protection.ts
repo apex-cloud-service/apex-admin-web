@@ -49,7 +49,8 @@ export function stripHtmlTags(html: string): string {
 }
 
 /**
- * 清理 URL，防止 JavaScript 伪协议
+ * 清理 URL，拦截危险协议。
+ * 命中 javascript:/data:/vbscript:/file:/about: 前缀时返回 about:blank，其余原样返回
  */
 export function sanitizeUrl(url: string): string {
   if (!url) return ''
@@ -156,7 +157,8 @@ export function sanitizeHtml(
 }
 
 /**
- * 验证 JSON 输入，防止注入
+ * 解析 JSON 并对全部字符串值与对象键做 HTML 转义，防止注入。
+ * 解析失败返回 null（不抛出），调用方需判空
  */
 export function sanitizeJson(input: string): unknown {
   try {

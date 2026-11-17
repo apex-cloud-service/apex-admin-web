@@ -15,3 +15,4 @@
 | 2026-11-16 | [2026-11-16-directory-normalization.md](./2026-11-16-directory-normalization.md) | 目录规范化：reports 分层 + 4 个 docs README + 总览表 + check-doc-layout.sh（FE-025） |
 | 2026-11-16 | [2026-11-16-fe-tasks-batch.md](./2026-11-16-fe-tasks-batch.md) | FE-001~FE-007 执行记录与测试报告（build 通过、E2E 12 passed） |
 | 2026-11-17 | [2026-11-17-integration-contract-repair.md](./2026-11-17-integration-contract-repair.md) | FE-026 真实联调契约修复：审批裸数组客户端分页、日历 `/range` 本地时间、用户状态映射（前端 533 用例全绿 + 真实浏览器回归） |
+| 2026-11-18 | [2026-11-18-comment-quality-audit.md](./2026-11-18-comment-quality-audit.md) | 全仓注释质量评审与 6 批整改：220 文件审计（P1×25/P2×9/P3×31），39 文件 63 处仅注释行修正（auth-config 失真头注、影子头注、features 语义等；533 用例全绿） |

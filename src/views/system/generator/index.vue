@@ -1,13 +1,16 @@
 <!--
   代码生成页面
   ------------------------------------------------------------------
-  功能：数据源管理、表结构扫描、代码生成配置、代码生成与生成历史查询，
-        以及生成向导（模板目录/预检/预览/异步任务/产物下载）
+  功能：数据源管理（增删改查/连接测试/表扫描）、代码生成配置与按配置
+  生成、生成历史查询，以及生成向导（模板目录/预检/预览/异步任务/产物下载）
 
-  权限：
-    - system:generator:view - 查看代码生成
-    - system:generator:generate - 生成代码
-    - system:generator:preflight/preview/task:create/task:read/task:cancel - 向导与异步任务
+  权限要求（与 v-permission 实际值一致）：
+    - system:generator:create / :edit / :delete / :test / :view - 数据源管理
+    - system:generator:config:create / :config:edit / :config:delete - 生成配置管理
+    - system:generator:generate - 按配置生成
+    - system:generator:history - 生成历史
+    - system:generator:preflight / :preview - 向导预检与预览
+    - system:generator:task:create / :task:cancel - 异步任务提交与取消
     - system:generator:artifact:download - 产物下载
 -->
 <template>
@@ -420,30 +423,6 @@
   </div>
 </template>
 
-/**
- * 代码生成器管理页面
- * ------------------------------------------------------------------
- * 功能说明:
- * 1. 数据源管理 - 配置数据库连接,支持MySQL/PostgreSQL/Oracle/SQL Server
- * 2. 表结构扫描 - 自动扫描数据库表结构和字段信息
- * 3. 代码生成配置 - 配置生成参数(模块名、包名、作者等)
- * 4. 代码生成 - 按配置一键生成代码文件
- * 5. 生成历史 - 按配置查看生成历史
- * 6. 生成向导 - 模板目录/结构预检/纯渲染预览/异步任务(提交、进度轮询、取消)/产物下载
- *
- * 权限要求:
- * - system:generator:view - 查看权限(必需)
- * - system:generator:create - 创建数据源
- * - system:generator:edit - 编辑配置
- * - system:generator:delete - 删除操作
- * - system:generator:generate - 生成代码
- * - system:generator:preflight/preview - 向导预检与预览
- * - system:generator:task:create/read/cancel - 异步任务提交、进度与取消
- * - system:generator:artifact:download - 产物下载
- *
- * @author system
- * @date 2024
- */
 <script setup lang="ts">
 import { ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'

@@ -1,9 +1,12 @@
 <!--
   用户管理
   ------------------------------------------------------------------
-  后台用户列表：关键字/状态筛选、分页、新增/编辑、启停、角色分配。
+  后台用户列表：关键字/状态筛选、分页、新增/编辑、启停、角色分配、
+  导出 Excel（后端固定返回最近创建的前 100 条）。
   字段与后端 AdminUserSummaryResponse / AdminUserCreateRequest 对齐：
   列表字段 nickname（非 nickName）、无 username；创建必填 phone/nickname/gender/birthday。
+
+  权限要求（按钮 v-permission）：staff:manage - 新增用户（导出按钮无前端权限码）。
 -->
 <template>
   <el-card shadow="never">

@@ -22,7 +22,9 @@ export interface MenuPayload {
   perms?: string
   icon?: string
   sort?: number
+  /** 显示状态：0=隐藏 1=显示（与 MenuNode.visible 口径一致） */
   visible?: number
+  /** 状态：0=停用 1=正常 */
   status?: number
 }
 
@@ -130,6 +132,7 @@ export interface DictDataPayload {
   dictLabel: string
   dictValue: string
   dictSort?: number
+  /** 是否默认：1=默认 0=否 */
   isDefault?: number
   remark?: string
 }

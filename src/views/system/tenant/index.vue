@@ -6,6 +6,8 @@
   - 创建租户（编码全局唯一且创建后不可变更）
   - 生命周期动作：停用/启用/冻结/解冻/注销/归档（支持乐观锁 version）
   - 配额调整：最大用户数与最大存储容量（留空表示不限制）
+
+  权限要求（按钮 v-permission）：tenant:create / tenant:lifecycle / tenant:quota。
 -->
 <template>
   <el-card shadow="never">

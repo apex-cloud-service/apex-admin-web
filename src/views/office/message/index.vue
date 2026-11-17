@@ -532,7 +532,7 @@ async function handleReadAll(): Promise<void> {
   }
 }
 
-/** 加载可选择的接收员工（已绑定系统账号的人员） */
+/** 加载可选择的接收员工（已绑定系统账号的人员；一次取 200 条，超出者不进入候选） */
 async function loadRecipientOptions(): Promise<void> {
   try {
     const page = await listOrgEmployees({ pageNum: 1, pageSize: 200 })

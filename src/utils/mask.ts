@@ -83,6 +83,7 @@ export function maskBankCard(bankCard: string): string {
   
   const first = cardStr.slice(0, 4)
   const last = cardStr.slice(-4)
+  // 中间星号最多 12 个：超长卡号避免星号段无限拉长
   const middle = '*'.repeat(Math.min(cardStr.length - 8, 12))
   
   return `${first} ${middle} ${last}`

@@ -27,6 +27,7 @@ export interface MeetingRoom {
   remark?: string
   createTime?: string
   updateTime?: string
+  /** 版本号（乐观锁预留；当前前端更新链路未回传该字段） */
   lockVersion?: number
 }
 

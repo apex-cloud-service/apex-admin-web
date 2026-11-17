@@ -46,7 +46,8 @@ export interface OAuth2TokenRequest {
 }
 
 /**
- * 社交登录请求参数
+ * 社交登录请求参数（预留类型：当前登录页社交入口统一走标准 OAuth2 授权码/PKCE，
+ * 本模块未封装社交登录调用，无消费方）
  */
 export interface SocialLoginRequest {
   /** 社交平台类型：wechat / github / google 等 */

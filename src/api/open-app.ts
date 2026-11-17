@@ -5,9 +5,12 @@
  * - GET  /                            - 分页查询开放应用（page/size，返回数组）
  * - POST /                            - 创建应用（响应含一次性明文 clientSecret）
  * - GET  /scopes                      - 平台 scope 目录与权限码映射（与创建校验同源注册表）
- * - GET  /{clientId}                  - 应用详情
  * - PUT  /{clientId}                  - 更新应用
  * - POST /{clientId}/reset-secret     - 重置密钥（响应含一次性明文 clientSecret）
+ *
+ * 迁移端点（平台管理员专用，前缀 /admin-api/v1/open-apps/migration）：
+ * - GET  /export - 导出存量应用迁移清单（含密钥哈希，不含明文）
+ * - POST /import - 批量导入存量应用（逐条写入）
  *
  * 权限码：open:app:read / open:app:manage。明文密钥仅创建/重置响应返回一次，不落本地。
  */

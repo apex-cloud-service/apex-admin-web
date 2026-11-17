@@ -129,6 +129,7 @@ const bookingFormRef = ref<FormInstance>()
 const bookingForm = reactive<BookMeetingRoomPayload>({ title: '', startTime: '', endTime: '' })
 const bookingRules: FormRules = { startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }], endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }] }
 
+/** 设备列表展示文本；后端 equipment 可能是 JSON 字符串或数组（列表为 Entity 口径） */
 function equipmentText(value?: string | string[]): string { if (!value) return '-'; if (Array.isArray(value)) return value.join('、'); try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed.join('、') : value } catch { return value } }
 async function fetchList(): Promise<void> { loading.value = true; try { const result = await listMeetingRooms(query); list.value = result.list || []; total.value = result.total } catch (error) { showError(error, '加载会议室失败') } finally { loading.value = false } }
 function search(): void { query.pageNum = 1; fetchList() }

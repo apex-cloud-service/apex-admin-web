@@ -19,7 +19,7 @@ interface PerformanceEntryWithProcessing extends PerformanceEntry {
  * 前端性能监控器
  * ------------------------------------------------------------------
  * 基于 PerformanceObserver 采集 Web Vitals 关键指标并输出到控制台。
- * 当前未接入：仓库内无调用点，需在应用入口调用 init() 后才会生效。
+ * 当前未接入：应用入口未调用 init()（仅单元测试引用），需在 main.ts 调用后才会生效。
  * 后续可将 console.log 替换为上报到监控后端（配合 TraceId 链路）。
  */
 export class PerformanceMonitor {

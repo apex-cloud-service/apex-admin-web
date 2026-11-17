@@ -78,7 +78,7 @@ export interface CreateDocumentRequest {
   ownerName: string
 }
 
-/** 移动文档请求（targetFolderId 走 query 参数） */
+/** 移动文档请求（targetFolderId 走 query 参数；预留契约——后端当前无文档移动端点，模块内亦未封装调用） */
 export interface MoveDocumentRequest {
   /** 目标文件夹ID */
   targetFolderId: string

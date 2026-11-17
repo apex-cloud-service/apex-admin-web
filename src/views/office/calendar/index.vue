@@ -181,7 +181,6 @@
             placeholder="请选择参与人"
             style="width: 100%"
           >
-            <!-- 这里需要从用户列表API获取数据 -->
             <el-option
               v-for="user in userList"
               :key="user.id"
@@ -387,6 +386,7 @@ const loadAllEvents = async () => {
       startTime: startOfMonth.toISOString(),
       endTime: endOfMonth.toISOString(),
       pageNum: 1,
+      // 单月事件数上限假设 1000：超出截断、月历少显（后端无更大窗口的专用端点）
       pageSize: 1000,
     })
     allEvents.value = res.list

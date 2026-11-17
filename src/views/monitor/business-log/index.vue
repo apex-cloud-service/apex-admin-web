@@ -118,7 +118,6 @@ const query = reactive({
 
 // 挂载时默认查询最近 7 天日志
 onMounted(() => {
-  // 默认查询最近7天
   const now = new Date()
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
   timeRange.value = [formatDateTime(sevenDaysAgo), formatDateTime(now)]
@@ -228,7 +227,7 @@ function formatDateTime(date: Date): string {
  */
 function formatTimestamp(timestamp: string): string {
   if (!timestamp) return '-'
-  // 后端返回的是 LocalDateTime 字符串，可能需要格式化
+  // LocalDateTime 带 T 与毫秒：替换 T 并截断到秒展示
   return timestamp.replace('T', ' ').substring(0, 19)
 }
 </script>

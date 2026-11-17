@@ -16,13 +16,13 @@ export interface UserListQuery extends PageQuery {
 
 /** 用户创建/更新请求体（与后端 AdminUserCreateRequest 对齐） */
 export interface AdminUserPayload {
-  /** 手机号（11 位，必填） */
+  /** 手机号（11 位；后端创建时必填，类型可选以便更新复用） */
   phone?: string
-  /** 昵称（必填） */
+  /** 昵称（后端创建时必填，类型可选以便更新复用） */
   nickname?: string
-  /** 性别 1=男 2=女（必填） */
+  /** 性别 1=男 2=女（后端创建时必填，类型可选以便更新复用） */
   gender?: number
-  /** 生日 YYYY-MM-DD（必填） */
+  /** 生日 YYYY-MM-DD（后端创建时必填，类型可选以便更新复用） */
   birthday?: string
   country?: string
   province?: string

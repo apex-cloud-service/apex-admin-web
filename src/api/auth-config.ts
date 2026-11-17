@@ -4,10 +4,13 @@
  * 提供 JWT 配置、OAuth2 客户端配置、权限码管理、会话管理、
  * 在线用户管理、安全策略配置、登录尝试记录等功能
  * 
- * 后端接口：
+ * 后端接口（OAuth2 客户端与权限码的读/写前缀不同，注意区分）：
  * - GET/PUT /admin-api/v1/auth/config/jwt - JWT Token 配置
- * - GET/POST/PUT/DELETE /admin-api/v1/auth/config/oauth2/clients - OAuth2 客户端管理
- * - POST/DELETE /api/v1/auth/permissions（更新走 /update 子路径）- 权限码管理
+ * - GET /admin-api/v1/auth/config/oauth2/clients - OAuth2 客户端列表（读）
+ * - POST/PUT/DELETE /admin-api/v1/oauth2/clients[/{id}] - OAuth2 客户端创建/更新/删除（写）
+ * - GET /admin-api/v1/auth/config/permissions - 权限码列表（读，全量裸数组）
+ * - POST /admin-api/v1/auth/config/permissions/sync - 权限码同步（从代码注解扫描）
+ * - POST/DELETE /api/v1/auth/permissions（更新走 POST /update 子路径）- 权限码创建/更新/删除（写）
  * - GET /admin-api/v1/auth/config/sessions（踢出会话：POST /admin-api/v1/users/{sessionId}/sessions/revoke）- 会话管理
  * - GET/PUT /admin-api/v1/auth/config/session - 会话配置
  * - GET/PUT /admin-api/v1/auth/config/security - 安全策略配置
@@ -64,7 +67,7 @@ export interface Permission {
   description?: string
   /** 所属模块 */
   module?: string
-  /** 权限类型：menu=菜单 button=按钮 api=API */
+  /** 权限类型：1=菜单 2=按钮 3=接口（与 api/auth.ts SystemPermission 口径一致） */
   type: number
   /** 状态：0=停用 1=启用 */
   status: number
@@ -120,7 +123,7 @@ export interface LoginAttempt {
   ip: string
   /** 尝试时间 */
   loginTime: string
-  /** 是否成功 */
+  /** 状态：0=成功 1=失败（与认证配置页登录日志筛选/渲染口径一致） */
   status: number
   /** 失败原因 */
   message?: string
@@ -228,9 +231,10 @@ export function deleteOAuth2Client(id: string): Promise<void> {
 
 
 /**
- * 分页查询权限码列表
- * @param query 分页查询参数（可选模块、类型筛选）
- * @returns 权限码分页结果
+ * 查询权限码列表（前端伪分页）。
+ * 后端 GET 返回全量裸数组：type 筛选与分页切片均在本函数内完成，不支持模块筛选。
+ * @param query page/size 分页参数（type 可选，按权限类型筛选：1=菜单 2=按钮 3=接口）
+ * @returns 伪分页结果（list/total 由前端切片计算，非后端分页）
  */
 export async function listPermissions(query: PageQuery & { type?: number }): Promise<PageResponse<Permission>> {
   const all = await get<Permission[]>('/admin-api/v1/auth/config/permissions')

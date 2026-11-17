@@ -87,6 +87,7 @@ function extractServerMessage(error: unknown, fallback = ''): string {
 /** 响应拦截：解包含数字 code 的 Result，裸响应原样返回 */
 service.interceptors.response.use(
   (response: AxiosResponse<Result>) => {
+    // 与后端的隐式契约：服务端滚动续期时经该响应头下发新令牌，前端静默替换会话令牌
     const newToken = response.headers['x-new-access-token']
     if (newToken) setToken(newToken)
     const result = response.data

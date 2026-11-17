@@ -183,7 +183,8 @@ export async function cachedRequest<T>(
 }
 
 /**
- * 预加载请求（提前加载并缓存）
+ * 预加载请求（提前加载并缓存）。
+ * 失败语义：仅记录日志不抛出、不写缓存，调用方无法感知失败；需要失败感知时自行调用 requestFn
  */
 export async function prefetchRequest<T>(
   requestFn: () => Promise<T>,
@@ -214,7 +215,8 @@ export function clearAllCache(): void {
 }
 
 /**
- * 获取缓存统计
+ * 获取缓存统计。
+ * @returns items 中 size 为 JSON 序列化后的字符数（非字节数）、age/ttl 单位毫秒
  */
 export function getCacheStats() {
   return {

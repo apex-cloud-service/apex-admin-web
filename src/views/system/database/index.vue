@@ -529,6 +529,7 @@ const openDsDialog = (row?: DataSourceInfo) => {
     url: row?.url ?? '',
     username: row?.username ?? '',
     password: '',
+    // 超时缺省取 HikariCP 默认（连接 30000ms、空闲 600000ms）；池大小 minIdle=5/maxPoolSize=20 为页面预设
     minIdle: 5,
     maxPoolSize: 20,
     connectionTimeout: 30000,
@@ -538,7 +539,7 @@ const openDsDialog = (row?: DataSourceInfo) => {
 }
 
 /**
- * 提交数据源新增/编辑（编辑时密码留空则不修改）
+ * 提交数据源新增/编辑（密码新增与编辑均必填：后端 @NotBlank，编辑须重新输入，留空无法通过校验）
  */
 const submitDataSource = async () => {
   if (!dsFormRef.value) return

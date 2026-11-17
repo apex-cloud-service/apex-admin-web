@@ -107,6 +107,7 @@ export function startWorkflowInstance(
 }
 
 // ===== 高级任务操作 =====
+// 注意：本节端点走 /api/workflow/** 前缀，与模块其余端点的 /api/v1|v2 workflows 前缀不同，属后端既定契约而非笔误
 
 /**
  * 流程回退

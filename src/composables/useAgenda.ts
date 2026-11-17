@@ -4,7 +4,8 @@
  * 用途：
  * 为工作台「我的事项」面板（AgendaPanel.vue）提供聚合数据源。
  * 工作流待办、办公审批、站内信、近期日程、系统通知五个领域并行加载、
- * 失败隔离；只做展示与跳转，办理操作在各领域原页面完成。
+ * 失败隔离；仅展示与跳转，办理操作在各领域原页面完成——
+ * 唯一写操作是系统通知标记已读（markRead）。
  *
  * @author anqli
  * @date 2026-11-12
@@ -53,7 +54,7 @@ function truncateTitle(content: string): string {
 /**
  * 我的事项聚合数据源
  * - 五个领域各自独立加载、独立失败，区块级降级不弹全局提示
- * - 仅展示与跳转，不提供任何办理操作（办理均在原域页面完成）
+ * - 仅展示与跳转，不提供办理操作（办理均在原域页面完成）；唯一写操作为通知标记已读（markRead）
  */
 export function useAgenda() {
   const userStore = useUserStore()

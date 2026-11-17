@@ -73,6 +73,7 @@
           {{ row.executionTime != null ? `${row.executionTime}ms` : '-' }}
         </template>
       </el-table-column>
+      <!-- 错误信息列截断 40 字符展示（本页无详情弹窗，超出部分不可见） -->
       <el-table-column label="错误" min-width="180" show-overflow-tooltip>
         <template #default="{ row }">
           {{ row.errorMsg ? row.errorMsg.slice(0, 40) : '-' }}

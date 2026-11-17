@@ -8,7 +8,8 @@
   权限要求（按钮 v-permission）：tenant:package:create / update。
 
   语义要点：
-  - menuIds / permissionCodes / features 的「空集合」= 全量放行，不是无权限；
+  - menuIds / permissionCodes 的「空集合」= 全量放行，不是无权限；
+    features 的「空集合」= 未订阅任何能力（并非全量），全量须显式提交能力目录全部编码。
     页面用「全量」开关显式表达，避免把留空误解为关闭全部能力。
   - 菜单多选提交前补全父链，否则租户侧菜单树会缺父节点。
   - features 取值来自能力目录（GET /api/v2/capabilities）。

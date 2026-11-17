@@ -119,6 +119,7 @@ const query = reactive({
   level: '',
   logger: '',
   message: '',
+  // 日志条数上限（后端查询 limit 参数；reset 处同步取 100，两处须一起改）
   limit: 100,
 })
 
@@ -131,7 +132,6 @@ const currentLog = ref<RuntimeLog>({} as RuntimeLog)
 
 // 挂载时默认查询最近 1 小时的日志
 onMounted(() => {
-  // 默认查询最近1小时
   const now = new Date()
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
   timeRange.value = [formatDateTime(oneHourAgo), formatDateTime(now)]
