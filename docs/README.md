@@ -11,6 +11,10 @@
 - [贡献指南](../CONTRIBUTING.md) - 分支/提交/质量门/文档同步义务
 - [更新日志](../CHANGELOG.md) - 版本变更记录
 
+### 本次联调
+
+- [2026-11-17 联调契约修复方案](specs/2026-11-17-integration-contract-repair.md) — FE-026，日期/数组分页/状态契约及验证边界。
+
 ### 架构文档
 
 - [总体架构](architecture/overview.md) - 技术栈、分层架构、请求时序、部署架构、质量保障

@@ -1,6 +1,6 @@
-# 01 · 前端现状（2026-11-14）
+# 01 · 前端现状（2026-11-16）
 
-> 采集：2026-11-14，`package.json` + `src/` 实测 + `git log`。数字会漂移，结论比数字寿命长。
+> 采集：2026-11-16，`package.json` + `src/` 实测 + `git log`。数字会漂移，结论比数字寿命长。
 
 ## 1. 技术与规模
 
@@ -8,13 +8,13 @@
 | --- | --- |
 | 版本 / 运行时 | `1.2.0`；Node `>=18`（实际还须满足依赖 engines） |
 | 主栈 | Vue 3.5 · Vite 6 · TypeScript ~5.7 · Vue Router 4 · Pinia 2 · Element Plus 2 · Axios · ECharts 5 · CropperJS 1 |
-| 页面 | `src/views` 下 **67 个 `.vue`**，15 个业务目录（11-14 新增 `knowledge`） |
+| 页面 | `src/views` 下 **66 个 `.vue`**，15 个业务目录（11-16 删除 0 引用遗留页 `office/components/PlatformSelector.vue`） |
 | 接口层 | `src/api` **40 个业务文件**（另有 31 个 `*.test.ts` 契约测试），无统一 `index.ts` |
 | 状态 | `src/stores` 4 个：`user` / `permission` / `app` / `office` |
 | 复用 | `src/composables` 5 个（`useCrud` / `useTableConfig` / `useFormDraft` / `useBreakpoint` / `useAgenda`）+ `src/components`（分页、全局搜索、空态、上传） |
 | 测试 | 单元 **66 个**：`src/api/` **31 个** `*.test.ts` 契约测试（40 个 API 模块全覆盖），另有 35 个 `*.spec.ts` 单测（`utils/__tests__` 18、`stores` 4、`composables` 5、`components` 6、`directives`/`router` 各 1）；另 3 个 Playwright E2E 文件（`e2e/`）；Vitest + happy-dom，11-13 实测 475 用例全绿（11-14 未复跑） |
-| 文档 | `docs/` 下 **46 个 Markdown**（含 `api/`、`architecture/`、`features/`、`guides/`、`reference/`、`archived/`） |
-| 工作树 | 干净；最后提交 2026-11-14 `b67a152` |
+| 文档 | `docs/` 下 **91 个 Markdown**（11-16 目录规范化后含 `api/`、`architecture/`、`features/`、`guides/`、`reference/`、`archived/`、`notes/`、`plans/`、`records/`、`reviews/`、`specs/`、`tasks/`、`diagrams/`） |
+| 工作树 | 干净；最后提交 2026-11-16 `856e370` |
 
 ## 2. 启动与验证
 
@@ -76,7 +76,9 @@ npx vitest run         # 单次测试
 5. `utils/` 下的缓存、XSS、性能监控工具**不是全局生效**，是否执行要看调用点。
 6. Mock 仅 `import.meta.env.DEV` 动态加载，不得当生产数据源。
 
-## 6. 近期交付（2026-11-14）
+## 6. 近期交付（2026-11-16）
+
+- 11-16（治理批次 + 目录规范化）：`856e370` 测试报告分层 + `docs/` 目录总览 + 结构自检脚本，`docs/` Markdown 46→**91**（新增 `notes/`、`plans/`、`records/`、`reviews/`、`specs/`、`tasks/` 等治理目录）；`548d1c2` 删除 0 引用遗留页 `views/office/components/PlatformSelector.vue`，`src/views` 67→**66**（业务目录仍 15）；同批 `7d46a81`/`02421f4`/`16af104` 收敛 TypeScript `any` 至 0，`0bdcf6e` 补工作流/租户/办公审批三条 E2E 主链路用例，`fc544e1` 27 张 Mermaid 落地为 `.mmd` + 同名 `.svg`。
 
 - 11-14：`1efc3cf` 知识库前端——新增 `api/knowledge.ts`（238 行，空间/文档/检索/问答四组）、`views/knowledge/` 四页、`types/index.ts` 88 行类型、`router/dynamic.ts` 4 条路由注册；`src/views` 63→67、`src/api` 39→40、`*.test.ts` 30→31，业务目录 14→15。`b67a152` 补 11-13 会话备注（`docs/` 44→46 的计数与用途说明）。
 - 11-12：`595bee8` 数据总览与我的事项——概览卡 `FIELD_LABELS` 三源字段中文映射（未登记 key 回退原名）+ 字节格式化，聚合失败改区块级失败态可重试，图表改分类统计柱状图；新增 `composables/useAgenda.ts`（五域并行加载、失败隔离、单域重试）与 `views/dashboard/components/AgendaPanel.vue`（`src/views` 62→63）；办公控制台绑定统计改走 `/bindings/page` 读真实 total；`docs/` Markdown 41→44（聚合评审、优化方案、字段映射方案三篇归档）。

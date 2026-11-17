@@ -73,7 +73,7 @@
 | GET | `/admin-api/v1/users/{id}` | `getUserDetail(id)` | 用户详情（含 roles） |
 | POST | `/admin-api/v1/users` | `createUser(payload)` | 创建用户 |
 | PUT | `/admin-api/v1/users/{id}` | `updateUser(id, payload)` | 更新用户 |
-| PUT | `/admin-api/v1/users/{id}/status` | `updateUserStatus(id, enabled)` | 启停用户 |
+| PUT | `/admin-api/v1/users/{id}/status` | `updateUserStatus(id, enabled)` | 启停用户（提交布尔 `enabled`；列表/详情 `status` 语义为 **1=正常、0=禁用**） |
 | POST | `/admin-api/v1/users/{id}/sessions/revoke` | `revokeUserSessions(id)` | 强退用户会话 |
 | PUT | `/admin-api/v1/users/{id}/roles` | `assignUserRoles(id, roleIds)` | 分配角色（整体替换） |
 | GET | `/admin-api/v1/staff-roles` | `listStaffRoles()` | 可分配角色列表 |
@@ -267,7 +267,9 @@
 | [office-calendar.ts](../../src/api/office-calendar.ts) | `/api/office/calendar/events/**`（CRUD/列表） | `createCalendarEvent` / `getCalendarEvent` / `updateCalendarEvent` / `deleteCalendarEvent` / `getCalendarEvents` | `office/calendar` |
 | [office-document.ts](../../src/api/office-document.ts) | `/api/office/documents/**`（创建/详情/删除/复制/my） | `createDocument` / `getDocument` / `deleteDocument` / `copyDocument` / `getMyDocuments` | `office/document` |
 
-> 审批列表元素字段为 `processName`/`currentNode`/`createdAt`，路径参数为 `processInstanceId`，`approverId` 必填。文档列表为「我的文档」裸数组，平台/类型/关键词筛选与分页在前端完成；后端无文档更新与分享端点，复制的 `targetFolderId` 走 query。
+> 审批列表元素字段为 `processName`/`currentNode`/`createdAt`，路径参数为 `processInstanceId`。`pending` 的 `approverId` 与 `initiated` 的 `initiatorId` 必填（前端缺省直接拒绝，不发请求）。`pending`/`initiated` 解包后均为**裸数组**，后端不接受分页参数：前端按平台/状态筛选后再做客户端分页，`total` 为筛选后全量、`pages`/`hasNext` 由切片计算；已办区块从「我发起的」全量派生。文档列表为「我的文档」裸数组，平台/类型/关键词筛选与分页在前端完成；后端无文档更新与分享端点，复制的 `targetFolderId` 走 query。
+>
+> 日历列表走 `GET /api/office/calendar/events/range`（不是集合根路径）：`startTime`/`endTime` 必填为**无时区** `LocalDateTime`，前端把 Date 控件的 `YYYY-MM-DD HH:mm:ss` 转 `T` 分隔，带 `Z`/偏移的时间换算为浏览器本地墙钟（不删后缀）；未选时间默认当前自然月。返回裸数组，平台/日历/状态/创建人筛选与分页在前端完成。平台列后端存小写（`feishu`/`dingtalk`/`wecom`），前端归一为大写枚举展示；状态取 `CONFIRMED`/`TENTATIVE`/`CANCELLED`。
 >
 > 多模块按职责拆分：`office-platform.ts` 覆盖平台标识、登录回调、应用配置、绑定管理与组织同步，`office-approval.ts` / `office-calendar.ts` / `office-document.ts` 覆盖审批/日历/文档业务，`office-sync-wizard.ts` 覆盖同步向导（预检/预览/执行/重试），`message.ts` 覆盖站内信与模板，`meeting-room.ts` 覆盖会议室。当前仓库可确认这些 API 封装、页面调用和开发代理配置；生产网关是否完整转发对应路径需在部署环境核验。新增办公页面时优先查看页面实际 import 的模块，不要凭前缀猜测。
 
