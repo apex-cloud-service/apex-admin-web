@@ -1,7 +1,7 @@
 # 记忆卡 · apex-admin-web（管理后台前端）
 
 > **用法**：接手前端或需要改页面时先读本卡（约 3 分钟），细节按文末指针进入 `AGENTS.md` 与 `docs/`。
-> **基线**：2026-11-16 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`dev` 分支）
+> **基线**：2026-11-17 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`dev` 分支，末次提交 `95a7f62`）
 > **仓库基线**：默认工作分支 **`dev`**（长期分支 `master`/`dev`/`test`，`main` 已删除）· 远端 `origin` = `git@github.com:apex-cloud-service/apex-admin-web.git`（固定 SSH 443）· 许可 **MIT**（`package.json` 已声明）
 > **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-11-10）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
 
@@ -94,8 +94,9 @@ src/
 | 集成/IoT/在线会话/密码找回页 404 或返回 HTML | 代理须覆盖 `/integration/v1`、`/auth/v1\|v2`（带版本前缀，勿用裸 `/integration` 撞菜单路由）；`/oauth2/consent` 仅 POST 反代 |
 | 站内信模板编辑/删除 404 | 网关 office 路由须含 `/admin-api/v1/message-templates/**`（后端已修，环境需滚动新配置） |
 
-## 7. 当前状态（2026-11-16）
+## 7. 当前状态（2026-11-17）
 
+- 11-17（联调契约修复）：`8ab7d22` 登记 FE-026 联调任务/方案/记录与契约口径，`docs/` Markdown 91→**93**（`docs/specs/`、`docs/records/` 各 1 篇 `2026-11-17-integration-contract-repair.md`）；`331158d` 按真实后端契约对齐办公审批/日历与用户状态（`api/office-approval.ts`、`api/office-calendar.ts` 及对应 `*.test.ts`、`views/office/{approval,calendar}`、`views/system/user`），`src/views` 仍 **66**、`src/api` 仍 **40**、`*.test.ts` 仍 **31**。
 - 11-16（治理批次 + 目录规范化）：`856e370` 测试报告分层 + `docs/` 目录总览 + 结构自检脚本，`docs/` Markdown 46→**91**（新增 `notes/`、`plans/`、`records/`、`reviews/`、`specs/`、`tasks/` 等治理目录）；`548d1c2` 删除 0 引用遗留页 `views/office/components/PlatformSelector.vue`，`src/views` 67→**66**（业务目录仍 15、`src/api` 仍 40、`*.test.ts` 仍 31）。同批 `7d46a81`/`02421f4`/`16af104` 将 TypeScript `any` 收敛至 0。
 - 11-14（`1efc3cf` 知识库前端）：新增 `api/knowledge.ts`（知识空间/文档/检索/问答四组接口，含 `/admin-api/v1/kb/**` 管理与 `/api/v1/kb/**` 用户侧）与 `views/knowledge/{space,document,search,chat}` 四页，`src/types/index.ts` 补 88 行类型、`router/dynamic.ts` 注册 4 条路由；`src/views` 63→**67**、`src/api` 39→**40**、`*.test.ts` 30→**31**，业务目录 14→**15**。同日 `b67a152` 补 11-13 会话备注（`docs/` 44→46 计数说明）。
 - 11-13（四任务整改：文档对齐 + 测试体系 + 图谱 + 注释）：**文档**清理幽灵端点（api/README MFA 5 项、同步向导 2 函数、IP `removeIpRuleByAddress`、`/inbox/cursor` 口径、CHANGELOG TraceQuery）；**测试** 28→**65** 文件 / 221→**475** 用例（39 个 API 模块契约全覆盖 + utils/stores/composables/组件补齐），首建 Playwright E2E（`playwright.config.ts` + `e2e/`，6 条打桩用例，`npm run test:e2e`）、Lighthouse（`test:perf`，静态基线 perf 95）与 autocannon 压测（`test:stress`，devDep 新增 autocannon）；**图谱**新增 `docs/architecture/domain-and-state-diagrams.md`（类图 + 工作流/租户/绑定三状态机 + 我的事项与数据总览时序图）；**注释**补 `useAgenda.ts` 头注等 3 处，`check:comments` 213 文件全绿。`docs/` Markdown 44→**46**（测试报告与领域状态图两篇）。报告见 [测试报告（2026-11-13）](docs/archived/project-reports/test-report-2026-11-13.md)。
