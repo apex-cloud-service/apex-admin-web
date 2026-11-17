@@ -67,7 +67,7 @@
 
 | 缺陷 | 证据 | 归属 |
 | --- | --- | --- |
-| 日历写操作完全不可用 | `OfficeCalendarService.createEvent` 首行调用 `getCalendarClient(platform)`，但仓库内 `infrastructure/client/feishu|dingtalk|wecom` 下只有 `*ApprovalClient`，**没有任何 `*CalendarClient` 实现**；因此创建/更新/删除恒返回「不支持的办公平台」 | 后端能力缺口，需另立任务实现三平台日历客户端 |
+| 日历写操作不可用（已修复，见 §9） | `OfficeCalendarService.createEvent` 首行调用 `getCalendarClient(platform)`，但此前仓库内 `feishu/dingtalk/wecom` 下只有 `*ApprovalClient`，**没有任何 `*CalendarClient` 实现**，创建/更新/删除恒返回「不支持的办公平台」 | 已由后端 BE-037 补齐三平台客户端（`1731b622`）；仍受端口签名限制，详见 §9 |
 | 审批发起依赖真实办公平台应用 | `POST /api/office/approvals` 返回 `飞书 appId未配置`；`office_platform_app` 表为空，发起需真实飞书应用凭据与外部 API | 外部依赖，需部署环境提供 |
 | 审批列表关键字段恒为 null | 插入合法数据后 `GET /api/office/approvals/pending` 返回 `processName/currentNode/createdAt` 均为 null，而库中 `process_name/current_node/created_at` 有值。根因：领域实体 `ApprovalProcess` 只有 `title`/`initiateTime`/`createTime`，PO 与响应 DTO 用 `processName`/`currentNode`/`createdAt`，MapStruct 静默丢字段 | 后端既有缺陷，影响审批页标题/节点/时间展示 |
 
@@ -92,3 +92,15 @@ user-info、menus、overview、calendar-range、approval-pending、approval-init
 - 构建会覆盖运行中服务的 JAR：`mvnd package` 后会触发 `NoClassDefFoundError`，必须重启对应服务（网关最敏感）。
 - 同一用户登录会顶替旧会话，导致服务注入的 reader token 失效返回 403；改完配置后需用当前 token 重启对应服务。
 - Redis 密钥轮换在每日 02:00，跨该时点后旧 token 验签失败属预期。
+
+## 9. 后续修复（BE-037：三平台日历客户端）
+
+§7.2 记的「日历写操作不可用」已由后端补齐，前端无需改动。
+
+- 新增 `feishuCalendarClient` / `dingtalkCalendarClient` / `wecomCalendarClient`，Bean 名与 `getCalendarClient` 查找口径一致。
+- 真实网关验证：`POST /api/office/calendar/events` 传 `platform=feishu|dingtalk|wecom` 分别返回「飞书 appId未配置 / 钉钉 appKey未配置 / 企业微信 corpid未配置」，**不再返回「不支持的办公平台」**，说明客户端已正确路由、凭据校验链已生效。
+- 仍存在的限制（后端端口签名所致，非本节修复范围）：
+  - 飞书/钉钉事件以组织者**主日历**为父资源，`organizerId` 需传平台侧用户标识（open_id/unionId），而非系统用户 ID；
+  - `getEventDetail`/`updateEvent` 只接收 `platformEventId`，无法定位父日历，后端显式拒绝；
+  - 会议室可用性查询三平台均未实现。
+- 真实创建闭环仍需平台凭据（appId/appKey/corpid + 对应密钥环境变量），本地未提供，故未做端到端创建验证。

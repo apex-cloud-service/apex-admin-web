@@ -86,6 +86,8 @@
 
 | 39 | 2026-11-17 | 台账 | **FE-026 收口**：环境完全重建后经网关跑 18 条真实接口 **18/18 通过**（user-info/menus/overview/calendar-range/approval-pending/initiated/kb-spaces/connectors/iot/masking/tenants/capabilities/operations/wf-instances/notifications/messages/sessions/permissions）；记录 §8 补充时区五种输入与分页边界独立校验、租户作用域复核结论及三条环境搭建注意（构建覆盖运行中 JAR、token 会话顶替、02:00 密钥轮换）；任务卡 FE-026 置「已完成」 | 未提交 | 18/18 实测；`vitest` 68 文件 533 用例全绿；`vue-tsc` 退出 0；`npm run build` 成功 | 仅记录与任务状态；日历写操作与审批发起两项外部依赖缺口已列入记录并需另立任务 |
 
+| 40 | 2026-11-17 | 台账 | **BE-037 后同步前端记录**：§7.2「日历写操作完全不可用」更正为已由后端补齐三平台客户端（`1731b622`），新增 §9 说明：Bean 名小写约定、组织者主日历语义（organizerId 需传平台 open_id/unionId）、详情/更新受端口签名限制显式拒绝、会议室未实现、真实创建仍需平台凭据故未做端到端验证 | 未提交 | 真实网关三平台分别返回「飞书 appId未配置/钉钉 appKey未配置/企业微信 corpid未配置」，不再是「不支持的办公平台」 | 仅前端记录文档；前端代码无需改动 |
+
 ---
 
 ## 4. 按类型检索
