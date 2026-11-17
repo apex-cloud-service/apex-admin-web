@@ -65,9 +65,11 @@ else
 fi
 
 # 4. AGENTS.md 附录 A 完整性
+# 前端基线 2026-11-18 更新（台账 #46）：TaskActions 删除按 AGENTS.md §10 维护条款同步 §7.3/§7.2，
+# 附录 A 由 712 行变为 700 行，哈希经复核后有意更新；此后该区域仍冻结，改动须走台账登记。
 if [ -f AGENTS.md ]; then
   if [ "$REPO" = "backend" ]; then H_LINES=306; H_EXPECT="aa0c25fcc3d4b32a79981efb4e01534ae68449fb320d37037263d4668d8960ed"
-  else H_LINES=712; H_EXPECT="ae5e19db9675ad33556faae36ea7007fa2011fefa7cdb35ee703bccec49db53a"; fi
+  else H_LINES=700; H_EXPECT="9e9f3cda9cd00e8eab7aff3da8eadb95fe998cb12d75931939f6328862611aa3"; fi
   H_ACTUAL="$(tail -n ${H_LINES} AGENTS.md | shasum -a 256 | awk '{print $1}')"
   if [ "$H_ACTUAL" = "$H_EXPECT" ]; then pass "AGENTS.md 附录 A 未被改动"; else fail "AGENTS.md 附录 A 哈希变化（实际 ${H_ACTUAL}），原文区不得改动"; fi
 else

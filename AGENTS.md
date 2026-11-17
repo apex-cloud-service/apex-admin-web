@@ -646,27 +646,13 @@ sequenceDiagram
     end
 ```
 
-工作流实例列表使用 `pageNum/pageSize`，返回 `records/total`；待办任务同样使用 `pageNum/pageSize`，但响应为 `PageResponse`，页面读 `list/total`；普通 `Pagination` 组件的绑定参数不等于接口查询字段，需要页面适配。实例、统计使用 `/admin-api/v1/workflows/**`；待办任务查询与办理（complete，仅携带 `comment`，固定为通过语义）使用 `/api/v1/workflows/tasks/**`；回退、转办、委派、挂起和恢复使用 `/api/workflow/**`。流程定义管理已由 `/api/v2/workflow-definitions` 提供（写接口返回领域对象、查询接口返回 DTO，字段名不可混用）；当前前端未封装或未调用任务驳回与 `tasks/my` 接口，相关后端能力需以目标服务契约核验。待办任务在 `workflow/monitor` 页的「待办任务」Tab 中办理，回退、转办、委派均由该页直接调用对应 API（不经过 TaskActions 组件），回退目标节点取自实例详情的流程定义节点。
+工作流实例列表使用 `pageNum/pageSize`，返回 `records/total`；待办任务同样使用 `pageNum/pageSize`，但响应为 `PageResponse`，页面读 `list/total`；普通 `Pagination` 组件的绑定参数不等于接口查询字段，需要页面适配。实例、统计使用 `/admin-api/v1/workflows/**`；待办任务查询与办理（complete，仅携带 `comment`，固定为通过语义）使用 `/api/v1/workflows/tasks/**`；回退、转办、委派、挂起和恢复使用 `/api/workflow/**`。流程定义管理已由 `/api/v2/workflow-definitions` 提供（写接口返回领域对象、查询接口返回 DTO，字段名不可混用）；当前前端未封装或未调用任务驳回与 `tasks/my` 接口，相关后端能力需以目标服务契约核验。待办任务在 `workflow/monitor` 页的「待办任务」Tab 中办理，回退、转办、委派均由该页直接调用对应 API（页面内实现，无独立任务操作组件），回退目标节点取自实例详情的流程定义节点。
 
 流程发起能力在 `workflow/monitor` 页的「发起流程」对话框：`startWorkflowInstance(workflowCode, { businessKey, contextJson? })` → `POST /api/v1/workflows/{workflowCode}/instances`。`businessKey` 必填（≤200 字符），`contextJson` 选填且必须是合法 JSON（≤10000 字符，前端校验），发起人取当前登录用户；流程定义可由 `/api/v2/workflow-definitions` 查询，但发起对话框仍由调用方手输 `workflowCode`。发起成功后重挂载实例列表 Tab 并切换到实例页签。
 
-### 7.3 TaskActions 能力边界
+### 7.3 TaskActions 组件（已于 2026-11-18 删除）
 
-```mermaid
-flowchart LR
-    COMP[TaskActions 组件：当前未接入页面] --> TYPE{动作}
-    TYPE -->|通过| EMITA[emit approve，由父组件处理]
-    TYPE -->|驳回| EMITR[emit reject，由父组件处理]
-    TYPE -->|回退| NODE[选择 previousNodes 与原因]
-    TYPE -->|转办 / 委派| USER[查询 users / 选择用户与原因]
-    NODE --> API[组件直接调用高级任务 API]
-    USER --> API
-    API --> RESULT{结果}
-    RESULT -->|成功| SUCCESS[提示并 emit success]
-    RESULT -->|失败| ERR[提示错误]
-```
-
-不能把该组件描述成已接入的审批闭环，也不能把实例挂起/恢复归入它。后续接入须明确通过/驳回事件的父级处理、权限判断、节点来源和操作后刷新。`previousNodes` 当前只在初始化复制，后续 prop 更新不会自动同步本地列表。
+`workflow/components/TaskActions.vue` 为零引用死代码（全仓无 import/路由注册，通过/驳回/回退/转办/委派能力均由 `workflow/monitor` 页「待办任务」Tab 直接调用对应 API 覆盖），已删除。后续如需恢复独立任务操作组件，须先明确通过/驳回事件的父级处理、权限判断、节点来源和操作后刷新，接入页面并同步本节，不得以「文件存在」描述未接线能力。
 
 ### 7.4 文件上传与响应处理流程
 

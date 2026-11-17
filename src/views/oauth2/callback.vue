@@ -13,9 +13,8 @@
   Props / Emits：无（路由页面）
 -->
 <template>
-  <div class="oauth2-callback">
-    <el-loading v-loading="loading" :text="loadingText" fullscreen />
-  </div>
+  <!-- v-loading 指令挂容器（el-loading 并非 Element Plus 组件，原写法不渲染任何加载效果；文字经 element-loading-text 下发） -->
+  <div v-loading="loading" :element-loading-text="loadingText" class="oauth2-callback" />
 </template>
 
 <script setup lang="ts">

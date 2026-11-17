@@ -54,7 +54,8 @@
                   {{ item.hrefLabel }}
                 </el-button>
               </div>
-              <div v-if="section.truncated" class="truncated-hint">仅展示前 5 条，请到对应页面查看全部</div>
+              <!-- 文案不带条数：条数由 useAgenda.PAGE_SIZE 决定，写死数字会漂移 -->
+              <div v-if="section.truncated" class="truncated-hint">仅展示部分事项，请到对应页面查看全部</div>
             </template>
           </template>
         </el-card>

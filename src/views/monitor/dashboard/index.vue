@@ -930,12 +930,6 @@ onBeforeUnmount(() => {
   max-width: 60%;
 }
 
-.kv-list .ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* 治理计数 */
 .gov-counts {
   display: flex;
@@ -946,36 +940,6 @@ onBeforeUnmount(() => {
 
 .rule-table {
   margin-top: 4px;
-}
-
-/* 网关汇总 */
-.gateway-summary {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 10px;
-}
-
-.g-item {
-  display: flex;
-  flex-direction: column;
-  font-size: 13px;
-}
-
-.g-item span {
-  color: var(--el-text-color-secondary);
-}
-
-.g-item b {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.c-warn {
-  color: var(--el-color-warning);
-}
-
-.c-danger {
-  color: var(--el-color-danger);
 }
 
 /* 核心业务 */

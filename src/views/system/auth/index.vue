@@ -1,11 +1,18 @@
 <!--
   认证配置页面
   ------------------------------------------------------------------
-  功能：OAuth2 客户端管理、认证配置、密钥管理
-  
-  权限：
-    - system:auth:view - 查看认证配置
-    - system:auth:edit - 编辑认证配置
+  功能：JWT 配置（密钥轮换与连接测试）、OAuth2 客户端管理、权限码管理与
+  同步、在线用户/会话管理（强制与批量下线）、会话配置、安全策略、
+  登录尝试记录查询（无解锁账号能力）
+
+  权限要求（与 v-permission 实际值一致）：
+    - system:auth:config:jwt:edit - 更新/测试 JWT 配置
+    - system:auth:oauth2:create / :edit / :delete - OAuth2 客户端管理
+    - system:auth:config:permission:sync - 权限码同步
+    - system:auth:permission:create / :edit / :delete - 权限码管理
+    - staff:session:revoke - 强制/批量下线
+    - system:auth:config:session:edit - 更新会话配置
+    - system:auth:config:security:edit - 更新安全策略
 -->
 <template>
   <div class="auth-config-container">
@@ -429,13 +436,6 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="permissionRolesDialogVisible" title="关联角色" width="600px">
-      <el-table :data="permissionRoles" border stripe>
-        <el-table-column prop="roleId" label="角色ID" width="100" />
-        <el-table-column prop="roleName" label="角色名称" />
-      </el-table>
-    </el-dialog>
-
     <el-dialog v-model="jwtTestVisible" title="测试 JWT 配置" width="760px">
       <el-alert
         title="按当前已保存的 JWT 配置生成测试令牌并验证，用于确认配置正确性"
@@ -480,29 +480,6 @@
   </div>
 </template>
 
-/**
- * 认证授权配置管理页面
- * ------------------------------------------------------------------
- * 功能说明:
- * 1. JWT配置 - 配置JWT密钥、过期时间、签名算法等
- * 2. OAuth2配置 - 管理第三方OAuth2客户端(GitHub、Google等)
- * 3. 权限码管理 - 统一管理系统权限码,支持同步和角色关联
- * 4. 在线用户 - 查看在线用户列表,支持强制下线和批量下线
- * 5. 会话配置 - 配置并发会话数、超时时间、踢出策略等
- * 6. 安全策略 - 配置登录尝试次数、密码策略、IP白名单、双因素认证
- * 7. 登录日志 - 查看登录尝试记录,支持解锁被锁定的用户
- * 
- * 权限要求:
- * - system:auth:view - 查看权限(必需)
- * - system:auth:config:jwt:edit - 更新JWT配置
- * - system:auth:oauth2:* - OAuth2客户端管理
- * - system:auth:permission:* - 权限码管理
- * - system:auth:session:* - 会话管理
- * - system:auth:config:security:edit - 更新安全策略
- * 
- * @author system
- * @date 2024
- */
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
@@ -534,7 +511,6 @@ import {
   type JwtTestResult,
   type OAuth2ClientConfig,
   type Permission,
-  type PermissionRole,
   type OnlineUser,
   type SessionConfig,
   type LoginAttempt,
@@ -637,9 +613,6 @@ const permissionRules: FormRules = {
 
   type: [{ required: true, message: '请选择类型', trigger: 'change' }],
 }
-
-const permissionRolesDialogVisible = ref(false)
-const permissionRoles = ref<PermissionRole[]>([])
 
 const onlineLoading = ref(false)
 const onlineUsers = ref<OnlineUser[]>([])

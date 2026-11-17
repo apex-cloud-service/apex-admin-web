@@ -527,13 +527,6 @@ onMounted(loadCaptcha)
   margin-top: 8px;
 }
 
-
-.github-icon:hover {
-  border-color: var(--el-color-primary);
-  fill: var(--el-color-primary);
-  transform: scale(1.1);
-}
-
 .social-icon {
   width: 40px;
   height: 40px;
@@ -561,33 +554,6 @@ onMounted(loadCaptcha)
 }
 
 /* 企业微信图标特定样式 */
-.wecom-icon:hover {
-  border-color: #4fc3f7;
-}
-.social-icon {
-  width: 40px;
-  height: 40px;
-  padding: 8px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.3s;
-  fill: var(--el-text-color-primary);
-}
-
-.social-icon:hover {
-  border-color: var(--el-color-primary);
-  transform: scale(1.1);
-}
-
-.dingtalk-icon:hover {
-  border-color: #1296db;
-}
-
-.feishu-icon:hover {
-  border-color: #00d6b9;
-}
-
 .wecom-icon:hover {
   border-color: #4fc3f7;
 }
