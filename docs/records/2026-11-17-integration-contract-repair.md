@@ -75,3 +75,20 @@
 
 - 审批租户隔离：插入租户 1 与租户 2 各一条审批后，以租户 1 身份调用 `pending?approverId=1001` 仅返回租户 1 记录；查询租户 2 的 `processInstanceId` 返回「审批流程不存在」。说明 BE-036 修复的租户上下文传播在生产路径生效。
 - 验证用测试数据已全部清理（`itest-` 前缀记录数 0）。
+
+## 8. 最终回归（2026-11-17 全量真实链路）
+
+环境完全重建后（容器 + 9 个后端服务 + 网关 + Vite），经网关跑 18 条真实接口，结果 **18/18 通过**：
+
+user-info、menus、overview、calendar-range、approval-pending、approval-initiated、kb-spaces、connectors、iot-devices、masking、tenants、capabilities、operations、wf-instances、notifications、messages、sessions、permissions 全部 200。
+
+补充确认：
+- 时区转换独立校验：`2026-11-17 09:30:00`、`T09:30`、`T09:30:00`、`01:30:00.000Z`、`09:30:00+08:00` 五种输入均正确产出无时区本地时间（`01:30Z` 与 `09:30+08` 都换算为 `09:30`）。
+- 客户端分页独立校验：4 条数据 / size=2 时第 1 页 hasNext=true、第 2 页 false、第 3 页越界返回空且 hasNext=false、空列表 total=0。
+- 租户作用域 `withTenantScoped` 经复核：`callWithTenant` 在 `finally` 恢复，`fromCallable` 异常路径同样经过，无租户在触达 mapper 前拒绝。
+
+### 环境搭建注意事项（避免重复踩坑）
+
+- 构建会覆盖运行中服务的 JAR：`mvnd package` 后会触发 `NoClassDefFoundError`，必须重启对应服务（网关最敏感）。
+- 同一用户登录会顶替旧会话，导致服务注入的 reader token 失效返回 403；改完配置后需用当前 token 重启对应服务。
+- Redis 密钥轮换在每日 02:00，跨该时点后旧 token 验签失败属预期。

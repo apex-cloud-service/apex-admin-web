@@ -84,6 +84,8 @@
 
 | 38 | 2026-11-17 | 代码 | **FE-026 第二轮：日历写路径契约补齐**：①`CreateEventRequest` 补后端 `@NotBlank` 的 `eventType`/`organizerId`/`organizerName`（真实 POST 曾返回 400「事件类型不能为空, 组织者姓名不能为空, 组织者ID不能为空」），日历页新增事件类型下拉、组织者取当前登录用户；②写请求平台标识统一转小写（后端按 `<platform>CalendarClient` Bean 名查找，传 `FEISHU` 返回「不支持的办公平台: FEISHU」）；③新增 `EventType` 枚举与 `EVENT_TYPE_NAMES` | 未提交 | `npx vue-tsc --noEmit` 退出 0；`vitest` office-calendar 7 用例通过；真实 `POST /api/office/calendar/events` 的 400 原因已确认并修复前端传参 | 仅前端请求体与表单字段；未改后端。**日历写操作仍不可用**：后端无任何 `*CalendarClient` 实现，已记入记录 §7.2 另立任务 |
 
+| 39 | 2026-11-17 | 台账 | **FE-026 收口**：环境完全重建后经网关跑 18 条真实接口 **18/18 通过**（user-info/menus/overview/calendar-range/approval-pending/initiated/kb-spaces/connectors/iot/masking/tenants/capabilities/operations/wf-instances/notifications/messages/sessions/permissions）；记录 §8 补充时区五种输入与分页边界独立校验、租户作用域复核结论及三条环境搭建注意（构建覆盖运行中 JAR、token 会话顶替、02:00 密钥轮换）；任务卡 FE-026 置「已完成」 | 未提交 | 18/18 实测；`vitest` 68 文件 533 用例全绿；`vue-tsc` 退出 0；`npm run build` 成功 | 仅记录与任务状态；日历写操作与审批发起两项外部依赖缺口已列入记录并需另立任务 |
+
 ---
 
 ## 4. 按类型检索
