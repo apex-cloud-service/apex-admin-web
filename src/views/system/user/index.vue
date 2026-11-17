@@ -14,8 +14,8 @@
       </el-form-item>
       <el-form-item label="状态">
         <el-select v-model="query.status" placeholder="全部" clearable style="width: 120px">
-          <el-option label="正常" :value="0" />
-          <el-option label="禁用" :value="1" />
+          <el-option label="正常" :value="1" />
+          <el-option label="禁用" :value="0" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -45,8 +45,8 @@
       </el-table-column>
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
-          <el-tag :type="row.status === 0 ? 'success' : 'danger'">
-            {{ row.status === 0 ? '正常' : '禁用' }}
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+            {{ row.status === 1 ? '正常' : '禁用' }}
           </el-tag>
         </template>
       </el-table-column>
@@ -55,8 +55,8 @@
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button link type="primary" @click="openAssignRole(row)">角色</el-button>
-          <el-button link :type="row.status === 0 ? 'danger' : 'success'" @click="toggleStatus(row)">
-            {{ row.status === 0 ? '禁用' : '启用' }}
+          <el-button link :type="row.status === 1 ? 'danger' : 'success'" @click="toggleStatus(row)">
+            {{ row.status === 1 ? '禁用' : '启用' }}
           </el-button>
         </template>
       </el-table-column>
@@ -352,7 +352,7 @@ async function submit(): Promise<void> {
  * @param row 行数据
  */
 async function toggleStatus(row: AdminUser): Promise<void> {
-  const enable = row.status === 1
+  const enable = row.status !== 1
   try {
     await ElMessageBox.confirm(`确认${enable ? '启用' : '禁用'}用户「${row.nickname}」？`, '提示', {
       type: 'warning',

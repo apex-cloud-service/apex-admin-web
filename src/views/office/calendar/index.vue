@@ -57,8 +57,8 @@
           <span>事件列表</span>
           <el-radio-group v-model="queryParams.status" @change="handleQuery">
             <el-radio-button label="">全部</el-radio-button>
-            <el-radio-button label="SCHEDULED">计划中</el-radio-button>
-            <el-radio-button label="COMPLETED">已完成</el-radio-button>
+            <el-radio-button label="CONFIRMED">已确认</el-radio-button>
+            <el-radio-button label="TENTATIVE">待定</el-radio-button>
             <el-radio-button label="CANCELLED">已取消</el-radio-button>
           </el-radio-group>
         </div>
@@ -498,8 +498,8 @@ const getPlatformTagType = (platform: OfficePlatform) => {
 /** 事件状态 → 标签类型映射 */
 const getStatusTagType = (status: string) => {
   const typeMap: Record<string, any> = {
-    SCHEDULED: '',
-    COMPLETED: 'success',
+    CONFIRMED: 'success',
+    TENTATIVE: 'warning',
     CANCELLED: 'info',
   }
   return typeMap[status] || ''
@@ -508,8 +508,8 @@ const getStatusTagType = (status: string) => {
 /** 事件状态 → 中文文案映射 */
 const getStatusText = (status: string) => {
   const textMap: Record<string, string> = {
-    SCHEDULED: '计划中',
-    COMPLETED: '已完成',
+    CONFIRMED: '已确认',
+    TENTATIVE: '待定',
     CANCELLED: '已取消',
   }
   return textMap[status] || status
@@ -518,8 +518,8 @@ const getStatusText = (status: string) => {
 /** 事件状态 → 月历徽标颜色映射 */
 const getEventBadgeType = (status: string) => {
   const typeMap: Record<string, any> = {
-    SCHEDULED: 'primary',
-    COMPLETED: 'success',
+    CONFIRMED: 'success',
+    TENTATIVE: 'warning',
     CANCELLED: 'info',
   }
   return typeMap[status] || 'primary'

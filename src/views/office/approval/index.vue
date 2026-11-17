@@ -213,6 +213,7 @@ import {
   getApprovalDetail,
   getMyInitiatedApprovals,
   getPendingApprovals,
+  listMyInitiatedApprovals,
   initiateApproval,
   type ApprovalProcess,
   type InitiateApprovalRequest,
@@ -255,6 +256,9 @@ const initiatedLoading = ref(false)
 const initiatedApprovals = ref<ApprovalProcess[]>([])
 const initiatedTotal = ref(0)
 const initiatedPage = reactive({ pageNum: 1, pageSize: 10 })
+/** 最近一次「我发起的」全量数据（供已办本地分页复用） */
+const allInitiated = ref<ApprovalProcess[]>([])
+
 
 // ==================== 详情 ====================
 const detailVisible = ref(false)
@@ -363,14 +367,24 @@ async function loadPendingApprovals(): Promise<void> {
 async function loadInitiatedApprovals(): Promise<void> {
   initiatedLoading.value = true
   completedLoading.value = true
+  const initiatorId = String(currentUserId.value ?? '')
+  if (!initiatorId) {
+    initiatedLoading.value = false
+    completedLoading.value = false
+    return
+  }
   try {
     const result = await getMyInitiatedApprovals({
+      initiatorId,
       pageNum: initiatedPage.pageNum,
       pageSize: initiatedPage.pageSize,
     })
     initiatedApprovals.value = result.list || []
     initiatedTotal.value = result.total
-    rebuildCompletedApprovals()
+    // 已办需从全量终态数据派生，不能只看当前页
+    const all = await listMyInitiatedApprovals({ initiatorId, pageNum: 1, pageSize: 1 })
+    allInitiated.value = all
+    rebuildCompletedApprovals(all)
   } catch (error) {
     showError(error, '加载我发起的审批失败')
   } finally {
@@ -379,11 +393,9 @@ async function loadInitiatedApprovals(): Promise<void> {
   }
 }
 
-/** 由「我发起的」数据聚合已办列表（后端未提供独立已办端点） */
-function rebuildCompletedApprovals(): void {
-  const terminal = initiatedApprovals.value.filter((item) =>
-    TERMINAL_STATUSES.includes(item.status),
-  )
+/** 由「我发起的」全量数据聚合已办列表（后端未提供独立已办端点） */
+function rebuildCompletedApprovals(source: ApprovalProcess[] = allInitiated.value): void {
+  const terminal = source.filter((item) => TERMINAL_STATUSES.includes(item.status))
   const start = (completedPage.pageNum - 1) * completedPage.pageSize
   completedApprovals.value = terminal.slice(start, start + completedPage.pageSize)
   completedTotal.value = terminal.length

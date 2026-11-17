@@ -64,7 +64,7 @@ function mockAllSuccess(): void {
   ])
   getCalendarEventsMock.mockResolvedValue(
     page<CalendarEvent>([
-      { id: 'e1', platform: 'FEISHU', platformEventId: 'p1', title: '周会', startTime: '2026-11-12 14:00:00', endTime: '2026-11-12 15:00:00', attendeeIds: [], status: 'SCHEDULED', allDay: false, creatorId: '42' },
+      { id: 'e1', platform: 'FEISHU', platformEventId: 'p1', title: '周会', startTime: '2026-11-12 14:00:00', endTime: '2026-11-12 15:00:00', attendeeIds: [], status: 'CONFIRMED', allDay: false, creatorId: '42' },
     ], 1),
   )
   listNotificationsMock.mockResolvedValue(

@@ -2,9 +2,11 @@
  * 办公平台审批对接 API 测试
  * ------------------------------------------------------------------
  * 覆盖：HTTP 方法、路径与关键参数透传（审批操作按 processInstanceId 路径参数、
- * approverId 必填上行、列表分页 pageNum/pageSize；approverId 不能为空串）。
+ * approverId/initiatorId 必填上行）；后端 pending/initiated 返回裸数组，
+ * 前端按平台筛选后再做客户端真分页（total/pages/hasNext 与切片一致）。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ApprovalProcess } from './office-approval'
 
 const request = vi.hoisted(() => ({
   get: vi.fn(),
@@ -22,7 +24,13 @@ import {
   getMyInitiatedApprovals,
   getPendingApprovals,
   initiateApproval,
+  listMyInitiatedApprovals,
 } from './office-approval'
+
+/** 构造审批记录（仅填充断言关心的字段）。 */
+function approval(id: string, platform: 'FEISHU' | 'DINGTALK' = 'FEISHU'): ApprovalProcess {
+  return { processInstanceId: id, platform, processName: id, status: 'PENDING' }
+}
 
 describe('办公平台审批 API', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -60,22 +68,63 @@ describe('办公平台审批 API', () => {
     })
   })
 
-  it('待审批列表携带 approverId 与 pageNum/pageSize', () => {
-    getPendingApprovals({ platform: 'FEISHU', approverId: 'u-200', pageNum: 1, pageSize: 20 })
-    expect(request.get).toHaveBeenCalledWith('/api/office/approvals/pending', {
+  it('待审批：只上送 approverId，返回裸数组按平台筛选后客户端分页', async () => {
+    request.get.mockResolvedValueOnce([
+      approval('a1'),
+      approval('a2', 'DINGTALK'),
+      approval('a3'),
+      approval('a4'),
+    ])
+    const result = await getPendingApprovals({
       platform: 'FEISHU',
       approverId: 'u-200',
-      pageNum: 1,
-      pageSize: 20,
+      pageNum: 2,
+      pageSize: 2,
     })
+    expect(request.get).toHaveBeenCalledWith('/api/office/approvals/pending', {
+      approverId: 'u-200',
+    })
+    // FEISHU 命中 a1/a3/a4 共 3 条；pageSize=2 时第 2 页只有 a4
+    expect(result.list.map((item) => item.processInstanceId)).toEqual(['a4'])
+    expect(result.total).toBe(3)
+    expect(result.pages).toBe(2)
+    expect(result.hasNext).toBe(false)
   })
 
-  it('我发起的列表声明参数为 ApprovalListQuery，透传分页与可选平台', () => {
-    getMyInitiatedApprovals({ platform: 'FEISHU', pageNum: 2, pageSize: 10 })
+  it('待审批缺少 approverId 时直接拒绝，不发请求', async () => {
+    await expect(
+      getPendingApprovals({ approverId: '  ', pageNum: 1, pageSize: 10 }),
+    ).rejects.toThrow('审批人ID不能为空')
+    expect(request.get).not.toHaveBeenCalled()
+  })
+
+  it('我发起的：必带 initiatorId，状态筛选后分页', async () => {
+    request.get.mockResolvedValueOnce([
+      { ...approval('i1'), status: 'APPROVED' },
+      { ...approval('i2'), status: 'PENDING' },
+      { ...approval('i3'), status: 'APPROVED' },
+    ])
+    const result = await getMyInitiatedApprovals({
+      initiatorId: '42',
+      status: 'APPROVED',
+      pageNum: 1,
+      pageSize: 1,
+    })
     expect(request.get).toHaveBeenCalledWith('/api/office/approvals/initiated', {
-      platform: 'FEISHU',
-      pageNum: 2,
-      pageSize: 10,
+      initiatorId: '42',
+    })
+    expect(result.list).toHaveLength(1)
+    expect(result.total).toBe(2)
+    expect(result.hasNext).toBe(true)
+  })
+
+  it('我发起的全量查询保留完整数组，供已办区块独立分页', async () => {
+    const all = [approval('x1'), approval('x2')]
+    request.get.mockResolvedValueOnce(all)
+    await expect(listMyInitiatedApprovals({ initiatorId: '42', pageNum: 1, pageSize: 1 }))
+      .resolves.toEqual(all)
+    expect(request.get).toHaveBeenCalledWith('/api/office/approvals/initiated', {
+      initiatorId: '42',
     })
   })
 })

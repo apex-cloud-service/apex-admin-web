@@ -2,9 +2,9 @@
  * 办公平台审批对接 API（/api/office/approvals）
  * ------------------------------------------------------------------
  * 用途：
- * 办公平台（飞书/钉钉/企业微信）审批流程的发起、查询与办理。列表接口
- * 返回 PageResponse；审批操作的路径参数为 processInstanceId，审批人
- * approverId 必填（后端 @NotBlank）。
+ * 办公平台（飞书/钉钉/企业微信）审批流程的发起、查询与办理。
+ * pending/initiated 返回裸数组，前端筛选并分页；审批操作的路径参数为
+ * processInstanceId，查询身份分别为 approverId/initiatorId。
  *
  * @author system
  * @date 2026-11-05
@@ -103,17 +103,11 @@ export interface ApprovalListQuery {
 }
 
 /** 我发起的审批查询参数 */
-export interface MyInitiatedApprovalsQuery {
-  /** 平台类型（可选） */
-  platform?: OfficePlatform
-  /** 发起人ID */
+export interface MyInitiatedApprovalsQuery extends ApprovalListQuery {
+  /** 发起人ID（必填） */
   initiatorId: string
-  /** 审批状态（可选） */
+  /** 审批状态（前端筛选） */
   status?: ApprovalStatus
-  /** 页码 */
-  pageNum: number
-  /** 每页数量 */
-  pageSize: number
 }
 
 /**
@@ -153,23 +147,60 @@ export function cancelApproval(processInstanceId: string): Promise<void> {
 }
 
 /**
- * 查询待我审批列表。
+ * 查询待我审批列表；后端返回裸数组，平台筛选与分页在前端完成。
  * @param query 查询参数（approverId 必填）
  */
-export function getPendingApprovals(
+export async function getPendingApprovals(
   query: ApprovalListQuery,
 ): Promise<PageResponse<ApprovalProcess>> {
-  return get<PageResponse<ApprovalProcess>>('/api/office/approvals/pending', query as any)
+  if (!query.approverId?.trim()) throw new Error('审批人ID不能为空')
+  const list = await get<ApprovalProcess[]>('/api/office/approvals/pending', {
+    approverId: query.approverId,
+  })
+  return wrapApprovalPage(list, query)
 }
 
 /**
- * 查询我发起的审批列表。
- * @param query 查询参数
+ * 查询我发起的完整审批列表，供列表分页与终态区块派生使用。
+ * @param query 查询参数（initiatorId 必填）
  */
-export function getMyInitiatedApprovals(
-  query: ApprovalListQuery,
+export async function listMyInitiatedApprovals(
+  query: MyInitiatedApprovalsQuery,
+): Promise<ApprovalProcess[]> {
+  if (!query.initiatorId.trim()) throw new Error('发起人ID不能为空')
+  const list = await get<ApprovalProcess[]>('/api/office/approvals/initiated', {
+    initiatorId: query.initiatorId,
+  })
+  return list.filter((item) => (!query.platform || item.platform === query.platform)
+    && (!query.status || item.status === query.status))
+}
+
+/**
+ * 查询我发起的审批分页（客户端分页）。
+ * @param query 查询参数（initiatorId 必填）
+ */
+export async function getMyInitiatedApprovals(
+  query: MyInitiatedApprovalsQuery,
 ): Promise<PageResponse<ApprovalProcess>> {
-  return get<PageResponse<ApprovalProcess>>('/api/office/approvals/initiated', query as any)
+  return wrapApprovalPage(await listMyInitiatedApprovals(query), query)
+}
+
+/** 按平台筛选后切页，total 为筛选后的全量条数。 */
+function wrapApprovalPage(
+  list: ApprovalProcess[],
+  query: ApprovalListQuery,
+): PageResponse<ApprovalProcess> {
+  const items = list.filter((item) => !query.platform || item.platform === query.platform)
+  const start = (query.pageNum - 1) * query.pageSize
+  const pages = Math.ceil(items.length / query.pageSize)
+  return {
+    list: items.slice(start, start + query.pageSize),
+    total: items.length,
+    pageNum: query.pageNum,
+    pageSize: query.pageSize,
+    pages,
+    hasNext: query.pageNum < pages,
+  }
 }
 
 /** 审批状态中文名映射 */

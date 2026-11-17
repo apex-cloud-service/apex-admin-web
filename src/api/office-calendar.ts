@@ -3,7 +3,7 @@
  * ------------------------------------------------------------------
  * 用途：
  * 办公平台（飞书/钉钉/企业微信）日历事件的创建、查询、更新与删除。
- * 列表接口返回 PageResponse，查询参数使用 pageNum/pageSize。
+ * 列表接口为裸数组，客户端按时间范围查询并在本地完成筛选与分页。
  *
  * @author system
  * @date 2026-11-05
@@ -12,8 +12,8 @@ import { del, get, post, put } from '@/utils/request'
 import type { PageResponse } from '@/types'
 import type { OfficePlatform } from './office-platform'
 
-/** 日历事件状态 */
-export type EventStatus = 'SCHEDULED' | 'CANCELLED' | 'COMPLETED'
+/** 日历事件状态（与后端 CalendarEvent 实体一致：CONFIRMED/TENTATIVE/CANCELLED） */
+export type EventStatus = 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED'
 
 /** 事件参与人 */
 export interface EventAttendee {
@@ -29,7 +29,7 @@ export interface EventAttendee {
 export interface CalendarEvent {
   /** 事件ID */
   id: string
-  /** 平台类型 */
+  /** 平台类型（后端存小写自由字符串，读取后归一为大写枚举） */
   platform: OfficePlatform
   /** 平台事件ID */
   platformEventId: string
@@ -162,8 +162,86 @@ export function deleteCalendarEvent(eventId: string): Promise<void> {
 
 /**
  * 查询日历事件列表。
+ *
+ * <p>后端契约（OfficeCalendarRouter）只提供按时间范围的列表端点
+ * {@code GET /api/office/calendar/events/range}：参数为无时区的
+ * {@code LocalDateTime}，返回裸数组，且没有服务端分页与附加筛选。
+ * 这里统一做时间格式转换、平台/状态/日历/创建人筛选和真分页，调用方按
+ * {@link PageResponse} 消费即可。
+ *
  * @param query 查询参数
  */
-export function getCalendarEvents(query: CalendarEventsQuery): Promise<PageResponse<CalendarEvent>> {
-  return get<PageResponse<CalendarEvent>>('/api/office/calendar/events', query as any)
+export async function getCalendarEvents(
+  query: CalendarEventsQuery,
+): Promise<PageResponse<CalendarEvent>> {
+  const { startTime, endTime } = resolveRange(query.startTime, query.endTime)
+  const events = await get<CalendarEvent[]>('/api/office/calendar/events/range', {
+    startTime: toLocalDateTime(startTime),
+    endTime: toLocalDateTime(endTime),
+  })
+  const platform = query.platform ? (String(query.platform).toUpperCase() as OfficePlatform) : undefined
+  const filtered = toArray(events).filter(
+    (event) =>
+      (!platform || event.platform === platform) &&
+      (!query.calendarId || event.calendarId === query.calendarId) &&
+      (!query.status || event.status === query.status) &&
+      (!query.creatorId || event.creatorId === query.creatorId),
+  )
+  const pageSize = Math.max(1, query.pageSize)
+  const pages = Math.ceil(filtered.length / pageSize)
+  const start = (Math.max(1, query.pageNum) - 1) * pageSize
+  return {
+    list: filtered.slice(start, start + pageSize),
+    total: filtered.length,
+    pageNum: query.pageNum,
+    pageSize: query.pageSize,
+    pages,
+    hasNext: query.pageNum < pages,
+  }
+}
+
+/** 默认查询当前自然月；显式时间缺失时补齐边界，避免后端 LocalDateTime.parse 失败。 */
+function resolveRange(startTime?: string, endTime?: string): { startTime: string; endTime: string } {
+  const now = new Date()
+  return {
+    startTime: startTime || formatLocalDateTime(new Date(now.getFullYear(), now.getMonth(), 1)),
+    endTime:
+      endTime ||
+      formatLocalDateTime(new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)),
+  }
+}
+
+/**
+ * 转换为后端可解析的无时区 LocalDateTime 文本。
+ *
+ * <p>Date 控件的值形如 {@code 2026-11-17 09:30:00}，先补 `T`；带 `Z` 或
+ * `+08:00` 偏移的时间按浏览器本地墙钟重新格式化，而不是粗暴删掉时区
+ * 后缀，避免跨时区把 09:30 送成 01:30。
+ */
+function toLocalDateTime(value: string): string {
+  const local = value.trim().replace(' ', 'T')
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(local)) {
+    return local.length === 16 ? `${local}:00` : local
+  }
+  const parsed = new Date(local)
+  return Number.isNaN(parsed.getTime()) ? local : formatLocalDateTime(parsed)
+}
+
+/** 按本地时间格式化为 `YYYY-MM-DDTHH:mm:ss`（后端 LocalDateTime 可直接解析）。 */
+function formatLocalDateTime(date: Date): string {
+  const pad = (value: number, length = 2): string => String(value).padStart(length, '0')
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  )
+}
+
+/** 后端字段为裸数组；兼容空响应，但不把对象误当列表。 */
+function toArray(value: CalendarEvent[] | undefined): CalendarEvent[] {
+  return Array.isArray(value) ? value.map(normalizeEvent) : []
+}
+
+/** 后端平台列存小写（feishu/dingtalk/wecom），统一归一为大写枚举供页面比较与展示。 */
+function normalizeEvent(event: CalendarEvent): CalendarEvent {
+  return { ...event, platform: String(event.platform).toUpperCase() as OfficePlatform }
 }
