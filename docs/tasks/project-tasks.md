@@ -10,6 +10,8 @@
 | ID | 优先级 | 任务 | 状态 | 负责 | 验收标准 | 关联 |
 | --- | --- | --- | --- | --- | --- | --- |
 | FE-026 | P1 | 【P1】联调-修复办公列表、日期与用户状态契约 | 待复核 | ZCode（用户于 2026-11-17 授权为本项主控） | 验收：`npx vue-tsc --noEmit` 退出 0、`npx vitest run` 68 文件 533 用例全绿、`npm run build` 成功、真实浏览器回归日历/审批/用户页、真实网关 `/range` 200；二轮补 `eventType`/`organizerId`/`organizerName` 必填与写路径平台小写（真实 POST 曾 400），提交 `95a7f62`/`c988870`；最终重建环境后经网关 18 条真实接口 **18/18 通过**；未验证项（日历写操作缺后端 `*CalendarClient`、审批发起需真实飞书凭据）已在记录 §7.2/§8 列明并需另立任务 | [方案](../specs/2026-11-17-integration-contract-repair.md)、[记录](../records/2026-11-17-integration-contract-repair.md)；后端 BE-036；复核清单见 apex-scaffold `docs/reviews/2026-11-17-integration-review-checklist.md` |
+| FE-027 | P2 | 【P2】注释-全仓质量评审与六批整改（仅注释行，零逻辑变更） | 待复核 | ZCode（用户于 2026-11-18 授权登记并执行） | 验收：220 文件 9 组审计（P1×25/P2×9/P3×31）；`npx vue-tsc --noEmit` 退出 0、`check:comments` 220 文件通过、`npx vitest run` 68 文件 533 用例全绿；重点修正：auth-config 失真头注、open-app/sso 幽灵端点、auth/generator 影子头注与虚构权限码、tenant-package features 空集合语义、job/query 端点路径、BusinessLog/LoginAttempt 相反状态口径（页面渲染取证）；提交 `38e23fc` | [记录](../records/2026-11-18-comment-quality-audit.md)；台账 #44；FE-026 复核可一并覆盖本卡注释面 |
+| FE-028 | P2 | 【P2】清理-范围外死代码与预检附录 A 基线同步 | 待复核 | ZCode（用户于 2026-11-18 授权登记并执行） | 验收：login/dashboard 死 CSS 删除（模板类名 grep 复核）、auth 死弹窗与 `PermissionRole` 导入删除、零引用 `TaskActions.vue` 删除（AGENTS.md §7.3/§7.2 同步，全仓 grep 零残留）、oauth2/callback 无效 `<el-loading>` 改 `v-loading`、AgendaPanel 文案去硬编码；预检附录 A 哈希基线 712→700 行有意更新（`apex-preflight` FAIL=0）；`vue-tsc` 0 error、`check:comments` 219、`vitest` 533 全绿；提交 `62855d2` | [记录（追加段）](../records/2026-11-18-comment-quality-audit.md)；台账 #45/#46；FE-026 复核可一并覆盖本卡 |
 
 （2026-11-16：本轮 7 张卡 `FE-001`~`FE-007` 已全部完成并移入 §2；新增任务须先立卡再动手。）
 
