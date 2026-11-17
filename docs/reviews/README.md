@@ -22,3 +22,4 @@
 本仓相关整改项：`database-config.md:153` 死指针、`docs/archived/project-reports/` 3 条断链、规范 §9 任务范围。
 | 2026-11-16 | 两仓 `dev` 分支治理一致性（前端基线 `d957e6f`） | 有条件通过（P1 5 / P2 1） | [2026-11-16-dev-branch-governance-audit.md](./2026-11-16-dev-branch-governance-audit.md) |
 | 2026-11-17 | [2026-11-17-integration-review-checklist.md](./2026-11-17-integration-review-checklist.md) | FE-026 联调修复复核要点（正文在 apex-scaffold `docs/reviews/`，跨仓链接） |
+| 2026-11-18 | [2026-11-18-fe026-028-review.md](./2026-11-18-fe026-028-review.md) | FE-026/027/028 三卡复核：APPROVE / APPROVE / APPROVE_WITH_NITS（R5 角色卡子代理独立复核，业主授权；三卡据此置「已完成」） |
