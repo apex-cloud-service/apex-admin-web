@@ -117,3 +117,18 @@ user-info、menus、overview、calendar-range、approval-pending、approval-init
 ### 待前端确认
 
 `organizerId` 的来源是当前登录用户（`userStore.identity.id`），这与后端「系统用户 ID」口径一致。若后续改为传平台标识，需同步调整换算逻辑——当前不需要。
+
+## 11. 追加：BE-039 日历写操作端到端闭环
+
+此前「真实创建闭环未验证」已关闭。
+
+- 后端让平台基址可配置（`apex.office.platforms[*].base-url`，缺省仍为官方地址），据此用本地模拟飞书平台跑通完整链路。
+- **端到端 6/6 通过**：创建 → 详情 → 更新 → 范围查询 → 删除 → 删除后为空，全部经真实网关与 office 服务，非 mock 页面。
+- 过程中修复三个此前被「不支持的办公平台」掩盖的落库缺陷：创建缺 `create_time`、更新/取消缺 `update_time`、逻辑删除未真正置位（`@TableLogic` 字段被常规 update 排除）。根因是 `apex-office` 未依赖 `apex-infrastructure-persistence`，`MetaObjectHandler` 不生效。
+
+### 前端影响
+
+无代码改动。`baseUrl` 是后端可选配置，前端仍按原方式调用。真实生产环境需：
+1. 平台凭据（appId/appKey/corpid + 密钥环境变量）；
+2. 用户完成办公平台账号绑定；
+3. 若走私有化网关，可配置 `base-url` 指向兼容地址。
