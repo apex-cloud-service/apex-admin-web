@@ -9,7 +9,7 @@
 
 | ID | 优先级 | 任务 | 状态 | 负责 | 验收标准 | 关联 |
 | --- | --- | --- | --- | --- | --- | --- |
-| FE-026 | P1 | 【P1】联调-修复办公列表、日期与用户状态契约 | 已完成 | ZCode（用户于 2026-11-17 授权为本项主控） | 验收：`npx vue-tsc --noEmit` 退出 0、`npx vitest run` 68 文件 533 用例全绿、`npm run build` 成功、真实浏览器回归日历/审批/用户页、真实网关 `/range` 200；二轮补 `eventType`/`organizerId`/`organizerName` 必填与写路径平台小写（真实 POST 曾 400），提交 `95a7f62`/`c988870`；最终重建环境后经网关 18 条真实接口 **18/18 通过**；未验证项（日历写操作缺后端 `*CalendarClient`、审批发起需真实飞书凭据）已在记录 §7.2/§8 列明并需另立任务 | [方案](../specs/2026-11-17-integration-contract-repair.md)、[记录](../records/2026-11-17-integration-contract-repair.md)；后端 BE-036 |
+| FE-026 | P1 | 【P1】联调-修复办公列表、日期与用户状态契约 | 待复核 | ZCode（用户于 2026-11-17 授权为本项主控） | 验收：`npx vue-tsc --noEmit` 退出 0、`npx vitest run` 68 文件 533 用例全绿、`npm run build` 成功、真实浏览器回归日历/审批/用户页、真实网关 `/range` 200；二轮补 `eventType`/`organizerId`/`organizerName` 必填与写路径平台小写（真实 POST 曾 400），提交 `95a7f62`/`c988870`；最终重建环境后经网关 18 条真实接口 **18/18 通过**；未验证项（日历写操作缺后端 `*CalendarClient`、审批发起需真实飞书凭据）已在记录 §7.2/§8 列明并需另立任务 | [方案](../specs/2026-11-17-integration-contract-repair.md)、[记录](../records/2026-11-17-integration-contract-repair.md)；后端 BE-036；复核清单见 apex-scaffold `docs/reviews/2026-11-17-integration-review-checklist.md` |
 
 （2026-11-16：本轮 7 张卡 `FE-001`~`FE-007` 已全部完成并移入 §2；新增任务须先立卡再动手。）
 
