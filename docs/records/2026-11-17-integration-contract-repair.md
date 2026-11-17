@@ -104,3 +104,16 @@ user-info、menus、overview、calendar-range、approval-pending、approval-init
   - `getEventDetail`/`updateEvent` 只接收 `platformEventId`，无法定位父日历，后端显式拒绝；
   - 会议室可用性查询三平台均未实现。
 - 真实创建闭环仍需平台凭据（appId/appKey/corpid + 对应密钥环境变量），本地未提供，故未做端到端创建验证。
+
+## 10. 追加：BE-038 端口扩展与组织者换算（影响前端传参）
+
+后端已扩展 `CalendarPort`，前端**无需改代码**，但需知悉以下语义：
+
+- `organizerId` 现在会被后端换算成平台侧用户标识（查 `office_organization_mapping`）。前端继续传系统用户 ID（如 `1001`）即可；若该用户未绑定对应平台账号，接口返回「系统用户 X 未绑定 feishu 平台账号」。
+- 详情/更新已于 BE-038 可用：飞书/钉钉按组织者主日历定位事件，不再直接拒绝。
+- 真实创建闭环仍需平台凭据（appId/appKey/corpid + 密钥环境变量）。真实网关验证链路：无绑定 → 未绑定提示；插入绑定 → 推进到「飞书 appId未配置」，证明换算与客户端路由已通。
+- 前置条件：日历写操作要真正可用，除了平台凭据，还需要用户完成办公平台账号绑定（组织同步会写入 `office_organization_mapping`）。
+
+### 待前端确认
+
+`organizerId` 的来源是当前登录用户（`userStore.identity.id`），这与后端「系统用户 ID」口径一致。若后续改为传平台标识，需同步调整换算逻辑——当前不需要。
