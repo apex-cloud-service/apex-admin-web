@@ -51,3 +51,27 @@
 ## 6. 回滚
 
 全部改动均在工作区未提交；如需回退按文件 `git checkout --` 单文件恢复。本地数据库的授权/套餐等修补仅限本机联调环境，不是生产迁移。
+
+## 7. 追加（2026-11-17 第二轮：写操作联调）
+
+补做写路径真实联调后，新增修复与发现如下。
+
+### 7.1 已修复（前端）
+
+| 问题 | 证据 | 修复 |
+| --- | --- | --- |
+| 日历创建缺后端必填字段 | 真实 `POST /api/office/calendar/events` 返回 `事件类型不能为空, 组织者姓名不能为空, 组织者ID不能为空`（HTTP 400） | `CreateEventRequest` 补 `eventType`/`organizerId`/`organizerName`；日历页新增事件类型下拉，组织者取当前登录用户 |
+| 日历写路径平台大小写不匹配 | 传 `FEISHU` 返回 `不支持的办公平台: FEISHU`；后端按 `<platform>CalendarClient` Bean 名（小写）查找 | 写请求统一 `toLowerCase()` 转换平台标识 |
+
+### 7.2 新发现的外部/既有缺陷（未修复，超出本任务范围）
+
+| 缺陷 | 证据 | 归属 |
+| --- | --- | --- |
+| 日历写操作完全不可用 | `OfficeCalendarService.createEvent` 首行调用 `getCalendarClient(platform)`，但仓库内 `infrastructure/client/feishu|dingtalk|wecom` 下只有 `*ApprovalClient`，**没有任何 `*CalendarClient` 实现**；因此创建/更新/删除恒返回「不支持的办公平台」 | 后端能力缺口，需另立任务实现三平台日历客户端 |
+| 审批发起依赖真实办公平台应用 | `POST /api/office/approvals` 返回 `飞书 appId未配置`；`office_platform_app` 表为空，发起需真实飞书应用凭据与外部 API | 外部依赖，需部署环境提供 |
+| 审批列表关键字段恒为 null | 插入合法数据后 `GET /api/office/approvals/pending` 返回 `processName/currentNode/createdAt` 均为 null，而库中 `process_name/current_node/created_at` 有值。根因：领域实体 `ApprovalProcess` 只有 `title`/`initiateTime`/`createTime`，PO 与响应 DTO 用 `processName`/`currentNode`/`createdAt`，MapStruct 静默丢字段 | 后端既有缺陷，影响审批页标题/节点/时间展示 |
+
+### 7.3 已真实验证
+
+- 审批租户隔离：插入租户 1 与租户 2 各一条审批后，以租户 1 身份调用 `pending?approverId=1001` 仅返回租户 1 记录；查询租户 2 的 `processInstanceId` 返回「审批流程不存在」。说明 BE-036 修复的租户上下文传播在生产路径生效。
+- 验证用测试数据已全部清理（`itest-` 前缀记录数 0）。

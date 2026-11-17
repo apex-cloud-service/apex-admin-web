@@ -12,6 +12,19 @@ import { del, get, post, put } from '@/utils/request'
 import type { PageResponse } from '@/types'
 import type { OfficePlatform } from './office-platform'
 
+/** 日历事件类型（后端 CalendarEventType 枚举；创建时必填） */
+export type EventType = 'MEETING' | 'TASK' | 'REMINDER' | 'VACATION' | 'BIRTHDAY' | 'OTHER'
+
+/** 事件类型中文名 */
+export const EVENT_TYPE_NAMES: Record<EventType, string> = {
+  MEETING: '会议',
+  TASK: '任务',
+  REMINDER: '提醒',
+  VACATION: '假期',
+  BIRTHDAY: '生日',
+  OTHER: '其他',
+}
+
 /** 日历事件状态（与后端 CalendarEvent 实体一致：CONFIRMED/TENTATIVE/CANCELLED） */
 export type EventStatus = 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED'
 
@@ -85,6 +98,12 @@ export interface CreateEventRequest {
   reminderMinutes?: number
   /** 日历ID */
   calendarId?: string
+  /** 事件类型（后端必填） */
+  eventType: EventType
+  /** 组织者ID（后端必填，取当前登录用户） */
+  organizerId: string
+  /** 组织者姓名（后端必填，取当前登录用户） */
+  organizerName: string
 }
 
 /** 更新日历事件请求 */
@@ -129,10 +148,26 @@ export interface CalendarEventsQuery {
 
 /**
  * 创建日历事件。
+ *
+ * <p>后端按 Bean 名 {@code <platform>CalendarClient} 选择实现，平台标识必须是
+ * 小写（feishu/dingtalk/wecom）；大写会返回「不支持的办公平台」。
+ *
  * @param request 创建请求
  */
 export function createCalendarEvent(request: CreateEventRequest): Promise<CalendarEvent> {
-  return post<CalendarEvent>('/api/office/calendar/events', request)
+  return post<CalendarEvent>('/api/office/calendar/events', toWireEvent(request))
+}
+
+/** 平台枚举 → 后端要求的写路径小写标识。 */
+function toWirePlatform(platform: OfficePlatform): string {
+  return String(platform).toLowerCase()
+}
+
+/** 写请求体：平台转小写，其余字段原样透传。 */
+function toWireEvent<T extends CreateEventRequest | UpdateEventRequest>(request: T): T {
+  return 'platform' in request
+    ? ({ ...request, platform: toWirePlatform(request.platform) } as T)
+    : request
 }
 
 /**

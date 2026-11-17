@@ -131,6 +131,16 @@
             <el-option label="企业微信" value="WECOM" />
           </el-select>
         </el-form-item>
+        <el-form-item label="事件类型" prop="eventType">
+          <el-select v-model="formData.eventType" placeholder="请选择事件类型" :disabled="isEdit">
+            <el-option
+              v-for="(label, value) in EVENT_TYPE_NAMES"
+              :key="value"
+              :label="label"
+              :value="value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="事件标题" prop="title">
           <el-input v-model="formData.title" placeholder="请输入事件标题" />
         </el-form-item>
@@ -271,8 +281,11 @@ import {
   type CreateEventRequest,
   type UpdateEventRequest,
   type CalendarEventsQuery,
+  EVENT_TYPE_NAMES,
+  type EventType,
 } from '@/api/office-calendar'
 import { PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
+import { useUserStore } from '@/stores/user'
 import { listUsers } from '@/api/user'
 import { showError } from '@/utils/request'
 
@@ -304,8 +317,21 @@ const queryParams = reactive<CalendarEventsQuery>({
 
 // ==================== 表单数据 ====================
 // 默认表单数据生成器
+const userStore = useUserStore()
+
+/** 当前登录用户作为组织者（后端 organizerId/organizerName 必填） */
+function currentOrganizer(): { organizerId: string; organizerName: string } {
+  const identity = userStore.identity
+  return {
+    organizerId: identity?.id ? String(identity.id) : '',
+    organizerName: identity?.nickname || identity?.nickName || identity?.username || '',
+  }
+}
+
 const defaultFormData = (): CreateEventRequest & Partial<UpdateEventRequest> => ({
   platform: 'FEISHU',
+  eventType: 'MEETING' as EventType,
+  ...currentOrganizer(),
   title: '',
   description: '',
   startTime: '',
@@ -322,6 +348,7 @@ const formData = reactive<CreateEventRequest & Partial<UpdateEventRequest>>(defa
 // 日历事件表单验证规则
 const formRules: FormRules = {
   platform: [{ required: true, message: '请选择平台', trigger: 'change' }],
+  eventType: [{ required: true, message: '请选择事件类型', trigger: 'change' }],
   title: [{ required: true, message: '请输入事件标题', trigger: 'blur' }],
   startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
   endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }],

@@ -82,6 +82,8 @@
 
 | 37 | 2026-11-17 | 代码 | **FE-026 真实联调契约修复**：①`office-approval.ts` 的 pending/initiated 按真实裸数组契约适配——只上送 `approverId`/`initiatorId`，平台与状态筛选后客户端真分页（total/pages/hasNext 与切片一致），缺身份直接拒绝；新增 `listMyInitiatedApprovals` 供已办区块从全量派生。②`office-calendar.ts` 改调真实 `/range`：空格转 `T`、带 `Z`/偏移时间换算浏览器本地墙钟（不再粗暴删后缀）、未选时间默认当前自然月、客户端筛选分页、平台归一为大写、状态类型对齐实体 `CONFIRMED/TENTATIVE/CANCELLED`。③用户管理页状态映射修正（1=正常、0=禁用，写操作仍提交布尔 `enabled`）。④审批页已办改为全量派生、日历页状态文案对齐 | 未提交 | `npx vue-tsc --noEmit` 退出 0；`npx vitest run` 68 文件 / **533 用例全绿**；真实浏览器回归 `/office/calendar`（真实数据 2 条渲染正确、平台「飞书」、状态「已确认」）与 `/office/approval`（`共 0 条`，无 `undefined`）；真实网关 `GET /api/office/calendar/events/range` 200 | 仅前端契约适配与页面映射；不改 request 拦截器、鉴权与租户头；后端契约未变更 |
 
+| 38 | 2026-11-17 | 代码 | **FE-026 第二轮：日历写路径契约补齐**：①`CreateEventRequest` 补后端 `@NotBlank` 的 `eventType`/`organizerId`/`organizerName`（真实 POST 曾返回 400「事件类型不能为空, 组织者姓名不能为空, 组织者ID不能为空」），日历页新增事件类型下拉、组织者取当前登录用户；②写请求平台标识统一转小写（后端按 `<platform>CalendarClient` Bean 名查找，传 `FEISHU` 返回「不支持的办公平台: FEISHU」）；③新增 `EventType` 枚举与 `EVENT_TYPE_NAMES` | 未提交 | `npx vue-tsc --noEmit` 退出 0；`vitest` office-calendar 7 用例通过；真实 `POST /api/office/calendar/events` 的 400 原因已确认并修复前端传参 | 仅前端请求体与表单字段；未改后端。**日历写操作仍不可用**：后端无任何 `*CalendarClient` 实现，已记入记录 §7.2 另立任务 |
+
 ---
 
 ## 4. 按类型检索

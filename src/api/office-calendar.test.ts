@@ -50,9 +50,12 @@ describe('办公平台日历事件 API', () => {
 
   afterEach(() => vi.useRealTimers())
 
-  it('创建事件以 POST 提交完整请求体', () => {
+  it('创建事件携带后端必填的 eventType/organizerId/organizerName', () => {
     const payload = {
       platform: 'DINGTALK' as const,
+      eventType: 'MEETING' as const,
+      organizerId: '1001',
+      organizerName: '系统管理员',
       title: '迭代评审',
       startTime: '2026-11-13 14:00:00',
       endTime: '2026-11-13 15:00:00',
@@ -61,7 +64,16 @@ describe('办公平台日历事件 API', () => {
       reminderMinutes: 15,
     }
     createCalendarEvent(payload)
-    expect(request.post).toHaveBeenCalledWith('/api/office/calendar/events', payload)
+    // 平台必须转小写：后端按 <platform>CalendarClient Bean 名选择实现，大写返回 400
+    expect(request.post).toHaveBeenCalledWith('/api/office/calendar/events', {
+      ...payload,
+      platform: 'dingtalk',
+    })
+    // 回归：这三项后端 @NotBlank，缺失会 400（真实联调已复现）
+    const body = request.post.mock.calls[0][1] as Record<string, unknown>
+    expect(body.eventType).toBe('MEETING')
+    expect(body.organizerId).toBe('1001')
+    expect(body.organizerName).toBe('系统管理员')
   })
 
   it('详情与删除按字符串 eventId 拼路径', () => {
