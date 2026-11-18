@@ -122,3 +122,48 @@ git config --unset core.hooksPath
 | 业务代码 | `src/` 0 改动 |
 | 自检 | `verify-docs.sh` 0 问题；`audit-frontend-rules.sh` 无阻断 |
 
+---
+
+## 10. 2026-11-18 第三次增补：多智能体协作规则 v1.2
+
+### 10.1 范围与背景
+
+- 任务号：待主控补登（非主控执行；按 `AGENTS.md` 0.3.11 业主直派例外处理）。
+- 范围：项目治理规则、R1–R5 角色卡与任务交接模板；不改业务代码。
+- 修正冲突：① 规范 §5.3 旧文允许文档治理在 `master` 提交，与 `dev` 默认工作分支冲突；② 规范 §4.3 旧交接协议要求执行智能体更新任务状态，与 `docs/tasks/project-tasks.md`「仅主控可写」冲突。
+- 目标：让多智能体并行时具备明确的任务占用、文件所有权、工作区隔离、标准交接和独立复核闭环。
+
+### 10.2 改动清单
+
+| 文件 | 改动 |
+| --- | --- |
+| `AGENTS.md` | 0.3 增任务占用、交接边界、业主直派例外；0.4 增并行编排必填项 |
+| `docs/specs/project-governance.md` | 升级 v1.2；§2.4 扩任务卡字段；§2.5/2.6 明确独立复核和大盘单写；重写 §4.3 交接协议；新增 §4.5 写隔离、§4.6 独立复核、§4.7 冲突升级；修正 §5.3 分支口径；更新 §10 验收清单 |
+| `docs/specs/ai-agents/*.md` | R1 限定大盘写权；R2 增主写/范围守卫与交接包；R3/R4/R5 增版本绑定、独立复核和证据要求；README 增编排顺序 |
+| `docs/tasks/README.md` | 新增标准交接包模板与并行写隔离规则 |
+| `docs/specs/README.md` | 规范正文版本登记更新为 v1.2 |
+| `scripts/dev/apex-preflight.sh` | 修正治理自检结果映射：按子脚本退出码区分异常；默认告警记 `WARN`，`--strict` 才阻断 |
+
+### 10.3 验证证据
+
+| 项 | 结果 |
+| --- | --- |
+| `git diff --check` | 通过，无空白/补丁格式错误 |
+| `bash scripts/governance/verify-docs.sh` | 目录、索引、任务大盘、私有目录边界、图表与结构检查通过；仅 1 项历史 WARN（`docs/plans/2026-11-16-directory-normalization-plan.md` 引私有目录），非本轮引入 |
+| `bash scripts/governance/audit-frontend-rules.sh` | 无阻断项；`: any` 1 处为既有 FE-005 跟踪项 |
+| `bash scripts/governance/check-doc-refs.sh` | Markdown 断链 0；1 项历史私有路径 WARN，非本轮引入 |
+| 附录 A 哈希 | `tail -n 700 AGENTS.md` = `9e9f3cda9cd00e8eab7aff3da8eadb95fe998cb12d75931939f6328862611aa3`，与基线一致 |
+| `bash scripts/dev/apex-preflight.sh` | 默认模式 `FAIL=0`；4 项 `WARN` 分别为未提交工作区、远端拉取失败及 2 项既有私有路径告警 |
+| 业务代码 | `src/` 0 文件改动 |
+
+### 10.4 预检口径修正
+
+- 背景：子脚本文档约定「默认只告警，`--strict` 才非零退出」，但 `apex-preflight.sh` 通过末行文本判断，把既有告警误升级为 `FAIL`。
+- 修正：默认模式按子脚本退出码识别运行失败，成功且仍有问题记 `WARN`；`--strict` 模式向子脚本传 `--strict`，发现问题记 `FAIL`。
+- 验收：全量预检 `FAIL=0`；历史私有路径告警仍保持可见，不借修正脚本隐藏整改项。
+
+### 10.5 影响面与回滚
+
+- 影响面：仅治理文档、角色卡、任务交接模板和预检脚本；无页面、接口、构建产物变化。
+- 回滚：提交前对相关文件执行 `git restore`；提交后使用 `git revert <sha>`。
+- 复核状态：待独立 R5 对本次工作区快照复核；在复核与主控补登完成前不得置「已完成」。

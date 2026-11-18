@@ -29,4 +29,4 @@
 
 | 文档 | 内容 | 状态 |
 | --- | --- | --- |
-| [project-governance.md](project-governance.md) | 项目任务管理规范完整正文（任务体系、文档收口、多智能体目录映射、`.gitignore` 规则、前端红线、执行记录、验收清单） | v1.1 · 2026-11-16 生效 |
+| [project-governance.md](project-governance.md) | 项目任务管理规范完整正文（任务体系、文档收口、多智能体编排/写隔离/交接/复核、`.gitignore` 规则、前端红线、执行记录、验收清单） | v1.2 · 2026-11-18 生效 |
