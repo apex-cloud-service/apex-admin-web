@@ -125,11 +125,19 @@ else
     echo "  -- 治理自检（每次数秒，失败即视为未通过）--"
     for s in verify-docs.sh check-doc-refs.sh; do
       if [ -f "${GOV}/${s}" ]; then
-        OUT="$(bash "${GOV}/${s}" 2>&1 | tail -1)"
-        case "$OUT" in
-          *"0 项"*|*"通过"*) pass "${s}：$(echo "$OUT" | sed 's/^[[:space:]]*//')" ;;
-          *) fail "${s}：$(echo "$OUT" | sed 's/^[[:space:]]*//')" ;;
-        esac
+        STRICT_ARG=""
+        [ "$STRICT" -eq 1 ] && STRICT_ARG="--strict"
+        ALL_OUT="$(bash "${GOV}/${s}" ${STRICT_ARG} 2>&1)"
+        RC=$?
+        OUT="$(printf '%s\n' "$ALL_OUT" | tail -1 | sed 's/^[[:space:]]*//')"
+        if [ "$RC" -ne 0 ]; then
+          fail "${s}：${OUT}"
+        else
+          case "$OUT" in
+            *"0 项"*|*"通过"*) pass "${s}：${OUT}" ;;
+            *) warn "${s}：${OUT}（默认告警；--strict 阻断）" ;;
+          esac
+        fi
       fi
     done
     if [ "$REPO" = "backend" ] && [ -f "${GOV}/audit-backend-rules.sh" ]; then
