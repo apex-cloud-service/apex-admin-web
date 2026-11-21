@@ -15,7 +15,7 @@
     - GET  /api/v1/file/chunk/status/{fileId} - 查询已上传分片（本组件未调用，断点续传预留，见 api/file.ts）
 
   Props：
-    - sex: 性别路由参数（0=男/AM，1=女/AF），随 FormData 上送
+    - sex: 性别路由参数（0=男/AM，1=女/AF），FormData 中映射为 1/2
     - limit: 最大上传数量
     - listType: 上传控件展示形态（text/picture/picture-card）
     - accept: 允许的 MIME 类型（逗号分隔）
@@ -168,7 +168,9 @@ import { getToken } from '@/utils/auth'
 import { apiUrl } from '@/utils/api-base'
 import { MAX_UPLOAD_SIZE } from '@/settings'
 import { initChunkUpload, mergeChunks, uploadChunk, type ChunkMergeResult } from '@/api/file'
-import type { FileUploadResult } from '@/types'
+import { toMultipartUploadSex } from '@/utils/upload-sex'
+import { toFileUploadResult } from '@/utils/upload-result'
+import type { FileUploadResponse, FileUploadResult } from '@/types'
 import type { UploadProps, UploadUserFile, UploadProgressEvent, UploadRawFile } from 'element-plus'
 import Cropper from 'cropperjs'
 import { showError } from '@/utils/request'
@@ -245,7 +247,7 @@ const uploadHeaders = computed(() => ({
 }))
 /** 额外表单参数（性别路由，供后端按目录归档） */
 const uploadData = computed(() => ({
-  sex: props.sex
+  sex: toMultipartUploadSex(props.sex)
 }))
 
 /** 大小上限（MB，用于提示文案与校验提示） */
@@ -480,7 +482,7 @@ const handleCropperConfirm = async (): Promise<void> => {
 const uploadProcessedFile = async (file: File): Promise<void> => {
   const formData = new FormData()
   formData.append('file', file)
-  formData.append('sex', String(props.sex))
+  formData.append('sex', toMultipartUploadSex(props.sex))
   
   progressVisible.value = true
   uploadProgress.value = 0
@@ -500,13 +502,13 @@ const uploadProcessedFile = async (file: File): Promise<void> => {
     xhr.addEventListener('load', () => {
       if (xhr.status === 200) {
         // 后端 Result{code,msg,data}；此处按契约收类型，避免 any
-        const response = JSON.parse(xhr.responseText) as { code: number; msg?: string; data: FileUploadResult }
+        const response = JSON.parse(xhr.responseText) as { code: number; msg?: string; data: FileUploadResponse }
         if (response.code === 0) {
           uploadStatus.value = 'success'
           uploadProgressText.value = '上传成功！'
           setTimeout(() => {
             progressVisible.value = false
-            emit('success', response.data)
+            emit('success', toFileUploadResult(response.data))
             ElMessage.success('上传成功')
           }, 1000)
         } else {
@@ -690,7 +692,7 @@ const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent): 
  */
 const handleSuccess: UploadProps['onSuccess'] = (response, uploadFile: UploadUserFile): void => {
   // 后端响应为 Result{code,msg,data}，此处按契约收紧类型
-  const payload = response as { code: number; msg?: string; data: FileUploadResult }
+  const payload = response as { code: number; msg?: string; data: FileUploadResponse }
   if (!props.enableCropper) {
     if (payload.code === 0) {
       uploadStatus.value = 'success'
@@ -699,7 +701,7 @@ const handleSuccess: UploadProps['onSuccess'] = (response, uploadFile: UploadUse
         progressVisible.value = false
       }, 1000)
       
-      const result: FileUploadResult = payload.data
+      const result = toFileUploadResult(payload.data)
       ElMessage.success('上传成功')
       
       if (uploadFile && result.url) {

@@ -143,7 +143,7 @@ import {
   type DictDataPayload,
   type DictTypePayload,
 } from '@/api/system'
-import type { DictData, DictType } from '@/types'
+import type { DictData, DictId, DictType } from '@/types'
 
 /** 加载/保存状态 */
 const loading = ref(false)
@@ -154,7 +154,7 @@ const types = ref<DictType[]>([])
 const dataList = ref<DictData[]>([])
 
 /** 类型弹窗 */
-const typeDialog = reactive({ visible: false, isEdit: false, id: 0 })
+const typeDialog = reactive<{ visible: boolean; isEdit: boolean; id: DictId }>({ visible: false, isEdit: false, id: 0 })
 const typeFormRef = ref<FormInstance>()
 const typeForm = reactive<DictTypePayload>({ dictName: '', dictType: '', remark: '' })
 const typeRules: FormRules = {
@@ -165,7 +165,7 @@ const typeRules: FormRules = {
 /** 数据抽屉 */
 const dataDrawer = reactive({ visible: false, dictType: '' })
 /** 数据弹窗 */
-const dataDialog = reactive({ visible: false, isEdit: false, id: 0 })
+const dataDialog = reactive<{ visible: boolean; isEdit: boolean; id: DictId }>({ visible: false, isEdit: false, id: 0 })
 const dataFormRef = ref<FormInstance>()
 const dataForm = reactive<DictDataPayload>({ dictType: '', dictLabel: '', dictValue: '', dictSort: 0, isDefault: 0 })
 const dataRules: FormRules = {

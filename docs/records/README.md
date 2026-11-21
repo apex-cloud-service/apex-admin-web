@@ -7,6 +7,8 @@
 已登记记录：
 
 - [2026-11-16 文档治理与目录重构](./2026-11-16-docs-governance.md)
+- [2026-11-19 前后端联调执行记录](./2026-11-19-fullstack-integration.md)
+- 本轮后续结果以追加段落写入 [2026-11-19 前后端联调执行记录](./2026-11-19-fullstack-integration.md)，保持同一任务单一记录入口。
 
 > 规则：记录只增不改；后续修正以追加段落方式写入，不覆盖历史结论。
 
@@ -17,3 +19,5 @@
 | 2026-11-16 | [2026-11-16-fe-tasks-batch.md](./2026-11-16-fe-tasks-batch.md) | FE-001~FE-007 执行记录与测试报告（build 通过、E2E 12 passed） |
 | 2026-11-17 | [2026-11-17-integration-contract-repair.md](./2026-11-17-integration-contract-repair.md) | FE-026 真实联调契约修复：审批裸数组客户端分页、日历 `/range` 本地时间、用户状态映射（前端 533 用例全绿 + 真实浏览器回归） |
 | 2026-11-18 | [2026-11-18-comment-quality-audit.md](./2026-11-18-comment-quality-audit.md) | 全仓注释质量评审与 6 批整改：220 文件审计（P1×25/P2×9/P3×31），39 文件 63 处仅注释行修正（auth-config 失真头注、影子头注、features 语义等；533 用例全绿） |
+| 2026-11-19 | [2026-11-19-api-route-matrix.md](./2026-11-19-api-route-matrix.md) | FE-029 API 导出函数与后端路由静态对照（335 路由匹配；动态/委派函数已人工核查） |
+| 2026-11-19 | [2026-11-19-fullstack-integration.md](./2026-11-19-fullstack-integration.md) | FE-029/BE-043 Podman 联调证据，含真实网关登录修复、通知只读验证与剩余覆盖项 |

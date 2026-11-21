@@ -176,6 +176,7 @@ export async function mockBackend(page: Page, options: { menus?: unknown } = {})
 /** 表单登录（前置：mockBackend 已挂载） */
 export async function loginViaForm(page: Page): Promise<void> {
   await page.goto('/login')
+  await page.locator('.captcha-img').waitFor({ state: 'visible' })
   await page.getByPlaceholder('请输入账号').fill('e2e-user')
   await page.getByPlaceholder('请输入密码').fill('e2e-password')
   await page.getByPlaceholder('验证码（点击图片刷新）').fill('1234')

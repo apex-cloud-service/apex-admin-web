@@ -1,0 +1,19 @@
+x-authorized-service: &authorized-service
+  volumes:
+    - "${VERIFY_AUTHORIZATION_CONFIG_DIR}:/run/secrets/authorization:ro"
+  environment:
+    SPRING_CONFIG_ADDITIONAL_LOCATION: file:/run/secrets/authorization/authorization.yml
+    JAVA_TOOL_OPTIONS: >-
+      -Djavax.net.ssl.trustStore=/run/secrets/authorization/truststore.p12
+      -Djavax.net.ssl.trustStorePassword=changeit
+      -Djavax.net.ssl.trustStoreType=PKCS12
+
+services:
+  apex-auth-service:
+    <<: *authorized-service
+  apex-office-service:
+    <<: *authorized-service
+  apex-workflow-service:
+    <<: *authorized-service
+  apex-integration-service:
+    <<: *authorized-service

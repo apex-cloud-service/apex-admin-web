@@ -9,9 +9,24 @@
 
 | ID | 优先级 | 任务 | 状态 | 负责 | 验收标准 | 关联 |
 | --- | --- | --- | --- | --- | --- | --- |
+| FE-029 | P1 | 【P1】联调-全量前后端功能核对与 Podman 联调基线 | 执行中 | R0/执行：Codex（用户 2026-11-18 授权，串行单写者） | R3 方案评审 `integration_plan_review`：最终结论 APPROVE（2026-11-18，确认移除不存在的 integration profile、显式唯一 Compose 入口及拓扑边界）；逐项核对全部 `src/api/` 导出函数与后端路由；Podman Compose 真实验证登录/鉴权/核心读写链路并逐项记录未验证项；修复前端契约问题并关联 BE-043；同步文档、配置、脚本、测试与报告；类型、单测、构建、E2E、治理检查通过；R5 独立复核通过后关闭 | [方案](../specs/2026-11-18-fullstack-integration.md)；FE 基线 `f03bb6883a0f05be9cb4fda836062db55f6e4460`；BE-043；FE-026 历史基线 |
 
 （2026-11-16：本轮 7 张卡 `FE-001`~`FE-007` 已全部完成并移入 §2；新增任务须先立卡再动手。）
-（2026-11-18：`FE-026`/`FE-027`/`FE-028` 经 R5 角色卡子代理独立复核通过（APPROVE / APPROVE / APPROVE_WITH_NITS，见 [评审报告](../reviews/2026-11-18-fe026-028-review.md)）移入 §2；当前无活跃任务。）
+（2026-11-18：`FE-026`/`FE-027`/`FE-028` 经 R5 角色卡独立复核通过（APPROVE / APPROVE / APPROVE_WITH_NITS，见 [评审报告](../reviews/2026-11-18-fe026-028-review.md)）移入 §2；FE-029 新登记，待方案评审。）
+
+### FE-029 执行租约
+
+- **R0 / 执行者**：Codex（用户 2026-11-18 明确要求继续完成；当前串行单写者）。
+- **独立 R3 / R5**：R3 `integration_plan_review`（最终 APPROVE，2026-11-18）；R5 `integration_final_reviewer`（已接受最终复核指派，不参与实现，结论绑定最终 SHA）。
+- **租约起始时间**：2026-11-18 继续执行（Asia/Shanghai）；R0 单写者持有至交接 R5。
+- **执行基线**：前端 `dev` `f03bb6883a0f05be9cb4fda836062db55f6e4460`；后端 `dev` `b177605d1d1482470945b8a48183103655bf3d18`。
+- **执行环境**：唯一全栈入口为后端 `apex-scaffold/podman-compose.yml`，显式项目名 `apex-scaffold`，网络名 `apex-scaffold_apex-network`；前端在独立仓库预构建镜像，再由后端 Compose 的 `apex-admin-web` 服务启动。`.env` 从 `.env.example` 准备并填入本地安全密钥；不使用前端第二份 Compose 定义，不运行 Docker Compose。
+- **前端写入范围**：`src/api/**`、对应页面与测试、废弃的前端 `docker-compose.yml`（移除并同步引用）、`scripts/build/build-image.sh`、`docs/**`、`reports/**`。
+- **禁止触碰**：无关页面/模块；认证拦截器、租户头、权限语义等共享核心行为除非先经 R3 方案确认；后端源码、Flyway、共享契约由 BE-043 单独持有。
+- **依赖与互斥**：FE-029 与 BE-043 同一 R0 串行推进；任何接口契约修订先由 R3 核定唯一口径，FE/BE 同步同一证据，不并行改契约或数据库。
+- **验收命令**：`podman-compose -p apex-scaffold -f ../apex-scaffold/podman-compose.yml config`；构建前端镜像后 `podman-compose -p apex-scaffold -f ../apex-scaffold/podman-compose.yml up -d --build`，检查服务健康、网络 DNS、HTTP 冒烟和浏览器链路。静态 API 映射覆盖全部前端 API 导出函数；动态真实请求仅对本轮实际执行的链路计通过，其余逐项注明未验证原因。另运行 `npx vue-tsc --noEmit`、`npx vitest run`、`npm run build`、`npm run test:e2e` 和治理检查；后端按 BE-043 固定 JDK/mvnd 约束执行。
+- **全局集成租约**：`HOLDING`，由本 R0 串行持有；所有提交、跨仓验证及最终收口不得并行。
+- **交接物**：逐端点矩阵、Podman 启停/健康/网络检查证据、原始 HTTP 冒烟结果、页面回归记录、测试报告、变更记录、记忆台账与 R5 结论。
 
 ## 2. 本期已完成（治理基线）
 

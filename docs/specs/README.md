@@ -9,6 +9,7 @@
 | 方案 | 状态 | 说明 |
 | --- | --- | --- |
 | [2026-11-17-integration-contract-repair.md](2026-11-17-integration-contract-repair.md) | 待复核 | FE-026：真实联调既有改动补记及后续日期/分页修复边界；非事前审批 |
+| [2026-11-18-fullstack-integration.md](2026-11-18-fullstack-integration.md) | 待评审 | FE-029 / BE-043：全量 API 对照、Podman Compose 真实联调及前后端缺陷闭环 |
 | （暂无新增，历史评审材料见 `docs/archived/project-reports/`） | — | 历史报告保持原位，不搬迁 |
 
 > 规则：涉及路由注册、权限码、令牌刷新、租户头、分页口径、上传链路的改动，必须先在此出方案。

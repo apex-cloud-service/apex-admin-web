@@ -1,7 +1,7 @@
 # 记忆卡 · apex-admin-web（管理后台前端）
 
 > **用法**：接手前端或需要改页面时先读本卡（约 3 分钟），细节按文末指针进入 `AGENTS.md` 与 `docs/`。
-> **基线**：2026-11-17 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · 工作树干净（`dev` 分支，末次提交 `95a7f62`）
+> **基线**：2026-11-19 实测（`package.json` + 源码 + `git log`）· 版本 1.2.0 · `dev` 分支，末次提交 `f03bb68`（11-18），工作树 **24 项在途**（容器化改造 Docker→`Containerfile`/`container/`、全栈联调记录与规格文档等）
 > **仓库基线**：默认工作分支 **`dev`**（长期分支 `master`/`dev`/`test`，`main` 已删除）· 远端 `origin` = `git@github.com:apex-cloud-service/apex-admin-web.git`（固定 SSH 443）· 许可 **MIT**（`package.json` 已声明）
 > **权威优先级**：执行代码与类型定义 > `AGENTS.md`（核对日 2026-11-10）> `docs/` > 本卡。文档与实现冲突时以代码为准并回改文档。
 
@@ -30,7 +30,7 @@ Apex Scaffold 的管理后台（前后端分离独立工程），消费 `apex-sc
 src/
 ├── api/          40 个按业务域拆分的类型化接口文件（无统一 index.ts）
 ├── router/       index.ts 静态路由 + dynamic.ts 菜单转路由 + VIEW_REGISTRY
-├── views/        66 个 .vue 页面，15 个业务目录
+├── views/        65 个 .vue 页面，15 个业务目录
 ├── stores/       user / permission / app / office
 ├── layouts/      AdminLayout（菜单、顶栏、面包屑、未读角标、权限码告警）
 ├── composables/  useCrud / useTableConfig / useFormDraft / useBreakpoint / useAgenda
@@ -94,7 +94,9 @@ src/
 | 集成/IoT/在线会话/密码找回页 404 或返回 HTML | 代理须覆盖 `/integration/v1`、`/auth/v1\|v2`（带版本前缀，勿用裸 `/integration` 撞菜单路由）；`/oauth2/consent` 仅 POST 反代 |
 | 站内信模板编辑/删除 404 | 网关 office 路由须含 `/admin-api/v1/message-templates/**`（后端已修，环境需滚动新配置） |
 
-## 7. 当前状态（2026-11-17）
+## 7. 当前状态（2026-11-19）
+
+- 11-18（注释评审 + 死代码清理 + 复核收口）：`38e23fc` 全仓注释质量评审整改（仅注释行，零逻辑变更）；`62855d2` 清理范围外死代码并修复无效加载态，删除 0 引用页 `views/workflow/components/TaskActions.vue`，`src/views` 66→**65**（业务目录仍 15、`src/api` 仍 **40**、`*.test.ts` 仍 **31**）；`c611f56`～`93bd38f`/`371095d`/`f03bb68` 登记 FE-026/027/028 复核要点、三卡置「已完成」并将协作规则升级 v1.2，新增 `docs/reviews/2026-11-18-fe026-028-review.md`、`docs/records/2026-11-18-comment-quality-audit.md`，`docs/` Markdown 93→**95**。
 
 - 11-17（联调契约修复）：`8ab7d22` 登记 FE-026 联调任务/方案/记录与契约口径，`docs/` Markdown 91→**93**（`docs/specs/`、`docs/records/` 各 1 篇 `2026-11-17-integration-contract-repair.md`）；`331158d` 按真实后端契约对齐办公审批/日历与用户状态（`api/office-approval.ts`、`api/office-calendar.ts` 及对应 `*.test.ts`、`views/office/{approval,calendar}`、`views/system/user`），`src/views` 仍 **66**、`src/api` 仍 **40**、`*.test.ts` 仍 **31**。
 - 11-16（治理批次 + 目录规范化）：`856e370` 测试报告分层 + `docs/` 目录总览 + 结构自检脚本，`docs/` Markdown 46→**91**（新增 `notes/`、`plans/`、`records/`、`reviews/`、`specs/`、`tasks/` 等治理目录）；`548d1c2` 删除 0 引用遗留页 `views/office/components/PlatformSelector.vue`，`src/views` 67→**66**（业务目录仍 15、`src/api` 仍 40、`*.test.ts` 仍 31）。同批 `7d46a81`/`02421f4`/`16af104` 将 TypeScript `any` 收敛至 0。
@@ -121,7 +123,7 @@ src/
 | 后端契约源 | `/Users/work/apex-scaffold` 的 Router/Handler 与 `docs/03-api/API_ROUTES.md` |
 | 认证与路由详解 | `docs/architecture/auth-and-routing.md` |
 | 接口文档索引 | `docs/api/README.md` |
-| 部署与代理 | `docs/guides/deployment.md`、`vite.config.ts`、`docker/nginx.conf` |
+| 部署与代理 | `docs/guides/deployment.md`、`vite.config.ts`、`container/nginx.conf` |
 | **变更流水台账（每次改动登记）** | `docs/reference/ai-knowledge/04-change-memory.md` |
 
 ## 9. 维护规则

@@ -19,7 +19,7 @@ dist-ssr
 *.log
 npm-debug.log*
 
-# Docker 自身
-Dockerfile
-docker-compose*.yml
-.dockerignore
+# Podman build metadata
+Containerfile
+podman-compose*.yml
+.containerignore

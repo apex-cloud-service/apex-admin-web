@@ -13,7 +13,7 @@
 - [4. 构建与产物](#4-构建与产物)
 - [5. 环境变量](#5-环境变量)
 - [6. 部署方式一：Nginx 独立部署（推荐生产）](#6-部署方式一nginx-独立部署推荐生产)
-- [7. 部署方式二：Docker 容器部署（推荐）](#7-部署方式二docker-容器部署推荐)
+- [7. Podman Compose 联调](#7-podman-compose-联调)
 - [8. 部署方式三：与后端网关同域部署](#8-部署方式三与后端网关同域部署)
 - [9. 开发环境联调](#9-开发环境联调)
 - [10. 部署验证清单（迁移回归）](#10-部署验证清单迁移回归)
@@ -62,7 +62,7 @@
 
 | 组件 | 版本要求 | 说明 |
 |------|---------|------|
-| Node.js | ≥ 18（构建）；开发/测试实际需 ≥ 22.12 | package.json 顶层 `engines.node >= 18`；已安装依赖（如 Vitest 5）实际要求 Node `^22.12.0 \|\| ^24.0.0 \|\| >=26.0.0`，Node 18 仅能支撑 `npm run build` |
+| Node.js | 镜像构建 22；开发/测试 22.12 或更高受支持版本 | `package.json` 声明仍为 ≥18；当前锁定依赖（Vitest 5、Sass Embedded 等）使测试工具链实际要求更高版本 |
 | npm | ≥ 9（推荐） | 依赖安装与脚本执行（推荐值，仓库未声明 npm engines） |
 | Nginx | 任意主流版本 | 推荐生产独立部署用；也可使用任意静态服务器 |
 
@@ -106,18 +106,18 @@ dist/
 
 | 变量 | 生效环境 | 说明 |
 |------|---------|------|
-| `VITE_API_BASE_URL` | 生产（`.env.production`） | 后端网关地址。**同域部署留空**，走相对路径 `/api`、`/admin-api`、`/oauth2`；跨域/独立网关时填写完整前缀（如 `https://api.example.com`）。Docker 构建通过 `--build-arg` 注入 |
+| `VITE_API_BASE_URL` | 生产（`.env.production`） | 后端网关地址。**同域部署留空**，走相对路径 `/api`、`/admin-api`、`/oauth2`；跨域/独立网关时填写完整前缀（如 `https://api.example.com`）。镜像构建通过 `--build-arg` 注入 |
 | `VITE_API_PROXY_TARGET` | 开发（`.env.development`） | Vite dev server 代理目标（`/api`、`/admin-api`、`/auth/v1|v2`、`/integration/v1`、`/oauth2`），默认 `http://127.0.0.1:8080` |
 | `VITE_AUTH_TENANT_ENABLED` | 构建期 | 是否在登录页显示租户标识输入（多租户部署设为 `true`，默认关闭）。关闭时登录请求不带 `tenantId` |
 | `VITE_OAUTH2_CLIENT_ID` | 构建期 | OAuth2 授权码登录使用的 `client_id`，必须与后端 OAuth2 注册值一致（默认 `apex-admin-web`）。浏览器端为 PKCE 公共客户端，不携带 `clientSecret` |
 
 以上四项取自 `.env.example`，均已在 `src/env.d.ts` 中有类型声明；`VITE_OAUTH2_CLIENT_ID` 由登录页通过 `import.meta.env` 读取。OAuth2 的 `redirect_uri` 由前端按当前 Origin 拼出，需与后端注册值一致。
 
-运行期变量（`docker run` / `docker-compose.yml` 的 `environment`，不进入构建产物）：
+运行期变量（Podman 容器环境，不进入构建产物）：
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `API_PROXY_PASS` | `http://apex-scaffold:8080` | 容器启动时由 `docker-entrypoint.sh` 的 `envsubst` 渲染进 Nginx 配置，仅影响反向代理 upstream |
+| `API_PROXY_PASS` | `http://apex-gateway:8080` | 容器启动时由 `container-entrypoint.sh` 的 `envsubst` 渲染进 Nginx 配置，仅影响反向代理 upstream |
 | `TZ` | `Asia/Shanghai` | 容器时区 |
 | `WEB_PORT` | `80` | Compose 中宿主机端口映射（`${WEB_PORT:-80}:80`） |
 | `TAG` | `latest` | Compose 使用的镜像标签 |
@@ -291,7 +291,7 @@ server {
 nginx -t && systemctl reload nginx
 ```
 
-> 仓库内 `docker/nginx.conf` 是上述配置的容器模板版（`proxy_pass` 为 `${API_PROXY_PASS}` 占位，由入口脚本渲染），两者应保持等价；改动任一处需同步另一处。
+> 仓库内 `container/nginx.conf` 是上述配置的容器模板版（`proxy_pass` 为 `${API_PROXY_PASS}` 占位，由入口脚本渲染），两者应保持等价；改动任一处需同步另一处。
 
 > **为什么需要 `try_files ... /index.html`**：前端使用 Vue Router「history 模式」，直接刷新
 > `/monitor/api-call-log` 等多级路径时需回退到 `index.html` 再让前端路由接管，否则返回 404。
@@ -338,21 +338,22 @@ server {
 
 ---
 
-## 7. 部署方式二：Docker 容器部署（推荐）
+## 7. Podman Compose 联调
 
-适用：需要统一容器化交付、与后端（`apex-scaffold`）编排在同一 Docker 环境时。
-本工程提供 `Dockerfile`（多阶段构建）与 `docker-compose.yml` 编排。
+本地前后端容器联调统一使用 Podman 与 `podman-compose`。全栈编排唯一入口为后端仓库的 `podman-compose.yml`；前端仅预构建镜像，不保留独立 Compose 文件。
+
+> 旧 Docker 独立编排示例已移除。唯一入口是后端 Compose 内的 `apex-admin-web` 服务；不要在前端仓库运行独立 compose。
 
 ### 7.1 目录结构
 
 ```
 apex-admin-web/
-├── Dockerfile                # 多阶段构建：node:18 构建 → nginx:alpine 运行
-├── docker-compose.yml        # 前端服务编排
-├── .dockerignore
-└── docker/
+├── Containerfile             # Podman 多阶段构建：Node 22 构建 → Nginx 运行
+├── scripts/build/build-image.sh # Podman 前端镜像构建
+├── .containerignore             # Podman/Buildah 构建上下文忽略规则
+└── container/
     ├── nginx.conf            # Nginx 站点模板（${API_PROXY_PASS} 占位）
-    └── docker-entrypoint.sh  # 容器入口：envsubst 渲染后启动 Nginx
+    └── container-entrypoint.sh # 容器入口：envsubst 渲染后启动 Nginx
 ```
 
 ### 7.2 镜像设计
@@ -361,12 +362,12 @@ apex-admin-web/
 
 > 图源：[guides-deployment-02.mmd](../diagrams/guides-deployment-02.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
-- **构建阶段** `node:18-alpine`：`npm install` → `npm run build`（含 vue-tsc 类型校验），
+- **构建阶段** `node:22-alpine`：`npm ci` → `npm run build`（含 vue-tsc 类型校验），
   产物 `dist/`；`VITE_API_BASE_URL` 通过 `--build-arg` 注入（默认空 = 同域相对路径）。
 - **运行阶段** `nginx:1.27-alpine`：仅含静态产物与 Nginx，镜像小、启动快；
-  内置 `HEALTHCHECK`（`wget http://127.0.0.1/`）供编排探活。该探活**只证明静态服务可访问**，
+  后端 Compose 的前端服务使用 `wget` 检查容器内首页。该探活**只证明静态服务可访问**，
   不代表后端反代或 WebSocket 可用。
-- **反代地址可配置**：容器启动时由 `docker-entrypoint.sh` 用 `envsubst '${API_PROXY_PASS}'`
+- **反代地址可配置**：容器启动时由 `container-entrypoint.sh` 用 `envsubst '${API_PROXY_PASS}'`
   仅展开该占位符（避免误伤 Nginx 的 `$host`、`$uri` 等内置变量），渲染
   `/etc/nginx/conf.d/default.conf.template` 为 `default.conf` 后以前台模式启动 Nginx。
 - **WebSocket**：模板中已含 `location = /api/v1/messages/ws`（`Upgrade`/`Connection` + 3600s 超时），
@@ -387,195 +388,43 @@ cd /path/to/apex-admin-web
 ./scripts/build/build-image.sh --api-base-url https://api.example.com
 ./scripts/build/build-image.sh --no-cache
 
-# 等价的原生 docker 命令（脚本内部执行）：
-docker build [--build-arg VITE_API_BASE_URL=<url>] -t apex-admin-web:latest .
+# 等价的原生命令：
+podman build --build-arg VITE_API_BASE_URL=<url> -t apex-admin-web:latest .
 ```
 
 脚本特性：参数解析（`--tag/--api-base-url/--no-cache`）、自动读取 `.env.production`
-的 `VITE_API_BASE_URL`、构建完成后打印镜像与运行示例。
+的 `VITE_API_BASE_URL`、构建完成后打印镜像信息。显式传 `--api-base-url ''` 保证使用同源代理。
 
-### 7.4 独立运行
+### 7.4 后端 Compose 启动与验证
 
-```bash
-# 运行（独立部署时把反代指向宿主后端：macOS/Windows 用 172.17.0.1，Linux 用宿主 IP）
-docker run -d --name apex-admin-web -p 80:80   -e API_PROXY_PASS=http://172.17.0.1:8080   apex-admin-web:latest
-
-# 验证
-curl -s http://localhost/ | head -5        # 页面
-curl -s http://localhost/api/v1/health     # 反代后端健康检查
-```
-
-> `172.17.0.1` 是否可达取决于 Docker Desktop 或 Linux 的网络模式、宿主机监听地址、防火墙和目标后端配置；不能视为跨平台固定地址。
-
-### 7.5 Compose 编排（推荐）
-
-本工程的 `docker-compose.yml` 声明了**外部网络** `apex-network`
-（`name: apex-scaffold_apex-network`）与默认 `API_PROXY_PASS=http://apex-scaffold:8080`。
-这两者都只是前端侧的编排声明：网络是否已由后端 compose 创建、`apex-scaffold` 服务名能否在容器内解析，
-需在目标部署环境用 `docker network ls` / `docker inspect` / `getent hosts` 核验，不能仅凭前端仓库确认。
+以下命令用于接入**已启动的后端全栈项目**，先确认网关、认证和 system 服务已就绪。首次启动先按后端部署指南完成密钥、部署工具 JAR、观测网络和服务准备；不要在已有独立基础设施的宿主机上直接启动默认全栈，须先规划独立项目、卷和不冲突的宿主端口。
 
 ```bash
-# 前置：确保后端 compose 已先启动（其网络 apex-scaffold_apex-network 必须存在）
-cd /path/to/apex-scaffold && docker compose up -d
-
-# 前端接入：一条命令即可，compose 自动将容器挂到后端网络
 cd /path/to/apex-admin-web
-docker compose up -d --build
-docker compose ps    # 等待 healthy
-```
+./scripts/build/build-image.sh --tag latest --api-base-url ''
 
-### 7.6 接入后端 compose 网络的完整启动命令（端到端）
-
-> 以下命令按仓库内 Dockerfile、Compose、入口脚本和 Nginx 模板整理。容器网络、后端服务名解析和端到端反代仍需在目标部署环境中实际验证，不能仅凭前端仓库构建结果确认。
-
-#### 方式一（推荐）：Compose 一键启动
-
-前端 `docker-compose.yml` 已声明外部网络（`external: true` + `name: apex-scaffold_apex-network`）。
-该声明只表达「本服务要加入这个已存在的网络」，**网络是否已创建、后端服务名能否解析，必须在目标环境确认**
-（后端 `.env` 中 `COMPOSE_PROJECT_NAME=apex-scaffold` 时，网络名通常为 `apex-scaffold_apex-network`）。
-
-**步骤 ①  启动后端 compose（先建网）**
-
-```bash
 cd /path/to/apex-scaffold
+TAG=latest podman-compose -p apex-scaffold -f podman-compose.yml config >/dev/null
+TAG=latest podman-compose -p apex-scaffold -f podman-compose.yml up -d --no-deps apex-admin-web
+podman-compose -p apex-scaffold -f podman-compose.yml ps
 
-# 前置检查：网络是否已存在
-docker network ls | grep apex-network
-#   建议输出: apex-scaffold_apex-network   bridge   local
-
-# 若不存在，则启动后端 compose 任意一次即可自动创建：
-docker compose up -d
-```
-
-**步骤 ②  启动前端 compose（自动挂入后端网络）**
-
-```bash
 cd /path/to/apex-admin-web
-
-# 一键构建并启动；compose 读取 networks.external 复用后端网络
-docker compose up -d --build
-
-# 等待就绪
-docker compose ps            # STATUS 应为 running (healthy)
+bash scripts/integration/podman-smoke.sh
 ```
 
-**步骤 ③  验证整条链路**
+`--no-deps` 仅更新前端，不负责启动或等待后端。`API_PROXY_PASS` 指向容器端口 `http://apex-gateway:8080`，不随宿主 `APP_PORT` 变化。若使用自定义项目名或 `WEB_PORT`，冒烟时分别设置 `COMPOSE_PROJECT_NAME` 和 `BASE_URL`。
+
+脱敏和知识库联调分别需要后端 Compose 的 `masking` 和 `knowledge` profile。可在后端仓库从同一入口核对包含两者的服务清单。
 
 ```bash
-# 1) 确认容器已挂入后端网络
-docker inspect apex-admin-web --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
-#   期望包含 apex-scaffold_apex-network
-
-# 2) 确认网络内能解析后端服务名
-docker exec apex-admin-web getent hosts apex-scaffold
-#   期望输出一行 <IP>  apex-scaffold
-
-# 3) 前端页面
-curl -s -o /dev/null -w 'page=%{http_code}\n' http://localhost/
-
-# 4) 经容器内 Nginx 反代到后端健康/接口（需后端应用已运行）
-curl -s http://localhost/api/v1/health
-# 或在不带登录态时验证反代配置：
-docker exec apex-admin-web grep proxy_pass /etc/nginx/conf.d/default.conf
-#   期望: proxy_pass http://apex-scaffold:8080;
+podman-compose -p apex-scaffold -f podman-compose.yml --profile masking --profile knowledge config --services
 ```
 
-#### 方式二：docker run 直接挂网络（免 compose）
+### 7.5 冒烟检查范围
 
-后端 compose 已运行、前端镜像已构建，且目标环境已确认网络存在、服务名可解析时使用：
+冒烟脚本需要 `jq`，校验 Nginx、网关 DNS、首页 200 及反代后 system 健康端点的 JSON `code=0`、`data.status=UP`，避免把 SPA fallback 的 HTTP 200 误判为接口可用。登录及业务接口仍需单独验收。
 
-```bash
-cd /path/to/apex-admin-web
-docker build -t apex-admin-web:latest .
-
-docker run -d --name apex-admin-web \
-  --network apex-scaffold_apex-network \
-  -e API_PROXY_PASS=http://apex-scaffold:8080 \
-  -p 80:80 \
-  apex-admin-web:latest
-
-docker exec apex-admin-web getent hosts apex-scaffold   # 应解析出后端容器 IP
-curl -s http://localhost/api/v1/health
-```
-
-#### 方式三：合并进后端 compose（同网络，无需 external）
-
-> 以下为**参考片段**：若后端 `apex-scaffold/docker-compose.yml` 的 `services` 中加入 `apex-admin-web`
-> （挂在既有 `apex-network`，同网络内可直接按服务名访问，无需声明 `external`）。后端仓库是否已合入该服务，
-> 需以后端工程实际内容核验。
-
-```bash
-# ① 先构建前端镜像（后端 compose 无法引用前端仓库的 build context，故需预构建）
-cd /path/to/apex-admin-web
-docker build -t apex-admin-web:latest .
-
-# ② 一次性拉起后端 + 前端
-cd /path/to/apex-scaffold
-docker compose up -d --build            # 全部拉起
-# 单独启前端（不连带后端）：
-docker compose up -d apex-admin-web --no-deps
-
-# ③ 验证
-docker compose ps                       # apex-admin-web 应为 running (healthy)
-curl -s -o /dev/null -w 'HTTP %{http_code}\n' http://localhost/   # 200
-docker exec apex-admin-web getent hosts apex-scaffold             # 应解析出后端 IP
-```
-
-后端 `apex-scaffold/docker-compose.yml` 中对应的 `services` 片段（参考片段，后端仓库是否已合入需核验）：
-
-```yaml
-  # ---------------- Apex Admin Web（前端管理后台，可选） ----------------
-  apex-admin-web:
-    image: apex-admin-web:${TAG:-latest}
-    container_name: apex-admin-web
-    environment:
-      API_PROXY_PASS: ${API_PROXY_PASS:-http://apex-scaffold:8080}
-      TZ: ${TZ:-Asia/Shanghai}
-    ports:
-      - "${WEB_PORT:-80}:80"
-    depends_on:
-      apex-scaffold:
-        condition: service_started
-    restart: unless-stopped
-    networks:
-      - apex-network
-```
-
-> **依赖说明**：本片段未给 `apex-scaffold` 添加 `healthcheck`（避免改动后端既有行为），
-> 故前端 `depends_on` 用 `service_started`——只保证容器已启动，不保证后端应用已就绪，
-> 反代能否正常返回需在目标环境实测。
-> `compose up -d apex-admin-web` 因 `depends_on` 会连带拉起后端 `apex-scaffold`；
-> 只想单独启前端则加 `--no-deps`。
-
-#### 常见问题（FAQ）
-
-| 现象 | 原因 | 处理 |
-|------|------|------|
-| compose up 报 `network ... not found` | 后端网络尚未创建，或项目名不符 | 先 `docker compose up -d` 后端；`docker network ls` 核对网络名，同步调整 `name:` |
-| 无法解析 `apex-scaffold` | 前端容器未加入该网络，或不在同网络 | `docker inspect apex-admin-web` 查看 `Networks`；确认挂的是 `apex-scaffold_apex-network` |
-| 反代 502/504 | 后端应用未启动或端口不一致 | 确认后端 `APP_PORT`（默认 8080）与 `API_PROXY_PASS` 端口一致；`curl` 后端健康端点 |
-| 端口 80 被占用 | 宿主机 80 已被占用 | 启动时改映射 `docker compose run --rm -p 8088:80` 或 `.env` 设 `WEB_PORT=8088` |
-
-> **网络名与 DNS 说明**：按 compose 默认命名约定，项目名 `apex-scaffold` + 网络名 `apex-network`
-> 通常生成 `apex-scaffold_apex-network`，容器间按 **compose 服务名** `apex-scaffold` 做 DNS 解析。
-> 这是命名约定而非本仓库可确认的事实，请以目标环境 `docker network ls` 与
-> `docker exec <前端容器> getent hosts apex-scaffold` 的实际结果为准；若用 `docker-compose -p <项目>`
-> 改了项目名，需把两处 `apex-scaffold_apex-network` 替换为 `<项目>_apex-network`。
-
-### 7.7 Docker 部署验证
-
-```bash
-# 容器与网络
-docker ps | grep apex-admin-web
-docker exec apex-admin-web nginx -t
-
-# 页面与接口回路
-curl -s http://localhost/ -o /dev/null -w '%{http_code}\n'        # 200
-curl -s http://localhost/api/v1/health                             # 反代后端可达
-curl -s http://localhost/admin-api/v1/api-call-logs?pageNum=1      # 带登录态可查
-
-# 回滚：重新 build 旧 tag 镜像并重启容器即可
-```
+认证中心登录成功后，system 业务 API 还需要令牌中的 `accountId` 对应主应用 `sys_user.id`。使用隔离测试账号验收时，先按后端 `docs/05-operations/multi-client-acceptance-checklist.md` 核对账户映射，再验证登录、用户初始化和业务接口。
 
 ---
 
@@ -730,8 +579,7 @@ MFA 与 IP 规则走 `/api/mfa/**`、`/api/ip-access-control/**`；运维健康�
 | `npm run preview` | 本地预览构建产物 |
 | `nginx -t && systemctl reload nginx` | 校验并热加载 Nginx 配置 |
 | `cp -r dist/* /var/www/apex-admin/` | 发布前端产物到站点目录 |
-| `./scripts/build/build-image.sh` | 一键构建前端镜像（或 `docker build -t apex-admin-web:latest .`） |
-| `docker run -d -p 80:80 -e API_PROXY_PASS=http://172.17.0.1:8080 apex-admin-web:latest` | 独立运行容器 |
-| `docker compose up -d --build` | Compose 一键构建启动 |
-| `docker exec apex-admin-web nginx -t` | 容器内校验 Nginx 配置 |
+| `./scripts/build/build-image.sh` | 用 Podman 构建前端镜像 |
+| `podman-compose -p apex-scaffold -f podman-compose.yml up -d --no-deps apex-admin-web` | 在已就绪的后端项目中更新前端（从后端仓库运行） |
+| `bash scripts/integration/podman-smoke.sh` | 验证容器 DNS、Nginx 和 HTTP 反代 |
 | `BASE_URL=<站点> npm run verify:deploy` | 上线后自动化核验（`scripts/verify/post-deploy-check.sh`，C1–C13；可选 `API_BASE`/`TOKEN`/`TENANT_ID`/`INSECURE`/`SKIP_UPLOAD`/`SKIP_WS`；退出码 0 通过/1 失败/2 缺参） |

@@ -55,8 +55,10 @@ import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { Plus, Upload } from '@element-plus/icons-vue'
 import { getToken } from '@/utils/auth'
 import { apiUrl } from '@/utils/api-base'
+import { toMultipartUploadSex } from '@/utils/upload-sex'
+import { toFileUploadResult } from '@/utils/upload-result'
 import { MAX_UPLOAD_SIZE } from '@/settings'
-import type { FileUploadResult } from '@/types'
+import type { FileUploadResponse, FileUploadResult } from '@/types'
 import type { UploadProps, UploadUserFile } from 'element-plus'
 
 interface Props {
@@ -101,7 +103,7 @@ const uploadHeaders = computed(() => ({
 
 /** 上传额外参数 */
 const uploadData = computed(() => ({
-  sex: props.sex
+  sex: toMultipartUploadSex(props.sex)
 }))
 
 /** 文件大小上限（MB） */
@@ -141,9 +143,9 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
  */
 const handleSuccess: UploadProps['onSuccess'] = (response, uploadFile: UploadUserFile) => {
   // 后端响应为 Result{code,msg,data}，此处按契约收紧类型
-  const payload = response as { code: number; msg?: string; data: FileUploadResult }
+  const payload = response as { code: number; msg?: string; data: FileUploadResponse }
   if (payload.code === 0) {
-    const result: FileUploadResult = payload.data
+    const result = toFileUploadResult(payload.data)
     ElMessage.success('上传成功')
     
     // 更新文件列表中的URL（便于预览）

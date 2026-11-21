@@ -7,6 +7,14 @@
  */
 import { defineConfig, devices } from '@playwright/test'
 
+const host = '127.0.0.1'
+const port = 5173
+const baseURL = `http://${host}:${port}`
+const usePreview = process.env.PLAYWRIGHT_USE_PREVIEW === '1'
+const noProxy = [process.env.no_proxy, process.env.NO_PROXY, host, 'localhost'].filter(Boolean).join(',')
+process.env.no_proxy = noProxy
+process.env.NO_PROXY = noProxy
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -19,7 +27,7 @@ export default defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL,
     trace: 'retain-on-failure',
   },
   projects: [
@@ -29,9 +37,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev -- --port 5173 --strictPort',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+    command: `${usePreview ? 'npm exec vite -- preview' : 'npm run dev --'} --host ${host} --port ${port} --strictPort`,
+    url: baseURL,
+    reuseExistingServer: !usePreview && !process.env.CI,
     timeout: 120_000,
   },
 })

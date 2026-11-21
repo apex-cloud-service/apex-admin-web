@@ -107,6 +107,10 @@ bash scripts/governance/audit-frontend-rules.sh   # 前端红线静态扫描（�
 
 ---
 
+### 0.9 当前容器构建入口（2026-11-19）
+
+当前前端容器构建使用 `Containerfile`、`.containerignore` 与 `container/`，镜像构建命令使用 Podman；全栈编排唯一入口为后端仓库 `podman-compose.yml`。附录 A 的旧部署描述仅为不可改写的历史原文，实际操作以本节、`docs/guides/deployment.md` 和执行脚本为准。
+
 ## 附录 A：原始仓库开发规范（原文完整保留，未删改）
 
 # AGENTS.md — apex-admin-web

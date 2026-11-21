@@ -1,6 +1,6 @@
-# 01 · 前端现状（2026-11-17）
+# 01 · 前端现状（2026-11-19）
 
-> 采集：2026-11-17，`package.json` + `src/` 实测 + `git log`。数字会漂移，结论比数字寿命长。
+> 采集：2026-11-19，`package.json` + `src/` 实测 + `git log`。数字会漂移，结论比数字寿命长。
 
 ## 1. 技术与规模
 
@@ -8,13 +8,13 @@
 | --- | --- |
 | 版本 / 运行时 | `1.2.0`；Node `>=18`（实际还须满足依赖 engines） |
 | 主栈 | Vue 3.5 · Vite 6 · TypeScript ~5.7 · Vue Router 4 · Pinia 2 · Element Plus 2 · Axios · ECharts 5 · CropperJS 1 |
-| 页面 | `src/views` 下 **66 个 `.vue`**，15 个业务目录（11-16 删除 0 引用遗留页 `office/components/PlatformSelector.vue`） |
+| 页面 | `src/views` 下 **65 个 `.vue`**，15 个业务目录（11-16 删除 0 引用遗留页 `office/components/PlatformSelector.vue`；11-18 `62855d2` 删除 0 引用 `workflow/components/TaskActions.vue`） |
 | 接口层 | `src/api` **40 个业务文件**（另有 31 个 `*.test.ts` 契约测试），无统一 `index.ts` |
 | 状态 | `src/stores` 4 个：`user` / `permission` / `app` / `office` |
 | 复用 | `src/composables` 5 个（`useCrud` / `useTableConfig` / `useFormDraft` / `useBreakpoint` / `useAgenda`）+ `src/components`（分页、全局搜索、空态、上传） |
 | 测试 | 单元 **66 个**：`src/api/` **31 个** `*.test.ts` 契约测试（40 个 API 模块全覆盖），另有 35 个 `*.spec.ts` 单测（`utils/__tests__` 18、`stores` 4、`composables` 5、`components` 6、`directives`/`router` 各 1）；另 3 个 Playwright E2E 文件（`e2e/`）；Vitest + happy-dom，11-13 实测 475 用例全绿（11-14 未复跑） |
-| 文档 | `docs/` 下 **93 个 Markdown**（11-17 联调契约修复登记后含 `api/`、`architecture/`、`features/`、`guides/`、`reference/`、`archived/`、`notes/`、`plans/`、`records/`、`reviews/`、`specs/`、`tasks/`、`diagrams/`） |
-| 工作树 | 5 项在途（11-17 17:00 实测：`docs/records`、`docs/reference` 与 `api/office-calendar*`、`views/office/calendar`）；最后提交 2026-11-17 `331158d` |
+| 文档 | `docs/` 下 **95 个 Markdown**（11-17 联调契约修复登记后含 `api/`、`architecture/`、`features/`、`guides/`、`reference/`、`archived/`、`notes/`、`plans/`、`records/`、`reviews/`、`specs/`、`tasks/`、`diagrams/`） |
+| 工作树 | 24 项在途（11-19 实测：容器化改造 Docker→`Containerfile`/`container/`、全栈联调记录与规格文档等）；最后提交 2026-11-18 `f03bb68` |
 
 ## 2. 启动与验证
 
@@ -32,10 +32,10 @@ npx vitest run         # 单次测试
 
 ## 3. 构建与部署
 
-- Docker 两阶段：Node 18 Alpine 构建 → Nginx 运行；当前安装命令是 `npm install`。
+- Podman 镜像两阶段：Node 22 Alpine 构建（`npm ci`）→ Nginx 运行；前后端容器联调由后端 `podman-compose.yml` 唯一编排。
 - 构建期注入 `VITE_*`（`VITE_API_BASE_URL` 会写死进产物，运行期改不了）；运行期 `API_PROXY_PASS` 只影响 Nginx upstream。
 - Nginx 有 `/api/v1/messages/ws` 专用 location（转发 Upgrade，读超时 3600s，置于 `/api/` 之前）；`assets` 缓存 30 天 immutable；前端路由回退 `index.html`。
-- Compose 依赖外部网络 `apex-scaffold_apex-network`；首页健康检查只证明静态服务可达，**不证明接口可用**。
+- 前端与网关共享后端 Compose 项目的 `apex-network`，默认 upstream 为 `http://apex-gateway:8080`；首页健康检查只证明静态服务可达，**不证明接口可用**。
 
 ## 4. 能力覆盖（可指到代码）
 
@@ -76,7 +76,9 @@ npx vitest run         # 单次测试
 5. `utils/` 下的缓存、XSS、性能监控工具**不是全局生效**，是否执行要看调用点。
 6. Mock 仅 `import.meta.env.DEV` 动态加载，不得当生产数据源。
 
-## 6. 近期交付（2026-11-17）
+## 6. 近期交付（2026-11-19）
+
+- 11-18（注释评审 + 死代码清理 + 复核收口）：`38e23fc` 全仓注释质量评审整改（仅注释行，零逻辑变更）；`62855d2` 删除 0 引用页 `views/workflow/components/TaskActions.vue`，`src/views` 66→**65**（业务目录仍 15、`src/api` 仍 40、`*.test.ts` 仍 31）；`c611f56`～`93bd38f` 登记 FE-026/027/028 复核要点并置「已完成」，新增 `docs/reviews/2026-11-18-fe026-028-review.md`、`docs/records/2026-11-18-comment-quality-audit.md`，`docs/` Markdown 93→**95**。
 
 - 11-17（联调契约修复）：`8ab7d22` 登记 FE-026 联调任务/方案/记录与契约口径，`docs/` Markdown 91→**93**（`docs/specs/`、`docs/records/` 各 1 篇 `2026-11-17-integration-contract-repair.md`）；`331158d` 按真实后端契约对齐办公审批/日历与用户状态（`api/office-approval.ts`、`api/office-calendar.ts` 及对应 `*.test.ts`、`views/office/{approval,calendar}`、`views/system/user`），`src/views`、`src/api`、`*.test.ts` 计数未变。
 - 11-16（治理批次 + 目录规范化）：`856e370` 测试报告分层 + `docs/` 目录总览 + 结构自检脚本，`docs/` Markdown 46→**91**（新增 `notes/`、`plans/`、`records/`、`reviews/`、`specs/`、`tasks/` 等治理目录）；`548d1c2` 删除 0 引用遗留页 `views/office/components/PlatformSelector.vue`，`src/views` 67→**66**（业务目录仍 15）；同批 `7d46a81`/`02421f4`/`16af104` 收敛 TypeScript `any` 至 0，`0bdcf6e` 补工作流/租户/办公审批三条 E2E 主链路用例，`fc544e1` 27 张 Mermaid 落地为 `.mmd` + 同名 `.svg`。

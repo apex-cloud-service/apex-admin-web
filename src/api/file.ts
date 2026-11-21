@@ -12,7 +12,9 @@
  * - GET    /api/v1/file/chunk/status/{fileId} - 查询已上传分片（断点续传）
  */
 import { del, get, post } from '@/utils/request'
-import type { FileUploadResult } from '@/types'
+import { toMultipartUploadSex } from '@/utils/upload-sex'
+import { toFileUploadResult } from '@/utils/upload-result'
+import type { FileUploadResponse, FileUploadResult } from '@/types'
 
 /**
  * 上传文件（通用接口）
@@ -28,12 +30,12 @@ import type { FileUploadResult } from '@/types'
  * console.log('访问URL：', result.url)
  * ```
  */
-export function uploadFile(file: File, sex: 0 | 1): Promise<FileUploadResult> {
+export async function uploadFile(file: File, sex: 0 | 1): Promise<FileUploadResult> {
   const formData = new FormData()
   formData.append('file', file)
-  formData.append('sex', String(sex))
+  formData.append('sex', toMultipartUploadSex(sex))
   
-  return post<FileUploadResult>('/api/v1/files/generic', formData)
+  return toFileUploadResult(await post<FileUploadResponse>('/api/v1/files/generic', formData))
 }
 
 /**

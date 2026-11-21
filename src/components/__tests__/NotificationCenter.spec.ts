@@ -36,7 +36,7 @@ vi.mock('@/utils/notification-stream', () => ({
   subscribeNotificationPush: mocks.subscribeNotificationPush,
 }))
 
-/** el-popover 桩：渲染 reference 与默认插槽，open() 模拟打开并触发 show */
+/** el-popover 桩：渲染 reference 与默认插槽，open() 模拟入场完成 */
 const ElPopoverStub = defineComponent({
   name: 'ElPopover',
   props: {
@@ -44,12 +44,11 @@ const ElPopoverStub = defineComponent({
     width: { type: Number, default: 0 },
     placement: { type: String, default: '' },
   },
-  emits: ['update:visible', 'show'],
+  emits: ['after-enter'],
   setup(_, { slots, emit, expose }) {
     expose({
       open: () => {
-        emit('update:visible', true)
-        emit('show')
+        emit('after-enter')
       },
     })
     return () => h('div', { class: 'popover-stub' }, [slots.reference?.(), slots.default?.()])
@@ -132,7 +131,7 @@ function mountCenter() {
   return { wrapper, badge: wrapper.findComponent(ElBadgeStub) }
 }
 
-/** 打开通知面板（模拟 popover 打开并触发 show 拉取列表） */
+/** 打开通知面板并模拟入场完成。 */
 async function openPanel(wrapper: ReturnType<typeof mountCenter>['wrapper']) {
   const popover = wrapper.findComponent(ElPopoverStub)
   ;(popover.vm as unknown as { open: () => void }).open()

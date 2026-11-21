@@ -14,6 +14,9 @@
 ### 本次联调
 
 - [2026-11-17 联调契约修复方案](specs/2026-11-17-integration-contract-repair.md) — FE-026，日期/数组分页/状态契约及验证边界。
+- [2026-11-18 前后端全量联调方案](specs/2026-11-18-fullstack-integration.md) — FE-029 / BE-043，Podman Compose 联调环境、全量 API 对照和缺陷闭环。
+- [2026-11-19 API 路由静态对照报告](records/2026-11-19-api-route-matrix.md) — API 导出函数与后端源码路由的静态映射；不代表真实 HTTP 联调通过。
+- [2026-11-19 前后端联调执行记录](records/2026-11-19-fullstack-integration.md) — FE-029 / BE-043 的 Podman Compose 验证证据、未完成项与部署方授权前置条件。
 
 ### 架构文档
 
@@ -100,6 +103,7 @@ apex-admin-web/
 │   ├── performance/            # 性能测试脚本
 │   ├── quality/                # 质量检查脚本（注释规范检查、测试报告归一化）
 │   ├── security/               # 安全扫描脚本
+│   ├── integration/            # API 路由静态审计与 Podman Compose 联调冒烟
 │   └── verify/                 # 上线后验证脚本（post-deploy-check.sh，npm run verify:deploy）
 └── src/                        # 源代码
 ```

@@ -5,6 +5,7 @@
  * - 动态路由：由后端菜单树驱动生成（见 buildDynamicRoutes）
  * - 全局守卫：未登录跳登录页；已登录但身份未加载时拉取身份并生成动态路由
  */
+import { shallowReactive } from 'vue'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
@@ -66,7 +67,7 @@ export const staticRoutes: RouteRecordRaw[] = [
     redirect: '/dashboard',
     // 工作台为登录后默认页，不依赖后端菜单，须作为静态路由注册；
     // 否则未登录访问 / 时因 dashboard 动态路由尚未生成而命中 404 而非跳转登录页。
-    children: [
+    children: shallowReactive<RouteRecordRaw[]>([
       {
         path: 'dashboard',
         name: 'Dashboard',
@@ -101,7 +102,7 @@ export const staticRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/demo/FileUploadEnhancedDemo.vue'),
         meta: { title: '文件上传增强版', icon: 'Upload', hidden: true },
       },
-    ],
+    ]),
   },
   {
     path: '/:pathMatch(.*)*',
@@ -121,26 +122,24 @@ let dynamicRoutesAdded = false
 
 /**
  * 登录后（或刷新后）生成菜单驱动的动态路由。
- * 由前端路由守卫调用；失败时记录警告并保留静态路由。若动态子路由已挂入根记录，
- * 会在 addRoute 前设置已生成标记；因此注册异常后的后续导航不保证自动重试成功。
+ * 由前端路由守卫调用；失败时保留静态路由，后续导航可重试。
  */
 export async function setupDynamicRoutes(): Promise<void> {
   if (dynamicRoutesAdded) return
   const userStore = useUserStore()
+  const removeRoutes: Array<() => void> = []
   try {
     const routes = await buildDynamicRoutes(userStore.permissions)
-    // 找到根布局路由，将动态子路由挂入
-    const root = router.getRoutes().find((r) => r.name === 'Root')
+    if (dynamicRoutesAdded) return
     const rootRecord = router.options.routes.find((r) => r.name === 'Root')
-    if (rootRecord && Array.isArray(rootRecord.children)) {
-      routes.forEach((route) => rootRecord.children!.push(route))
-      dynamicRoutesAdded = true
-      // 重新解析路由表
-      router.addRoute(rootRecord)
+    if (!rootRecord?.children) return
+    for (const route of routes) {
+      removeRoutes.push(router.addRoute('Root', route))
     }
-    void root
+    rootRecord.children.push(...routes)
+    dynamicRoutesAdded = true
   } catch {
-    // 菜单加载失败时保留静态路由（登录页可用），记录日志便于排查
+    removeRoutes.reverse().forEach((remove) => remove())
     console.warn('[router] 动态路由生成失败，已降级为静态路由')
   }
 }
@@ -166,10 +165,9 @@ router.beforeEach(async (to) => {
   }
   if (!dynamicRoutesAdded) {
     await setupDynamicRoutes()
-    const resolved = router.resolve(to.fullPath)
-    if (resolved.name !== 'NotFound') {
-      return { path: to.fullPath, replace: true }
-    }
+  }
+  if (dynamicRoutesAdded && to.name === 'NotFound' && router.resolve(to.fullPath).name !== 'NotFound') {
+    return { path: to.path, query: to.query, hash: to.hash, replace: true }
   }
   return true
 })

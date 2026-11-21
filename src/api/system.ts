@@ -7,7 +7,7 @@
  * - 参数配置/定时任务列表接口后端返回全量数组（非分页）
  */
 import { del, get, post, put } from '@/utils/request'
-import type { DeptNode, DictData, DictType, JobLog, MenuNode, PageResponse, SysConfig, SysJob } from '@/types'
+import type { DeptNode, DictData, DictId, DictType, JobLog, MenuNode, PageResponse, SysConfig, SysJob } from '@/types'
 
 /* ==================== 菜单管理 ==================== */
 
@@ -119,6 +119,13 @@ export function deleteDept(id: number): Promise<void> {
 
 /* ==================== 字典管理 ==================== */
 
+function dictIdSegment(id: DictId): string {
+  if (typeof id === 'string' ? !/^[1-9][0-9]*$/.test(id) : !Number.isSafeInteger(id) || id <= 0) {
+    throw new Error('字典 ID 无效，请刷新列表后重试')
+  }
+  return String(id)
+}
+
 /** 字典类型请求体 */
 export interface DictTypePayload {
   dictName: string
@@ -148,18 +155,18 @@ export function createDictType(payload: DictTypePayload): Promise<void> {
 }
 
 /** 更新字典类型 */
-export function updateDictType(id: number, payload: DictTypePayload): Promise<void> {
-  return put<void>(`/admin-api/v1/dict/types/${id}`, payload)
+export function updateDictType(id: DictId, payload: DictTypePayload): Promise<void> {
+  return put<void>(`/admin-api/v1/dict/types/${dictIdSegment(id)}`, payload)
 }
 
 /** 删除字典类型 */
-export function deleteDictType(id: number): Promise<void> {
-  return del<void>(`/admin-api/v1/dict/types/${id}`)
+export function deleteDictType(id: DictId): Promise<void> {
+  return del<void>(`/admin-api/v1/dict/types/${dictIdSegment(id)}`)
 }
 
 /** 启停字典类型 */
-export function updateDictTypeStatus(id: number, enabled: boolean): Promise<void> {
-  return put<void>(`/admin-api/v1/dict/types/${id}/status`, { enabled })
+export function updateDictTypeStatus(id: DictId, enabled: boolean): Promise<void> {
+  return put<void>(`/admin-api/v1/dict/types/${dictIdSegment(id)}/status`, { enabled })
 }
 
 /** 按字典类型编码查询字典数据（dictType 必填） */
@@ -173,18 +180,18 @@ export function createDictData(payload: DictDataPayload): Promise<void> {
 }
 
 /** 更新字典数据 */
-export function updateDictData(id: number, payload: DictDataPayload): Promise<void> {
-  return put<void>(`/admin-api/v1/dict/data/${id}`, payload)
+export function updateDictData(id: DictId, payload: DictDataPayload): Promise<void> {
+  return put<void>(`/admin-api/v1/dict/data/${dictIdSegment(id)}`, payload)
 }
 
 /** 删除字典数据 */
-export function deleteDictData(id: number): Promise<void> {
-  return del<void>(`/admin-api/v1/dict/data/${id}`)
+export function deleteDictData(id: DictId): Promise<void> {
+  return del<void>(`/admin-api/v1/dict/data/${dictIdSegment(id)}`)
 }
 
 /** 启停字典数据 */
-export function updateDictDataStatus(id: number, enabled: boolean): Promise<void> {
-  return put<void>(`/admin-api/v1/dict/data/${id}/status`, { enabled })
+export function updateDictDataStatus(id: DictId, enabled: boolean): Promise<void> {
+  return put<void>(`/admin-api/v1/dict/data/${dictIdSegment(id)}/status`, { enabled })
 }
 
 /* ==================== 参数配置 ==================== */

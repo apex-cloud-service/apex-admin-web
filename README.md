@@ -133,7 +133,7 @@ apex-admin-web/
 │   ├── mock/           # Mock 数据服务（仅开发环境加载）
 │   ├── test/           # 测试全局准备（setup.ts）
 │   └── views/          # 页面（登录/工作台/系统管理/监控/数据/办公/工作流/集成/物联网/个人中心）
-├── docker/             # Nginx 模板与入口脚本（生产反代 /assets、/api、/admin-api、/auth/v1|v2、/integration/v1、OAuth2 与通知 SSE/站内信 WS 精确匹配）
+├── container/          # Nginx 模板与容器入口脚本（生产反代 /assets、/api、/admin-api、/auth/v1|v2、/integration/v1、OAuth2 与通知 SSE/站内信 WS 精确匹配）
 ├── scripts/            # 构建（build/）/ 数据库（database/ 与 database/archive/）/ 性能 / 质量（quality/）/ 安全（security/）/ 上线验证（verify/）
 ├── docs/               # 文档中心（架构/API/指南/功能/参考，见 docs/README.md）
 ├── vite.config.ts      # 构建与开发代理配置
@@ -221,7 +221,7 @@ flowchart LR
     BUILD --> DIST[dist]
     DIST --> N1[Nginx 静态托管]
     DIST --> IMG[Docker 镜像<br/>nginx:1.27-alpine]
-    ENV1[运行期 API_PROXY_PASS] --> EP[docker-entrypoint.sh<br/>envsubst]
+    ENV1[运行期 API_PROXY_PASS] --> EP[container-entrypoint.sh<br/>envsubst]
     EP --> IMG
     N1 --> BE[后端 upstream]
     IMG --> BE
@@ -234,7 +234,7 @@ flowchart LR
 > 本仓库是独立前端工程，生产构建产物为 `dist/`，应访问实际配置的前端源站。后端是否仍托管 `static/admin/`、是否提供 `/admin` 短入口重定向，需以后端工程和目标环境核验。完整构建与部署说明见 **[`docs/guides/deployment.md`](docs/guides/deployment.md)**。
 
 - **独立部署（推荐生产）**：`npm run build` 后将 `dist/` 交给 Nginx/静态服务器，反向代理 `/api`、`/admin-api`、`/auth/v1|v2`、`/integration/v1` 与 OAuth2 端点（`/oauth2/consent` 仅 POST）到后端，并为 `/api/v1/messages/ws`（WebSocket 升级）与 `/api/v1/notifications/stream`（SSE）单独配置转发；上线后可用 `npm run verify:deploy` 做端到端核验（详见 [`docs/guides/deployment.md`](docs/guides/deployment.md) §6、§10）。
-- **Docker 容器部署**：`docker compose up -d --build`（配置使用外部网络 `apex-scaffold_apex-network`，`API_PROXY_PASS` 默认 `http://apex-scaffold:8080`；网络是否已创建、`apex-scaffold` 服务名是否可解析，需在目标 Docker 环境核验），详见 deployment.md §7。
+- **Podman Compose 联调**：按 `docs/guides/deployment.md` §7 在前端构建镜像，并由后端 `podman-compose.yml` 启动前端服务；反代目标为 `http://apex-gateway:8080`。
 - **与后端网关同域**：前端走相对路径（`VITE_API_BASE_URL` 留空），由 Nginx 按 `/api/`、`/admin-api/`、`/auth/`、`/integration/`、`/oauth2/` 前缀分流到后端（详见 deployment.md §8）。
 
 ## 代码注释

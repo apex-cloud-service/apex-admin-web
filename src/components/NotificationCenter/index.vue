@@ -6,13 +6,13 @@
   - 与站内信铃铛（office 域 /api/v1/messages/**）互不影响
 -->
 <template>
-  <el-popover v-model:visible="panelVisible" trigger="click" :width="360" placement="bottom-end" @show="loadList">
+  <el-popover trigger="click" :width="360" placement="bottom-end" @after-enter="handleOpen" @before-leave="panelVisible = false">
     <template #reference>
-      <el-tooltip content="通知中心" placement="bottom">
+      <button type="button" class="notification-btn" aria-label="通知中心" title="通知中心" :aria-expanded="panelVisible">
         <el-badge :value="unreadCount" :hidden="unreadCount === 0" :max="99" class="notification-badge">
-          <el-icon class="notification-btn"><ChatDotRound /></el-icon>
+          <el-icon><ChatDotRound /></el-icon>
         </el-badge>
-      </el-tooltip>
+      </button>
     </template>
 
     <div class="notification-panel">
@@ -66,8 +66,12 @@ import {
 } from '@/api/notification'
 import { subscribeNotificationPush } from '@/utils/notification-stream'
 
-/** 面板开关（el-popover 受控） */
 const panelVisible = ref(false)
+
+function handleOpen(): void {
+  panelVisible.value = true
+  void loadList()
+}
 /** 未读通知数（角标展示） */
 const unreadCount = ref(0)
 /** 最近通知列表 */
@@ -170,6 +174,14 @@ onBeforeUnmount(() => {
 }
 
 .notification-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
   font-size: 18px;
   cursor: pointer;
   color: var(--el-text-color-regular);

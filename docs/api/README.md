@@ -87,6 +87,8 @@
 
 **字典**（`/admin-api/v1/dict/types`、`/dict/data`）：类型与数据的 CRUD + `updateDictTypeStatus`/`updateDictDataStatus`；数据列表按 `dictType` 查询。
 
+字典类型与数据管理列表的响应 `id` 为十进制字符串。修改、启停和删除路径中的 `{id}` 直接透传；兼容历史安全整数，拒绝已可能丢失精度的数字 ID。数据管理列表包含启用与停用项。
+
 **参数配置**（`/admin-api/v1/configs`）：`listConfigs`、`createConfig`、`updateConfig`、`deleteConfig`、`updateConfigStatus`。
 
 **定时任务**（`/admin-api/v1/jobs`）：`listJobs`、`pageJobs`（GET `/jobs/page`，统一分页口径）、`createJob`、`updateJob`、`deleteJob`、`updateJobStatus`、`runJobOnce`、`listJobLogs(id, limit)`。
@@ -108,14 +110,14 @@
 
 | 方法 | 路径 | 函数 | 说明 |
 |------|------|------|------|
-| POST | `/api/v1/files/generic` | `uploadFile(file, sex)` | 通用上传（FormData；sex: 0=男/AM 1=女/AF） |
+| POST | `/api/v1/files/generic` | `uploadFile(file, sex)` | 通用上传；前端调用方 `0=AM`、`1=AF`，HTTP multipart 字段 `sex` 为 `1=AM`、`2=AF`（含 Element Plus 直传与裁剪/粘贴 XHR） |
 | DELETE | `/api/v1/file/delete` | `deleteFile(bucketName, fileName)` | 删除文件 |
 | POST | `/api/v1/file/chunk/init` | `initChunkUpload(payload)` | 初始化分片会话 |
 | POST | `/api/v1/file/chunk/upload?fileId=&chunkIndex=&chunkSize=[&md5=]` | `uploadChunk(params, chunk)` | 上传单个分片（⚠️ 请求体为原始字节流，参数走 query） |
 | POST | `/api/v1/file/chunk/merge` | `mergeChunks({fileId, fileName?})` | 合并分片（请求体 `{fileId, fileName?}`） |
 | GET | `/api/v1/file/chunk/status/{fileId}` | `getChunkStatus(fileId)` | 查询已上传分片（断点续传/秒传依据 uploaded 集合） |
 
-> 上传结果字段是 `objectName`（不是 `fileName`）。删除函数实际传递 `bucketName` + `fileName`；`objectName` 与删除参数 `fileName` 的后端映射关系需在目标服务中外部确认。分片上传由 `FileUploadEnhanced` 组件 `enableChunk`（默认 false）在超过单发上限时启用；上传地址统一经 `utils/api-base.ts#apiUrl` 拼接，跨域部署自动携带 `VITE_API_BASE_URL`。
+> 普通上传 HTTP 响应使用 `data.fileName` 表示存储对象键。API 封装和组件成功事件统一转换为前端 `objectName`，并保留 `bucketName`、`url` 和 `expiresIn`（含 `0`）。删除函数将同一对象键作为 `fileName` 与 `bucketName` 传递。分片上传响应契约不变，由 `FileUploadEnhanced` 组件 `enableChunk`（默认 false）在超过单发上限时启用；上传地址统一经 `utils/api-base.ts#apiUrl` 拼接，跨域部署自动携带 `VITE_API_BASE_URL`。
 
 ### 2.6 监控 [src/api/monitor.ts](../../src/api/monitor.ts)
 

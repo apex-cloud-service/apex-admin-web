@@ -180,9 +180,11 @@ export interface DeptNode {
   children?: DeptNode[]
 }
 
+export type DictId = string | number
+
 /** 字典类型（/admin-api/v1/dict/types） */
 export interface DictType {
-  id: number
+  id: DictId
   dictName: string
   dictType: string
   remark?: string
@@ -193,7 +195,7 @@ export interface DictType {
 
 /** 字典数据项（/admin-api/v1/dict/data） */
 export interface DictData {
-  id: number
+  id: DictId
   dictType: string
   dictLabel: string
   dictValue: string
@@ -698,8 +700,7 @@ export interface CurrentDatabaseInfo {
 /* ==================== 文件上传类型（POST /api/v1/files/*） ==================== */
 
 /**
- * 文件上传结果
- * 对应后端 FileUploadResult
+ * 前端文件上传结果
  */
 export interface FileUploadResult {
   /** 存储桶名称 */
@@ -710,6 +711,11 @@ export interface FileUploadResult {
   url: string
   /** URL有效期（秒） */
   expiresIn: number
+}
+
+/** 普通上传 HTTP 响应，fileName 为存储对象键。 */
+export interface FileUploadResponse extends Omit<FileUploadResult, 'objectName'> {
+  fileName: string
 }
 
 /* ==================== 站内信与消息模板（/api/v1/messages、/admin-api/v1/message-templates） ==================== */

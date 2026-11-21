@@ -2,7 +2,7 @@
  * 办公审批主链路 E2E（FE-003）
  * ------------------------------------------------------------------
  * 覆盖：办公协同 → 审批中心 → 待办/已办 Tab；
- * 待办审批按 `records` 口径消费（与工作流 list/total 不同），列表字段 processName/currentNode/createdAt。
+ * 待办审批接口返回裸数组，前端执行平台筛选与分页，列表字段 processName/currentNode/createdAt。
  */
 import { expect, test } from '@playwright/test'
 import { loginViaForm, MENUS_FULL, mockBackend } from './helpers'
@@ -24,7 +24,7 @@ test.describe('办公审批主链路', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ code: 0, msg: 'ok', data: { list: [PENDING_APPROVAL], total: 1, pageNum: 1, pageSize: 20 }, traceId: 'e2e' }),
+        body: JSON.stringify({ code: 0, msg: 'ok', data: [PENDING_APPROVAL], traceId: 'e2e' }),
       }),
     )
     await loginViaForm(page)

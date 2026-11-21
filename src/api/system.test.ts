@@ -105,6 +105,41 @@ describe('部门管理 API', () => {
 describe('字典管理 API', () => {
   beforeEach(() => vi.clearAllMocks())
 
+  it('将列表中的大 ID 原样透传到所有写操作路径', async () => {
+    const id = '9007199254740993'
+    const type = { id, dictName: '是否', dictType: 'sys_yes_no', status: 1 }
+    const data = { id, dictType: type.dictType, dictLabel: '是', dictValue: 'Y', status: 1 }
+    request.get.mockResolvedValueOnce([type]).mockResolvedValueOnce([data])
+    const [listedType] = await listDictTypes()
+    const [listedData] = await listDictData(type.dictType)
+    const typePayload = { dictName: type.dictName, dictType: type.dictType }
+    const dataPayload = { dictType: type.dictType, dictLabel: data.dictLabel, dictValue: data.dictValue }
+    updateDictType(listedType.id, typePayload)
+    updateDictTypeStatus(listedType.id, false)
+    deleteDictType(listedType.id)
+    updateDictData(listedData.id, dataPayload)
+    updateDictDataStatus(listedData.id, true)
+    deleteDictData(listedData.id)
+    expect(request.put.mock.calls).toEqual([
+      [`/admin-api/v1/dict/types/${id}`, typePayload],
+      [`/admin-api/v1/dict/types/${id}/status`, { enabled: false }],
+      [`/admin-api/v1/dict/data/${id}`, dataPayload],
+      [`/admin-api/v1/dict/data/${id}/status`, { enabled: true }],
+    ])
+    expect(request.del.mock.calls).toEqual([
+      [`/admin-api/v1/dict/types/${id}`],
+      [`/admin-api/v1/dict/data/${id}`],
+    ])
+  })
+
+  it('拒绝不安全的历史数字 ID，不发送写请求', () => {
+    const id = Number.MAX_SAFE_INTEGER + 1
+    expect(() => deleteDictType(id)).toThrow('字典 ID 无效')
+    expect(() => updateDictDataStatus(id, false)).toThrow('字典 ID 无效')
+    expect(request.del).not.toHaveBeenCalled()
+    expect(request.put).not.toHaveBeenCalled()
+  })
+
   it('字典类型列表（全量数组）与创建/更新/删除/启停', () => {
     const payload: DictTypePayload = { dictName: '是否', dictType: 'sys_yes_no', remark: '通用' }
     listDictTypes()

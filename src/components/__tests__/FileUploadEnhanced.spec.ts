@@ -56,6 +56,7 @@ const ElUploadStub = defineComponent({
     disabled: { type: Boolean, default: false },
     drag: { type: Boolean, default: false },
     beforeUpload: { type: Function, default: null },
+    onSuccess: Function,
   },
   setup(_, { slots }) {
     return () => h('div', { class: 'el-upload-stub' }, [slots.default?.(), slots.tip?.()])
@@ -141,12 +142,61 @@ describe('FileUploadEnhanced props 缺省与提示文案', () => {
     wrapper.unmount()
   })
 
-  it('请求头携带 Bearer 令牌，表单参数携带 sex', async () => {
-    const { wrapper, stub } = mountEnhanced({ sex: 1 })
+  it.each([[0, '1'], [1, '2']] as const)('直传携带 Bearer 令牌并将 sex=%i 映射为 %s', async (sex, expected) => {
+    const { wrapper, stub } = mountEnhanced({ sex })
     await flushPromises()
     expect(stub.props('headers')).toEqual({ Authorization: 'Bearer test-token' })
-    expect(stub.props('data')).toEqual({ sex: 1 })
+    expect(stub.props('data')).toEqual({ sex: expected })
     wrapper.unmount()
+  })
+
+  it('直传成功事件使用存储对象键', () => {
+    vi.useFakeTimers()
+    const { wrapper, stub } = mountEnhanced()
+    try {
+      const metadata = { bucketName: 'apex', url: '/files/AF/stored.png', expiresIn: 0 }
+      stub.props('onSuccess')?.({ code: 0, data: { ...metadata, fileName: 'AF/stored.png' } })
+      expect(wrapper.emitted('success')).toEqual([[{ ...metadata, objectName: 'AF/stored.png' }]])
+    } finally {
+      wrapper.unmount()
+      vi.useRealTimers()
+    }
+  })
+
+  it.each([[0, '1'], [1, '2']] as const)('粘贴上传将 sex=%i 写入 FormData 为 %s', async (sex, expected) => {
+    const send = vi.fn<(body: FormData) => void>()
+    const objectName = `${sex === 0 ? 'AM' : 'AF'}/stored.png`
+    const metadata = { bucketName: 'apex', url: `/files/${objectName}`, expiresIn: 0 }
+    vi.useFakeTimers()
+    vi.stubGlobal('XMLHttpRequest', class extends EventTarget {
+      upload = new EventTarget()
+      open = vi.fn()
+      setRequestHeader = vi.fn()
+      status = 200
+      responseText = JSON.stringify({ code: 0, data: { ...metadata, fileName: objectName } })
+      send(body: FormData) {
+        send(body)
+        this.dispatchEvent(new Event('load'))
+      }
+    })
+    const { wrapper } = mountEnhanced({ sex, enablePaste: true, enableCompress: false, enableCropper: false })
+    try {
+      const file = new File(['fixture'], 'paste.png', { type: 'image/png' })
+      const paste = new Event('paste', { cancelable: true })
+      Object.defineProperty(paste, 'clipboardData', { value: { items: [{ type: file.type, getAsFile: () => file }] } })
+      document.dispatchEvent(paste)
+      await flushPromises()
+      expect(send).toHaveBeenCalledTimes(1)
+      const body = send.mock.calls[0][0]
+      expect(body.get('file')).toBe(file)
+      expect(body.get('sex')).toBe(expected)
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(wrapper.emitted('success')).toEqual([[{ ...metadata, objectName }]])
+    } finally {
+      wrapper.unmount()
+      vi.unstubAllGlobals()
+      vi.useRealTimers()
+    }
   })
 
   it('缺省 tip 按 accept 与 10MB 上限自动生成并含压缩提示', async () => {

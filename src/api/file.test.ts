@@ -29,13 +29,16 @@ import type { ChunkInitPayload } from './file'
 describe('通用文件上传/删除 API', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('上传以 FormData 携带文件且 sex 序列化为字符串（经统一请求层）', () => {
+  it.each([[0, '1'], [1, '2']] as const)('普通上传将 sex=%i 映射为 %s 并保留对象键', async (sex, expected) => {
     const file = new File([new Uint8Array([1, 2, 3])], 'avatar.png', { type: 'image/png' })
-    uploadFile(file, 1)
+    const objectName = `${sex === 0 ? 'AM' : 'AF'}/stored.png`
+    const metadata = { bucketName: 'apex', url: `/files/${objectName}`, expiresIn: 0 }
+    request.post.mockResolvedValueOnce({ ...metadata, fileName: objectName })
+    await expect(uploadFile(file, sex)).resolves.toEqual({ ...metadata, objectName })
     expect(request.post).toHaveBeenCalledWith('/api/v1/files/generic', expect.any(FormData))
     const body = request.post.mock.calls[0]?.[1] as FormData
     expect(body.get('file')).toBe(file)
-    expect(body.get('sex')).toBe('1')
+    expect(body.get('sex')).toBe(expected)
   })
 
   it('删除文件按桶名与对象名以 query 参数提交', () => {
