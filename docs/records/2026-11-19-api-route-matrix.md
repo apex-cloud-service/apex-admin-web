@@ -4,6 +4,7 @@
 - Backend route index: `../apex-scaffold/docs/03-api/API_ROUTES.md`.
 - `DOC_MATCH` statuses compare normalized method/path to the route index; `SOURCE_PATH_FOUND_DOC_MISSING` means the path literal exists in backend Java source but is absent from the route index. Neither status proves runtime behavior or successful E2E. The 23 source-backed route omissions found in the first audit were added to the backend route index and cleared in the final audit.
 - Status totals: DOC_MATCH=184, DOC_MATCH_DYNAMIC=151, NO_STATIC_HTTP_CALL=9, DYNAMIC_ROUTE_REVIEW=3.
+- Scope: this file is a static route/method cross-reference only. It does not yet provide the per-export request/response DTO, pagination, permission/tenant, and page-consumption mapping required by the integration plan, and static matches are not runtime acceptance. FE-029/BE-043 remain open until those contract details and blocked protected-domain/knowledge-base checks are completed.
 
 | API module | Export | Method | Path | Static status | Backend source evidence |
 | --- | --- | --- | --- | --- | --- |

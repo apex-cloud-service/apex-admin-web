@@ -6,6 +6,15 @@ FRONTEND_ROOT=$(cd "$(dirname "$0")/../.." && pwd -P)
 BACKEND_ROOT=$(cd "${BACKEND_ROOT:-$FRONTEND_ROOT/../apex-scaffold}" && pwd -P)
 VERIFY_FRONTEND_IMAGE=${VERIFY_FRONTEND_IMAGE:-localhost/apex-admin-web:latest}
 project=apex-fe029-verify
+project_lock="${TMPDIR:-/tmp}/apex-fe029-verify.lock"
+if ! mkdir "$project_lock" 2>/dev/null; then
+  printf 'Another verifier owns the isolated project lock: %s\n' "$project_lock" >&2
+  exit 1
+fi
+release_project_lock() {
+  rmdir "$project_lock" 2>/dev/null || true
+}
+trap release_project_lock EXIT
 case ${VERIFY_BROWSER_MODE:-} in
   ''|--notification-only|--notification-push|--governance-reads|--system-reads|--monitor-reads|--integration-reads) ;;
   *) printf 'Invalid VERIFY_BROWSER_MODE\n' >&2; exit 1 ;;
@@ -74,9 +83,11 @@ cleanup() {
   trap - EXIT
   if ! "${compose[@]}" down >/dev/null 2>&1 || ! project_is_empty; then
     printf 'Isolated cleanup incomplete\n' >&2
+    release_project_lock
     exit 1
   fi
   printf 'Isolated containers and network removed; no volumes deleted\n'
+  release_project_lock
   exit "$status"
 }
 install_cleanup() {

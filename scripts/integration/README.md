@@ -16,7 +16,7 @@
 | `browser-auth-smoke.mjs --monitor-reads` | 登录后打开监控大盘，验证概览、系统资源、中间件、治理、业务五个接口响应及目标路由挂载；只读，不启动 office/workflow/file/integration 服务 | `VERIFY_BROWSER_MODE=--monitor-reads bash scripts/integration/podman-verify.sh` |
 | `browser-auth-smoke.mjs --integration-reads` | 独立验证连接器列表真实 GET 与分页响应；启动完整业务依赖并等待集成服务管理端口就绪 | `VERIFY_BROWSER_MODE=--integration-reads bash scripts/integration/podman-verify.sh` |
 
-直接运行探测或浏览器脚本不会启动、停止或清理服务。使用 `podman-verify.sh` 时，入口会拒绝复用已有的 `apex-fe029-verify` 资源，先验证 Chromium 能创建空白页，再启动数据库；确认 MySQL 数据目录为 tmpfs 且 system 库为空后才启动迁移。退出时仅清理专属容器和网络，不删除卷。
+直接运行探测或浏览器脚本不会启动、停止或清理服务。使用 `podman-verify.sh` 时，入口会先取得进程间锁，再拒绝复用已有的 `apex-fe029-verify` 资源，避免两个验收脚本并发清理同一项目；随后验证 Chromium 能创建空白页，再启动数据库。确认 MySQL 数据目录为 tmpfs 且 system 库为空后才启动迁移。退出时仅清理专属容器和网络，不删除卷。
 
 隔离栈使用 `podman-verify.yml`，不对宿主发布任何端口。需预先准备 Playwright 镜像对应的仓库依赖、Compose 中的本地镜像和后端 `1.3.1` JAR；`BACKEND_ROOT` 默认指向同级 `apex-scaffold`，默认前端镜像为 `localhost/apex-admin-web:latest`，`VERIFY_FRONTEND_IMAGE` 可覆盖该标签。JAR 复制到容器本地后由 JVM 加载。验证栈中的超时不修改正式编排；工作流、文件和集成使用认证中心 JWKS 的轮换密钥验签，不使用 OAuth2 元数据服务的单公钥覆盖。办公及集成管理的成功场景需要可信 HTTPS 授权中心、已确认的共享身份命名空间和同租户专用 reader；缺项时冒烟测试保留失败，不跳过。
 
