@@ -13,7 +13,7 @@
 | `reports/` | 扁平结构：`test-results.xml`、`test-results.json`、`e2e-results.xml` + `coverage/`、`lighthouse/`、`stress/` | 报告文件散在根层，看不出"哪份报告属于哪类测试" |
 | `reports/` 入库边界 | `.gitignore` 白名单 4 条（3 个汇总件 + `coverage-summary.json`） | 机制正确，但路径与新结构未对齐 |
 | `test-results/`、`logs/`、`dist/` | 未跟踪 | 已忽略，属运行产物 |
-| 智能体目录 | `.workbuddy/`（agents/agents.md + memory 2 篇）、`.zcode/plans/`（空） | 已被 `.gitignore` 覆盖，未跟踪；按规范不改他人私有目录 |
+| 智能体目录 | `.workbuddy/`（agents/agents.md + memory 2 篇）、AI 会话计划缓存（当时为空，后续正文按治理规范归档） | 已被 `.gitignore` 覆盖，未跟踪；按规范不改他人私有目录 |
 | `scripts/` | 8 个子目录，无根级游离脚本 | 合规 |
 
 ## 2. 目标结构
