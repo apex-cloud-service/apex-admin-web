@@ -16,7 +16,13 @@
 - [2026-11-17 联调契约修复方案](specs/2026-11-17-integration-contract-repair.md) — FE-026，日期/数组分页/状态契约及验证边界。
 - [2026-11-18 前后端全量联调方案](specs/2026-11-18-fullstack-integration.md) — FE-029 / BE-043，Podman Compose 联调环境、全量 API 对照和缺陷闭环。
 - [2026-11-19 API 路由静态对照报告](records/2026-11-19-api-route-matrix.md) — API 导出函数与后端源码路由的静态映射；不代表真实 HTTP 联调通过。
+- [2026-11-23 API 契约追踪矩阵](records/2026-11-23-api-contract-matrix.md) — 347 个导出的前端 API 函数及 TS 签名、请求调用参数、返回类型、直接页面引用和后端路由证据；权限/租户、线级 DTO 与运行时状态仍需逐项复核。
 - [2026-11-19 前后端联调执行记录](records/2026-11-19-fullstack-integration.md) — FE-029 / BE-043 的 Podman Compose 验证证据、未完成项与部署方授权前置条件。
+- [2026-11-23 前端任务责任接管记录](records/2026-11-23-task-ownership-handoff.md) — FE-029 责任与租约接管；旧任务保持开放，FE-030 独立登记。
+- [2026-11-23 前端韧性、DDD 与发布能力优化规格](specs/2026-11-23-frontend-resilience-ddd-release.md) — FE-030 分波次目标与兼容性边界。
+- [2026-11-23 前端韧性优化计划](plans/2026-11-23-frontend-resilience-ddd-release.md) — FE-030 Wave A 完成隔离复验与 R5，后续业务页基线与优化单独推进。
+- [2026-11-23 FE-030 Wave A 静态基线](reviews/2026-11-23-fe030-wave-a-baseline.md) — 模块、请求韧性与发布链路抽查。
+- [2026-11-23 FE-030 Wave A 回归证据审计](records/2026-11-23-fe030-wave-a-test-report.md) — 区分历史产物与 2026-11-24 带日志复验及独立复核结论。
 
 ### 架构文档
 

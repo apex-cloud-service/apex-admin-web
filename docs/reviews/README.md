@@ -10,6 +10,11 @@
 
 历史评审材料仍保留在 `docs/archived/project-reports/`，不搬迁。
 
+## FE-030
+
+- [2026-11-23 Wave A 前端静态基线](./2026-11-23-fe030-wave-a-baseline.md)
+- Wave A 报告范围审计：[回归证据记录](../records/2026-11-23-fe030-wave-a-test-report.md)；增量 R5 `APPROVE_WITH_NITS`，FE-030 自有报告仍待独立租约。
+
 ## 跨仓评审（正文在 apex-scaffold）
 
 两仓共用的治理评审只有一份正文，避免双份口径：

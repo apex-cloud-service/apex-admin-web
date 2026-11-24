@@ -50,12 +50,22 @@ function collectCalls(node, found) {
     const name = ts.isIdentifier(callee) ? callee.text : null
     if (name && methods.has(name) && node.arguments.length) {
       const route = readRoute(node.arguments[0])
-      if (route) found.push({ method: methods.get(name), route, dynamic: route.includes('${') })
+      if (route) found.push({
+        method: methods.get(name),
+        route,
+        dynamic: route.includes('${'),
+        request: node.arguments.slice(1).map((argument) => argument.getText().replace(/\s+/g, ' ')).join('; ') || '-',
+      })
     } else if (name === 'request' && node.arguments.length) {
       const config = node.arguments[0]
       const route = readRoute(objectProperty(config, 'url'))
       const method = readRoute(objectProperty(config, 'method'))?.toUpperCase() || 'GET?'
-      if (route) found.push({ method, route, dynamic: route.includes('${') })
+      if (route) found.push({
+        method,
+        route,
+        dynamic: route.includes('${'),
+        request: config.getText().replace(/\s+/g, ' '),
+      })
     }
   }
   ts.forEachChild(node, (child) => collectCalls(child, found))
@@ -66,17 +76,61 @@ function exportedFunctions(sourceFile) {
   for (const statement of sourceFile.statements) {
     if (!ts.canHaveModifiers(statement) || !ts.getModifiers(statement)?.some((mod) => mod.kind === ts.SyntaxKind.ExportKeyword)) continue
     if (ts.isFunctionDeclaration(statement) && statement.name) {
-      results.push({ name: statement.name.text, body: statement.body })
+      results.push({ name: statement.name.text, body: statement.body, callable: statement })
     } else if (ts.isVariableStatement(statement)) {
       for (const declaration of statement.declarationList.declarations) {
         if (ts.isIdentifier(declaration.name) && declaration.initializer &&
           (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer))) {
-          results.push({ name: declaration.name.text, body: declaration.initializer.body })
+          results.push({ name: declaration.name.text, body: declaration.initializer.body, callable: declaration.initializer })
         }
       }
     }
   }
   return results
+}
+
+function sourceText(node) {
+  return node?.getText().replace(/\s+/g, ' ').trim() || '-'
+}
+
+function escapeCell(value) {
+  return value.replace(/\|/g, '\\|')
+}
+
+function collectConsumers(directory) {
+  const consumers = new Map()
+  function visit(current) {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const filename = path.join(current, entry.name)
+      if (entry.isDirectory() && !['node_modules', 'dist', 'coverage'].includes(entry.name)) {
+        visit(filename)
+        continue
+      }
+      if (!entry.isFile() || !/\.(ts|tsx|vue)$/.test(entry.name) || filename.includes(`${path.sep}api${path.sep}`)) continue
+      const content = fs.readFileSync(filename, 'utf8')
+      const source = entry.name.endsWith('.vue')
+        ? (content.match(/<script\b[^>]*>([\s\S]*?)<\/script>/)?.[1] || '')
+        : content
+      if (!source) continue
+      const parsed = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+      for (const statement of parsed.statements) {
+        if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue
+        const moduleName = statement.moduleSpecifier.text
+        if (!moduleName.includes('/api/')) continue
+        const bindings = statement.importClause?.namedBindings
+        if (!bindings || !ts.isNamedImports(bindings)) continue
+        for (const element of bindings.elements) {
+          const exportedName = element.propertyName?.text || element.name.text
+          if (!exportedName) continue
+          const consumerKey = `${path.posix.basename(moduleName)}:${exportedName}`
+          if (!consumers.has(consumerKey)) consumers.set(consumerKey, new Set())
+          consumers.get(consumerKey).add(path.relative(root, filename).replace(/\\/g, '/'))
+        }
+      }
+    }
+  }
+  visit(directory)
+  return consumers
 }
 
 function collectSourcePaths(directory, found) {
@@ -113,6 +167,7 @@ for (const line of docText.split(/\r?\n/)) {
 }
 const sourcePaths = new Map()
 collectSourcePaths(backendRoot, sourcePaths)
+const consumers = collectConsumers(path.join(root, 'src'))
 
 const rows = []
 for (const filename of fs.readdirSync(apiDir).filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts')).sort()) {
@@ -124,8 +179,12 @@ for (const filename of fs.readdirSync(apiDir).filter((name) => name.endsWith('.t
     if (fn.body) collectCalls(fn.body, calls)
     const unique = [...new Map(calls.map((call) =>
       [`${call.method} ${call.route}`, call])).values()]
+    const parameters = fn.callable.parameters.map((parameter) => sourceText(parameter)).join(', ')
+    const returnType = sourceText(fn.callable.type)
+    const signature = `${fn.name}(${parameters}): ${returnType}`
+    const consumerPaths = [...(consumers.get(`${path.basename(filename, '.ts')}:${fn.name}`) || [])].sort()
     if (!unique.length) {
-      rows.push({ file: filename, function: fn.name, method: '-', route: '-', status: 'NO_STATIC_HTTP_CALL' })
+      rows.push({ file: filename, function: fn.name, signature, returnType, consumers: consumerPaths, method: '-', route: '-', request: '-', status: 'NO_STATIC_HTTP_CALL' })
       continue
     }
     for (const call of unique) {
@@ -136,7 +195,7 @@ for (const filename of fs.readdirSync(apiDir).filter((name) => name.endsWith('.t
         ? call.dynamic ? 'DOC_MATCH_DYNAMIC' : 'DOC_MATCH'
         : sourcePath ? 'SOURCE_PATH_FOUND_DOC_MISSING'
         : call.dynamic ? 'DYNAMIC_ROUTE_REVIEW' : 'NOT_IN_ROUTE_INDEX'
-      rows.push({ file: filename, function: fn.name, method: call.method, route: call.route, status, sourcePath })
+      rows.push({ file: filename, function: fn.name, signature, returnType, consumers: consumerPaths, method: call.method, route: call.route, request: call.request, status, sourcePath })
     }
   }
 }
@@ -152,10 +211,11 @@ const lines = [
   `- Backend route index: \`${path.relative(root, backendDoc)}\`.`,
   '- `DOC_MATCH` statuses compare normalized method/path to the route index; `SOURCE_PATH_FOUND_DOC_MISSING` means the path literal exists in backend Java source but is absent from the route index. Neither status proves runtime behavior or successful E2E.',
   `- Status totals: ${Object.entries(counts).map(([key, value]) => `${key}=${value}`).join(', ')}.`,
+  '- Signature and return type come from the frontend TypeScript declaration; request detail is the call-site argument expression, not a wire-level schema. Consumer paths identify direct named imports only. Backend response schema, per-handler permission codes and tenant rules require source verification; runtime results require live testing. The two status columns explicitly remain pending until that evidence exists.',
   '',
-  '| API module | Export | Method | Path | Static status | Backend source evidence |',
-  '| --- | --- | --- | --- | --- | --- |',
-  ...rows.map((row) => `| \`${row.file}\` | \`${row.function}\` | ${row.method} | \`${row.route}\` | ${row.status} | ${row.sourcePath ? `\`${row.sourcePath}\`` : '-'} |`),
+  '| API module | Export | TypeScript signature | Return type | Method | Path | Request expression | Direct page consumers | Static status | Auth/tenant status | Runtime status | Backend source evidence |',
+  '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+  ...rows.map((row) => `| \`${row.file}\` | \`${row.function}\` | \`${escapeCell(row.signature)}\` | \`${escapeCell(row.returnType)}\` | ${row.method} | \`${row.route}\` | \`${escapeCell(row.request)}\` | ${row.consumers.length ? row.consumers.map((item) => `\`${item}\``).join(', ') : '-'} | ${row.status} | 待后端逐接口核定 | 本轮未实测 | ${row.sourcePath ? `\`${row.sourcePath}\`` : '-'} |`),
   '',
 ]
 const report = lines.join('\n')

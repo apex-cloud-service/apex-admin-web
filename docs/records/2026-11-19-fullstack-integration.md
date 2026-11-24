@@ -346,3 +346,11 @@
 - 先用提权只读查询确认 `apex-fe029-verify` 专属容器和网络无残留，再由 Podman Compose 启动监控只读栈。真实 Chromium 登录、身份/角色/权限/菜单初始化通过；监控概览、系统、中间件、治理、业务五个 GET 均 HTTP 200、业务码 0，监控页路由挂载通过。auth/system Flyway 分别 22/91 条成功、失败 0，MySQL 使用 tmpfs；脚本退出码 0 并报告专属容器与网络清理完成、未删除卷。
 - 随后通过 `bash scripts/integration/podman-verify.sh --frontend-test` 在 Podman Compose 容器中完成全前端回归：Vitest 68 个文件/543 条用例通过，`vue-tsc --noEmit` 与 Vite 生产构建通过，模拟 Chromium E2E 13/13 通过；退出码 0，专属资源已清理且未删除卷。
 - `VERIFY_AUTHORIZATION_CONFIG_DIR` 和知识库 embedding/chat 模型配置仍未设置；本轮未访问受保护域、未启动知识库服务，也未使用 Docker/Docker Compose。FE-029/BE-043 仍未完成全量受保护接口、知识库和业务写入/读回闭环；独立 R5 仍待执行。
+
+### 2026-11-23 前端契约追踪矩阵续验
+
+- 用户确认 FE-029 / BE-043 与全局集成租约交接给新 R0。本轮前端工作区为 `dev`，基线 `aec9c444dc113ce7b64f78c0956304b54d304727`；后端工作区为 `dev`，基线 `90a2f783e2c251a55f53b0fc1b845b11d537e951`。未改任务大盘、未提交或推送；后端 BE-043 任务盘仍显示旧 R0/HOLDING，后端同时有 BE-049 活跃写入记录，避免触碰后端任务文档和源码。
+- 扩展 `api-route-audit.mjs`，为 347 个导出 API 输出 TypeScript 参数签名、返回类型、HTTP 调用附加参数和按模块关联的直接页面导入者；生成 [2026-11-23 API 契约追踪矩阵](./2026-11-23-api-contract-matrix.md)，原 2026-11-19 静态路由报告保留不覆盖。该追踪不等于逐字段线级 DTO、Handler 权限码/租户规则或真实 HTTP 结果，仍需依据后端执行代码逐项核实。
+- `podman-compose -p apex-scaffold -f ../apex-scaffold/podman-compose.yml config` 通过；Podman 前端隔离回归通过，Vitest 68 文件/543 用例、`vue-tsc --noEmit`、Vite 生产构建及 Playwright 13/13 全通过；脚本退出码 0，仅清理本任务专属容器和网络，未删除卷。
+- `audit-frontend-rules.sh --strict` 通过；`apex-preflight.sh --fast` FAIL=0；`verify-docs.sh --strict` 与 `check-doc-refs.sh --strict` 仍报告既有私有路径引用 `docs/plans/2026-11-16-directory-normalization-plan.md:16`，未改写历史计划。Meilisearch v1.10 镜像缓存可用。
+- `VERIFY_AUTHORIZATION_CONFIG_DIR` 与 `KNOWLEDGE_EMBEDDING_*` / `KNOWLEDGE_CHAT_*` 仍未注入，因此没有启动全量后端栈、受保护接口或知识库服务；不伪造凭据或权限通过。FE-029 / BE-043 尚未完成，旧版本 R5 REJECT 未被本轮复核替代，最终 SHA 的独立 R5 复核仍待执行。

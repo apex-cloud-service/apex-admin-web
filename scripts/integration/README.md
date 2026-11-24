@@ -4,7 +4,7 @@
 
 | 脚本 | 用途 | 用法 |
 | --- | --- | --- |
-| `api-route-audit.mjs` | 静态对照前端 API 导出与后端路由源码 | `node scripts/integration/api-route-audit.mjs` |
+| `api-route-audit.mjs` | 静态对照前端 API 导出、TS 签名/返回类型、请求调用参数、直接页面引用与后端路由源码；不推断 handler 权限、租户规则或线上线级响应 | `node scripts/integration/api-route-audit.mjs [backend-root] [markdown-output]` |
 | `podman-smoke.sh` | 检查前端容器内 Nginx 配置、网关 DNS、首页与 system 健康反代 | `bash scripts/integration/podman-smoke.sh` |
 | `podman-verify.sh` | 编排专属临时栈并运行真实 Chromium 业务冒烟 | `bash scripts/integration/podman-verify.sh` |
 | `podman-verify.sh --frontend-test` | 在同一隔离项目前置检查下运行单测、生产构建与模拟 Chromium E2E | `bash scripts/integration/podman-verify.sh --frontend-test` |

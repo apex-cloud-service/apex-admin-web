@@ -1,6 +1,6 @@
-# 01 · 前端现状（2026-11-19）
+# 01 · 前端现状（2026-11-21）
 
-> 采集：2026-11-19，`package.json` + `src/` 实测 + `git log`。数字会漂移，结论比数字寿命长。
+> 采集：2026-11-21，`package.json` + `src/` 实测 + `git log`。数字会漂移，结论比数字寿命长。
 
 ## 1. 技术与规模
 
@@ -13,8 +13,8 @@
 | 状态 | `src/stores` 4 个：`user` / `permission` / `app` / `office` |
 | 复用 | `src/composables` 5 个（`useCrud` / `useTableConfig` / `useFormDraft` / `useBreakpoint` / `useAgenda`）+ `src/components`（分页、全局搜索、空态、上传） |
 | 测试 | 单元 **66 个**：`src/api/` **31 个** `*.test.ts` 契约测试（40 个 API 模块全覆盖），另有 35 个 `*.spec.ts` 单测（`utils/__tests__` 18、`stores` 4、`composables` 5、`components` 6、`directives`/`router` 各 1）；另 3 个 Playwright E2E 文件（`e2e/`）；Vitest + happy-dom，11-13 实测 475 用例全绿（11-14 未复跑） |
-| 文档 | `docs/` 下 **95 个 Markdown**（11-17 联调契约修复登记后含 `api/`、`architecture/`、`features/`、`guides/`、`reference/`、`archived/`、`notes/`、`plans/`、`records/`、`reviews/`、`specs/`、`tasks/`、`diagrams/`） |
-| 工作树 | 24 项在途（11-19 实测：容器化改造 Docker→`Containerfile`/`container/`、全栈联调记录与规格文档等）；最后提交 2026-11-18 `f03bb68` |
+| 文档 | `docs/` 下 **98 个 Markdown**（11-21 全栈联调登记后含 `api/`、`architecture/`、`features/`、`guides/`、`reference/`、`archived/`、`notes/`、`plans/`、`records/`、`reviews/`、`specs/`、`tasks/`、`diagrams/`） |
+| 工作树 | 23 项在途（11-21 实测：17 项已跟踪文件修改 + 6 项未跟踪新增文档，含 11-23 前端韧性/契约矩阵方案与记录）；最后提交 2026-11-21 `aec9c44` |
 
 ## 2. 启动与验证
 
