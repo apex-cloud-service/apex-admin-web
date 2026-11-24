@@ -62,6 +62,15 @@
 - **验收 / 回滚**：同一夹具、同一构建和浏览器比较两个认证页，要求每页解码 JS 至少减少 10%，无路由、组件或图标回归；披露请求数变化，类型/生产构建、单测及全套生产预览 E2E 通过，再交独立复核。若未达到，隔离候选不回写；必要时只撤回本波配置及配套测试。
 - **结果 / 释放**：隔离候选生产构建、专项 Chromium 1/1 通过，工作台解码 JS 减少 19.6%，用户管理减少 9.5%，未达到双页门槛，且资源数分别增加 2/6。不纳入应用代码，不运行候选全量回归；仅保留[对比证据](../records/2026-11-23-fe030-wave-a-test-report.md#wave-b1-分包对照)，本波实验租约释放，FE-030 继续执行。
 
+### FE-030 Wave C 执行租约（请求缓存并发语义）
+
+- **R0 / 执行 / 复核**：当前 Codex 串行单写；独立 R5 只读复核（优先委托非执行实例；若执行环境不可用则本卡明确标注“非独立复核”，不据此关闭）；全局集成租约 `WAITING`。
+- **基线 / 环境**：`8a839cbe56980cac0e525ed72e4710a4dc669107`；Node 26.12.1 / npm 11.20.0，固定锁文件。
+- **范围 / 互斥**：仅 `src/utils/request-cache.ts` 与 `src/utils/__tests__/request-cache.spec.ts`，加本卡、FE-030 记录与索引、前端记忆台账。不触碰 `reports/**`（FE-029 写入范围）、`components.d.ts`、契约矩阵、认证/租户/权限、API 封装或路由。
+- **已知缺陷（静态核实，先补失败用例再修）**：①`set()` 的旧 TTL 定时器按 key 删除，会提前淘汰同 key 的新值；②`setPendingRequest()` 的 `finally` 按 key 删除，`clear()` 后旧请求完成会清掉新请求的 pending 记录，导致重复请求且 `finally` 派生拒绝无人观察；③`cachedRequest`/`prefetchRequest` 请求返回后无条件 `set()`，因此 `clearCache`/`clearAllCache` 不构成失效屏障，飞行中的旧响应会回填已失效缓存。
+- **验收 / 回滚**：三个缺陷各补一条可复现失败用例，修复后全绿；`request-cache.spec.ts` 既有用例语义不变；`npm run test:report`、`npm run build`（含 `vue-tsc`）、`PLAYWRIGHT_USE_PREVIEW=1 npm run test:e2e -- --workers=2` 全通过；前端严格治理/红线与 `git diff --check` 通过。不改公共导出签名与 `CacheOptions`；`globalCache` 单例与 `CACHE_KEYS` 不变。语义变化仅限“清除即失效屏障”。回滚按文件撤回该两文件。
+- **结果（2026-11-24）**：三条新用例修复前全部失败（`3 failed | 12 passed`），修复后 **15/15 通过**；全量 `npm run test:report` **188 文件 / 546 项全通过**（原 543 + 新增 3）；`npm run build` 含 `vue-tsc --noEmit` 成功（51.02s）；生产预览 `PLAYWRIGHT_USE_PREVIEW=1 npm run test:e2e -- --workers=2` **13/13 通过**；`verify-docs.sh --strict`、`check-doc-refs.sh --strict`、`audit-frontend-rules.sh --strict`、`git diff --check` 均无阻断。改动仅 `src/utils/request-cache.ts`（+89/−? 行）与对应 spec；无公共 API 变更。**报告归属说明**：本轮 `npm run test:report` 刷新了 `reports/unit/**` 与 `reports/coverage/**`，该路径属 FE-029 写入范围；产物保留真实结果但不计作 FE-030 独立证据，FE-030 证据以本条命令输出与 spec 用例为准。本结论未获独立 R5（复核执行环境模型服务不可用），**不据此关闭 FE-030**。
+
 ### FE-030 Wave B2 实验租约（匿名入口图标负载）
 
 - **R0 / 执行 / 复核**：当前 Codex 串行单写；独立 R5 Curie 只读，2026-11-24（Asia/Shanghai）至实验证据交接；集成 `WAITING`。

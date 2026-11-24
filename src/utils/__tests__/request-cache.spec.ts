@@ -146,4 +146,57 @@ describe('request-cache', () => {
     expect(CACHE_KEYS.SYS_CONFIG('site')).toBe('config:site')
     expect(CACHE_KEYS.USER_INFO).toBe('user:info')
   })
+
+  describe('并发与失效语义（FE-030 Wave C）', () => {
+    it('旧 TTL 定时器不得淘汰同 key 的新值', () => {
+      globalCache.set('k', 'old', 1000)
+      vi.advanceTimersByTime(500)
+      globalCache.set('k', 'new', 2000)
+
+      // t=1100：旧条目的定时器到期，新条目仍在有效期内
+      vi.advanceTimersByTime(600)
+
+      expect(globalCache.get('k')).toBe('new')
+    })
+
+    it('清空后旧请求完成不得清除新请求的 pending 记录', async () => {
+      const resolvers: Array<(v: string) => void> = []
+      const fn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolvers.push(resolve)
+          }),
+      )
+
+      const p1 = cachedRequest(fn, { key: 'k' })
+      clearAllCache()
+      const p2 = cachedRequest(fn, { key: 'k' })
+
+      resolvers[0]('one')
+      await p1
+
+      // 旧请求的清理不得移除 p2 仍在进行中的记录
+      expect(globalCache.getPendingRequest('k')).not.toBeNull()
+
+      resolvers[1]('two')
+      await p2
+    })
+
+    it('清空缓存后飞行中的响应不得回填缓存', async () => {
+      let resolveFn!: (v: string) => void
+      const fn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveFn = resolve
+          }),
+      )
+
+      const p = cachedRequest(fn, { key: 'k' })
+      clearAllCache()
+      resolveFn('stale')
+      await p
+
+      expect(globalCache.has('k')).toBe(false)
+    })
+  })
 })
