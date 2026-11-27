@@ -203,7 +203,7 @@
  * 开放应用管理脚本
  * - 列表分页为 page/size 且后端返回数组（无 total），以「本页满页」判断下一页
  * - 创建/重置返回的一次性 clientSecret 仅内存展示
- * - 主体用户下拉取后台用户列表；迁移导出下载 JSON、导入解析后逐条上行
+ * - 主体用户下拉取后台用户列表；迁移导出下载 JSON，导入解析整个数组后单次提交
  */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'

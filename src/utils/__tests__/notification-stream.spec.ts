@@ -45,7 +45,8 @@ describe('createSseParser', () => {
       parser.processChunk('event: notification\ndata: 欢迎加入\n\n')
       expect(mod.events).toEqual([['notification', '欢迎加入']])
     })
-  })
+  // vi.resetModules + 动态 import 在高负载下可能超过默认 5s，本用例显式放宽（不改全局配置）
+  }, 15000)
 
   it('跨 chunk 的不完整行由缓冲拼接', () => {
     return loadModule().then(({ createSseParser }) => {

@@ -1,7 +1,7 @@
 <!--
   文件上传增强版测试页面
   ------------------------------------------------------------------
-  展示 FileUploadEnhanced 组件的所有增强功能
+  演示图片压缩、裁剪、自定义进度、拖拽/粘贴、多选与视频上传，未演示分片上传。
 -->
 <template>
   <div class="file-upload-enhanced-demo-page">
@@ -255,7 +255,7 @@ const upload1Ref = ref()
 const upload2Ref = ref()
 /** 示例 3 组件实例（批量 + 拖拽） */
 const upload3Ref = ref()
-/** 示例 4 组件实例（粘贴上传） */
+/** 示例 4 组件实例（视频上传，禁用粘贴） */
 const upload4Ref = ref()
 
 /** 示例 1 的上传结果列表 */

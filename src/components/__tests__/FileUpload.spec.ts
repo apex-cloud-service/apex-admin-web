@@ -2,7 +2,8 @@
  * 上传组件地址解析测试
  * ------------------------------------------------------------------
  * el-upload 的 action 不经过 Axios 拦截器，跨域部署必须自行带上
- * VITE_API_BASE_URL；此处校验组件对外暴露的上传地址与请求层同源。
+ * VITE_API_BASE_URL；此处校验组件对外暴露的上传地址与请求层同源，
+ * 以及直传成功事件回传经 toFileUploadResult 归一后的对象键。
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'

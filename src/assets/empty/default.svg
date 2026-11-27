@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="暂无数据">
+  <rect width="160" height="160" fill="#f5f7fa"/>
+  <ellipse cx="80" cy="126" rx="52" ry="9" fill="#e4e7ed"/>
+  <rect x="44" y="46" width="72" height="62" rx="6" fill="#ffffff" stroke="#c0c4cc" stroke-width="2"/>
+  <line x1="56" y1="64" x2="104" y2="64" stroke="#dcdfe6" stroke-width="3" stroke-linecap="round"/>
+  <line x1="56" y1="78" x2="96" y2="78" stroke="#dcdfe6" stroke-width="3" stroke-linecap="round"/>
+  <line x1="56" y1="92" x2="88" y2="92" stroke="#dcdfe6" stroke-width="3" stroke-linecap="round"/>
+</svg>

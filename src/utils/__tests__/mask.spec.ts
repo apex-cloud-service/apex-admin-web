@@ -4,7 +4,7 @@
  * 覆盖手机号/邮箱/身份证/银行卡/姓名/地址/IP/护照/车牌与通用脱敏的边界行为：
  * - 空值与过短输入原样或空串返回
  * - 不同保留策略的掩码位置与长度
- * - 批量脱敏只处理存在字段
+ * - 批量脱敏处理规则命中的真值顶层字段，不验证嵌套递归处理
  */
 import { describe, expect, it } from 'vitest'
 import {
@@ -137,6 +137,27 @@ describe('maskGeneral', () => {
     expect(maskGeneral('abcdefgh', 2, 2, '#')).toBe('ab####gh')
     expect(maskGeneral('abc', 2, 2)).toBe('abc')
     expect(maskGeneral('')).toBe('')
+  })
+
+  it('keepEnd=0 时不得把原文整段追加到结果（负零边界）', () => {
+    const masked = maskGeneral('6222021234567890', 4, 0)
+    expect(masked).toBe('6222************')
+    expect(masked).not.toContain('7890')
+  })
+
+  it('负数与小数保留长度被归一为非负整数', () => {
+    expect(maskGeneral('abcdefghij', -2, 2)).toBe('********ij')
+    expect(maskGeneral('abcdefghij', 3.9, 2)).toBe('abc*****ij')
+  })
+
+  it('保留长度合计不小于原文时原样返回，不产生负星号', () => {
+    expect(maskGeneral('abc', 10, 10)).toBe('abc')
+    expect(maskGeneral('abcdefghij', 6, 6)).toBe('abcdefghij')
+  })
+
+  it('NaN / Infinity 保留长度归零，不产生无效 repeat 参数', () => {
+    expect(maskGeneral('abcdefghij', Number.NaN, 2)).toBe('********ij')
+    expect(maskGeneral('abcdefghij', Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY)).toBe('**********')
   })
 })
 

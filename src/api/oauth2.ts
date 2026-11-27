@@ -39,7 +39,7 @@ export interface OAuth2TokenRequest {
   redirectUri: string
   /** 客户端 ID */
   clientId: string
-  /** 客户端密钥 */
+  /** 兼容保留字段；exchangeToken 不发送该字段，浏览器使用 PKCE 公共客户端，不应配置客户端密钥 */
   clientSecret?: string
   /** PKCE 验证码（如启用 PKCE） */
   codeVerifier: string

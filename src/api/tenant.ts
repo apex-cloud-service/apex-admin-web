@@ -32,7 +32,8 @@ export interface TenantQuery {
 
 /**
  * 分页查询租户
- * @param query 分页与筛选参数
+ * @param query pageNum/pageSize 必填，其他字段为可选筛选条件
+ * @returns TenantInfo 分页（list/total），由请求层解包，无需再访问 data
  */
 export function listTenants(query: TenantQuery): Promise<PageResponse<TenantInfo>> {
   return get<PageResponse<TenantInfo>>('/api/v2/platform/tenants', query as unknown as Record<string, unknown>)

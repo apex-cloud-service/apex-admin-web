@@ -162,7 +162,7 @@ import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import type { FormInstance, FormRules, TreeInstance } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { showError } from '@/utils/request'
-import { buildPackagePayload } from '@/utils/tenant-package'
+import { buildPackagePayload, isAllFeaturesSelected } from '@/utils/tenant-package'
 import {
   createTenantPackage,
   listTenantPackages,
@@ -229,11 +229,13 @@ function scopeText(values?: Array<string | number>): string {
   return `${values.length} 项`
 }
 
-/** 能力订阅展示文案（空集合 = 未订阅，等于目录长度 = 全量） */
+/** 空集合显示未订阅；按编码成员覆盖判断全量，数量相同但编码不同不算全量。 */
 function featureText(values?: string[]): string {
   const count = values?.length ?? 0
   if (count === 0) return '未订阅'
-  if (capabilities.value.length > 0 && count >= capabilities.value.length) return `全部（${count} 项）`
+  if (isAllFeaturesSelected(values, capabilities.value.map((item) => item.code))) {
+    return `全部（${count} 项）`
+  }
   return `${count} 项`
 }
 
@@ -275,9 +277,9 @@ function openDialog(row?: TenantPackage): void {
   })
   allMenus.value = !row?.menuIds?.length
   allPermissions.value = !row?.permissionCodes?.length
-  // 能力全量 = 已覆盖能力目录全部编码；空集合表示未订阅，不能回填为全量。新建默认全量。
+  // 全量开关按编码成员覆盖回填；空集合不等于全量，新建默认全量
   allFeatures.value = row
-    ? capabilities.value.length > 0 && (row.features?.length ?? 0) >= capabilities.value.length
+    ? isAllFeaturesSelected(row.features, capabilities.value.map((item) => item.code))
     : true
   dialogVisible.value = true
   // 等树渲染完成后回填选中项

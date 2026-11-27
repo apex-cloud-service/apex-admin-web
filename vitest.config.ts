@@ -21,6 +21,10 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     // e2e/ 归 Playwright 执行（vitest 默认 include 会误收 *.spec.ts）
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
+    // 限制并发：vitest 5 默认 pool 已是 forks，但默认 maxWorkers 取 CPU 数-1；
+    // 本机 12 CPU 全开时出现 "Failed to start forks worker / Timeout waiting for worker"，
+    // 导致用例被跳过或误报失败。此处降低并发（不放宽任何断言或超时标准）。
+    maxWorkers: 4,
     coverage: {
       // 使用 v8 内建覆盖率收集
       provider: 'v8',

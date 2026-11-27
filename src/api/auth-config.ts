@@ -11,7 +11,7 @@
  * - GET /admin-api/v1/auth/config/permissions - 权限码列表（读，全量裸数组）
  * - POST /admin-api/v1/auth/config/permissions/sync - 权限码同步（从代码注解扫描）
  * - POST/DELETE /api/v1/auth/permissions（更新走 POST /update 子路径）- 权限码创建/更新/删除（写）
- * - GET /admin-api/v1/auth/config/sessions（踢出会话：POST /admin-api/v1/users/{sessionId}/sessions/revoke）- 会话管理
+ * - GET /admin-api/v1/auth/config/sessions（强退用户：POST /admin-api/v1/users/{userId}/sessions/revoke）- 在线用户与会话管理
  * - GET/PUT /admin-api/v1/auth/config/session - 会话配置
  * - GET/PUT /admin-api/v1/auth/config/security - 安全策略配置
  * - GET /admin-api/v1/auth/config/login-logs - 登录尝试记录
@@ -158,8 +158,10 @@ export function getJwtConfig(): Promise<JwtConfig> {
 }
 
 /**
- * 更新 JWT 配置
- * @param payload JWT 配置信息
+ * 更新 JWT 配置。
+ * @param payload JWT 配置；secret 必须为非空且非全星号的密钥，不能保存脱敏占位值
+ * @returns 请求完成的 Promise，不返回配置记录
+ * @throws Error secret 为空或为全星号占位值；校验失败时不发送请求
  */
 export async function updateJwtConfig(payload: Omit<JwtConfig, 'id' | 'createTime' | 'updateTime'>): Promise<void> {
   if (!payload.secret?.trim() || /^\*+$/.test(payload.secret.trim())) {
@@ -183,6 +185,7 @@ export interface JwtTestResult {
 
 /**
  * 测试 JWT 配置：按当前配置生成并验证一个测试 Token，用于确认配置正确性
+ * @param options 测试选项（可选），使用服务端当前已保存的配置而非编辑器草稿
  * @param options.expiresIn 测试 Token 有效期（秒，可选）
  * @param options.payload 自定义载荷（可选）
  */
@@ -202,8 +205,10 @@ export function listOAuth2Clients(): Promise<OAuth2ClientConfig[]> {
 }
 
 /**
- * 创建 OAuth2 客户端
- * @param payload 客户端配置信息
+ * 创建 OAuth2 客户端。
+ * @param payload 客户端配置；PKCE、授权确认须显式为 boolean，三种 TTL 须为正安全整数
+ * @returns 请求完成的 Promise，不返回客户端记录
+ * @throws Error 设置缺失/无效，或公共授权码客户端未启用 PKCE；不发送请求
  */
 export async function createOAuth2Client(payload: Omit<OAuth2ClientConfig, 'id' | 'createTime' | 'updateTime'>): Promise<void> {
   validateOAuth2Settings(payload)
@@ -211,9 +216,11 @@ export async function createOAuth2Client(payload: Omit<OAuth2ClientConfig, 'id' 
 }
 
 /**
- * 更新 OAuth2 客户端配置
+ * 更新 OAuth2 客户端配置。
  * @param id 客户端 ID
- * @param payload 客户端配置信息
+ * @param payload 客户端配置；必须显式提供 PKCE、授权确认及三种正安全整数 TTL
+ * @returns 请求完成的 Promise，不返回客户端记录
+ * @throws Error 设置缺失/无效，或公共授权码客户端未启用 PKCE；不发送请求
  */
 export async function updateOAuth2Client(id: string, payload: Omit<OAuth2ClientConfig, 'id' | 'createTime' | 'updateTime'>): Promise<void> {
   validateOAuth2Settings(payload)
@@ -234,7 +241,7 @@ export function deleteOAuth2Client(id: string): Promise<void> {
  * 查询权限码列表（前端伪分页）。
  * 后端 GET 返回全量裸数组：type 筛选与分页切片均在本函数内完成，不支持模块筛选。
  * @param query page/size 分页参数（type 可选，按权限类型筛选：1=菜单 2=按钮 3=接口）
- * @returns 伪分页结果（list/total 由前端切片计算，非后端分页）
+ * @returns PageResponse：list 为筛选后的当前页切片，total 为筛选后全量条数，非后端分页
  */
 export async function listPermissions(query: PageQuery & { type?: number }): Promise<PageResponse<Permission>> {
   const all = await get<Permission[]>('/admin-api/v1/auth/config/permissions')
@@ -289,16 +296,19 @@ export function listOnlineUsers(query: PageQuery): Promise<PageResponse<OnlineUs
 }
 
 /**
- * 强制用户下线
- * @param sessionId 会话 ID
+ * 按用户 ID 强退该用户的会话，不是终止单个认证中心会话。
+ * @param sessionId 用户 ID（历史参数名，不是 sessionId 会话唯一标识）
+ * @returns 请求完成的 Promise，具体失效范围由后端用户会话接口控制
  */
 export function forceLogout(sessionId: string): Promise<void> {
   return post<void>(`/admin-api/v1/users/${encodeURIComponent(sessionId)}/sessions/revoke`)
 }
 
 /**
- * 批量强制用户下线
- * @param sessionIds 会话 ID 列表
+ * 按用户 ID 批量强退会话。
+ * 去重后串行执行，首次失败即停止后续请求；已成功项不回滚。
+ * @param sessionIds 用户 ID 列表（历史参数名）
+ * @returns 所有唯一用户的请求均成功后兑现；不返回逐项结果
  */
 export async function batchForceLogout(sessionIds: string[]): Promise<void> {
   for (const id of new Set(sessionIds)) await forceLogout(id)
@@ -347,6 +357,7 @@ export function updateSecurityPolicy(payload: Omit<SecurityPolicy, 'id' | 'creat
 
 
 
+/** 写入前验证必需的 OAuth2 安全设置，防止可选 DTO 字段缺失时静默保存不完整配置。 */
 function validateOAuth2Settings(payload: OAuth2ClientConfig): void {
   if (payload.clientAuthenticationMethods.includes('none') &&
       payload.authorizationGrantTypes.includes('authorization_code') && payload.requireProofKey !== true) {

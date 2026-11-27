@@ -109,91 +109,120 @@ export interface GenerateHistory {
 }
 
 /**
- * 查询数据源列表
+ * 查询数据源列表。
+ * @returns DataSource 数组，无分页 total；仅查询配置，不测试连通性
  */
 export function listDataSources(): Promise<DataSource[]> {
   return get<DataSource[]>('/admin-api/v1/generator/datasources')
 }
 
 /**
- * 创建数据源
+ * 创建数据源。
+ * @param payload 数据源连接配置，不包含 id 与创建/更新时间
+ * @returns 请求完成的 Promise，不返回创建记录；成功后由调用方刷新列表
  */
 export function createDataSource(payload: Omit<DataSource, 'id' | 'createTime' | 'updateTime'>): Promise<void> {
   return post<void>('/admin-api/v1/generator/datasources', payload)
 }
 
 /**
- * 更新数据源
+ * 更新数据源。
+ * @param id 已保存的数据源 ID
+ * @param payload 数据源连接配置，不包含 id 与创建/更新时间
+ * @returns 请求完成的 Promise，不返回更新记录
  */
 export function updateDataSource(id: number, payload: Omit<DataSource, 'id' | 'createTime' | 'updateTime'>): Promise<void> {
   return put<void>(`/admin-api/v1/generator/datasources/${id}`, payload)
 }
 
 /**
- * 删除数据源
+ * 删除数据源。
+ * @param id 已保存的数据源 ID
+ * @returns 请求完成的 Promise；确认与列表刷新由调用方负责
  */
 export function deleteDataSource(id: number): Promise<void> {
   return del<void>(`/admin-api/v1/generator/datasources/${id}`)
 }
 
 /**
- * 测试已保存数据源的连接（按数据源 ID）
+ * 测试已保存数据源的连接（按数据源 ID）。
+ * @param id 已保存的数据源 ID，不接收编辑器中尚未保存的连接配置
+ * @returns 后端返回的连通性布尔结果；Promise 兑现不等于结果一定为 true
  */
 export function testDataSourceConnection(id: number): Promise<boolean> {
   return post<boolean>(`/admin-api/v1/generator/datasources/${id}/test`)
 }
 
 /**
- * 查询数据源下的表列表
+ * 查询数据源下的表列表。
+ * @param datasourceId 已保存的数据源 ID
+ * @returns TableInfo 数组，无分页包装
  */
 export function listTables(datasourceId: number): Promise<TableInfo[]> {
   return get<TableInfo[]>(`/admin-api/v1/generator/datasources/${datasourceId}/tables`)
 }
 
 /**
- * 查询表的字段信息
+ * 查询表的字段信息。
+ * @param datasourceId 已保存的数据源 ID
+ * @param tableName 数据源中的表名，按现有实现原样作为路径段提交
+ * @returns ColumnInfo 数组，包含数据库字段类型、键与可空性等元数据
  */
 export function getTableColumns(datasourceId: number, tableName: string): Promise<ColumnInfo[]> {
   return get<ColumnInfo[]>(`/admin-api/v1/generator/datasources/${datasourceId}/tables/${tableName}/columns`)
 }
 
 /**
- * 分页查询生成配置列表
+ * 分页查询生成配置列表。
+ * @param query PageQuery（page/size）
+ * @returns GeneratorConfig 分页（list/total）
  */
 export function listGeneratorConfigs(query: PageQuery): Promise<PageResponse<GeneratorConfig>> {
   return get<PageResponse<GeneratorConfig>>('/admin-api/v1/generator/configs', query as unknown as Record<string, unknown>)
 }
 
 /**
- * 创建生成配置
+ * 创建生成配置。
+ * @param payload 数据源、目标表与生成命名配置，不含 id 与时间字段
+ * @returns 请求完成的 Promise，不返回新配置；由调用方刷新列表
  */
 export function createGeneratorConfig(payload: Omit<GeneratorConfig, 'id' | 'createTime' | 'updateTime'>): Promise<void> {
   return post<void>('/admin-api/v1/generator/configs', payload)
 }
 
 /**
- * 更新生成配置
+ * 更新生成配置。
+ * @param id 生成配置 ID
+ * @param payload 生成配置内容，不含 id 与时间字段
+ * @returns 请求完成的 Promise，不返回更新记录
  */
 export function updateGeneratorConfig(id: number, payload: Omit<GeneratorConfig, 'id' | 'createTime' | 'updateTime'>): Promise<void> {
   return put<void>(`/admin-api/v1/generator/configs/${id}`, payload)
 }
 
 /**
- * 删除生成配置
+ * 删除生成配置。
+ * @param id 生成配置 ID
+ * @returns 请求完成的 Promise；本函数不弹操作确认
  */
 export function deleteGeneratorConfig(id: number): Promise<void> {
   return del<void>(`/admin-api/v1/generator/configs/${id}`)
 }
 
 /**
- * 按配置执行代码生成（后端按配置生成全部文件）
+ * 按配置执行代码生成（后端按配置生成全部文件）。
+ * @param configId 已保存的生成配置 ID
+ * @returns GeneratedFile 数组；需检查各文件的 success/errorMessage，不以请求兑现替代逐项判断
  */
 export function generateCode(configId: number): Promise<GeneratedFile[]> {
   return post<GeneratedFile[]>(`/admin-api/v1/generator/configs/${configId}/generate`)
 }
 
 /**
- * 分页查询指定配置的生成历史
+ * 分页查询指定配置的生成历史。
+ * @param configId 已保存的生成配置 ID
+ * @param query PageQuery（page/size）
+ * @returns GenerateHistory 分页（list/total），generatedFiles 为文件路径串
  */
 export function listGenerateHistory(configId: number, query: PageQuery): Promise<PageResponse<GenerateHistory>> {
   return get<PageResponse<GenerateHistory>>(`/admin-api/v1/generator/configs/${configId}/history`, query as unknown as Record<string, unknown>)
@@ -319,32 +348,36 @@ export function listGenTemplates(): Promise<GenTemplateCatalogItem[]> {
 }
 
 /**
- * 结构化预检
+ * 结构化预检。
  * @param configId 生成配置 ID
+ * @returns ready 与 issues 等预检信息；ready=false 不会在本函数中转为异常
  */
 export function preflightGenerate(configId: number): Promise<GenPreflightResult> {
   return post<GenPreflightResult>('/admin-api/v1/generator/preflight', { configId })
 }
 
 /**
- * 纯渲染预览（不写盘），返回绑定输入摘要的预览令牌
+ * 纯渲染预览（不写盘），返回绑定输入摘要的预览令牌。
  * @param configId 生成配置 ID
+ * @returns GenPreviewResult；提交任务时回传 previewToken，输入变化后需重新预览
  */
 export function previewGenerate(configId: number): Promise<GenPreviewResult> {
   return post<GenPreviewResult>('/admin-api/v1/generator/preview', { configId })
 }
 
 /**
- * 提交异步生成任务
- * @param payload 配置 ID、预览令牌与覆盖开关
+ * 提交异步生成任务。
+ * @param payload 配置 ID、预览令牌与可选覆盖开关
+ * @returns taskId/status，仅表示提交结果；任务完成需后续查询，产物下载另行调用
  */
 export function submitGenTask(payload: GenTaskSubmitPayload): Promise<GenTaskSubmitResult> {
   return post<GenTaskSubmitResult>('/admin-api/v1/generator/tasks', payload)
 }
 
 /**
- * 查询异步任务进度
+ * 查询异步任务进度。
  * @param taskId 任务 ID
+ * @returns GenTaskProgress（进度百分比、处理与失败数量、状态等），本函数不启动轮询
  */
 export function getGenTaskProgress(taskId: number): Promise<GenTaskProgress> {
   return get<GenTaskProgress>(`/admin-api/v1/generator/tasks/${taskId}`)
@@ -367,8 +400,9 @@ export function listGenTaskArtifacts(taskId: number): Promise<GenArtifact[]> {
 }
 
 /**
- * 按产物 ID 下载产物文件（二进制流）
- * @param artifactId 产物 ID
+ * 按产物 ID 下载产物文件（二进制流）。
+ * @param artifactId 产物 ID，不是任务或生成配置 ID
+ * @returns 文件 Blob；下载链接创建、保存与回收由调用方负责
  */
 export function downloadGenArtifact(artifactId: number): Promise<Blob> {
   return request<Blob>({

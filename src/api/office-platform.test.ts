@@ -2,7 +2,8 @@
  * 办公平台基础设施 API（office-platform.ts）单元测试
  * ------------------------------------------------------------------
  * 覆盖：应用配置更新的乐观锁 version 透传、解绑请求的 version 查询参数、
- * 绑定分页列表的 platform/status/分页参数传递（status 缺省时省略）
+ * 绑定分页的 platform/status/分页参数透传；status 缺省时向请求层传 undefined，
+ * 不验证 Axios 序列化后的查询字符串是否省略该键。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

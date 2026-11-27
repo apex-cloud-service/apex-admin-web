@@ -171,6 +171,8 @@ export function listDeviceCommands(
  * 向指定设备下发命令（commandId 为幂等键）
  * @param id 设备主键
  * @param payload 命令 ID、载荷与超时窗口
+ * @returns DeviceCommand；duplicate=true 表示返回既有命令，并非本次新下发。
+ * 请求成功不等于设备执行成功，须结合 status 或后续命令历史判断
  */
 export function dispatchDeviceCommand(id: number, payload: CommandDispatchPayload): Promise<DeviceCommand> {
   return post<DeviceCommand>(`/integration/v1/iot/devices/${id}/commands`, payload)

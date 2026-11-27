@@ -1,9 +1,8 @@
 /**
  * 文件分享 API 测试
  * ------------------------------------------------------------------
- * 覆盖：HTTP 方法、路径与关键参数透传（创建分享的明文 token 仅创建响应返回
- * 一次、列表按文件 ID 查询且仅所有者可见、撤销幂等；exchange/download 为匿名
- * 端点，download 走 request 原始配置携带 responseType: 'blob'）。
+ * 覆盖：分享列表/创建/撤销/兑换/下载的方法、路径和参数，及下载的 responseType='blob'。
+ * 请求层为 mock；不验证所有者鉴权、匿名访问、token 返回生命周期或撤销幂等性。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

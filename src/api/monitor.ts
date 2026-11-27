@@ -40,6 +40,7 @@ export interface OnlineUserQuery extends PageQuery {
 /**
  * 分页查询登录日志。
  * @param params 分页与筛选参数（username 模糊、status 0=成功 1=失败）
+ * @returns LoginLog 分页（list/total），不是认证中心审计端点的裸数组
  */
 export function listLoginLogs(params: LoginLogQuery): Promise<PageResponse<LoginLog>> {
   return get<PageResponse<LoginLog>>('/admin-api/v1/login-logs', params as unknown as Record<string, unknown>)
@@ -48,6 +49,7 @@ export function listLoginLogs(params: LoginLogQuery): Promise<PageResponse<Login
 /**
  * 分页查询操作审计日志。
  * @param params 分页与筛选参数（module/operatorName 模糊）
+ * @returns AuditLog 分页（list/total）
  */
 export function listAuditLogs(params: AuditLogQuery): Promise<PageResponse<AuditLog>> {
   return get<PageResponse<AuditLog>>('/admin-api/v1/audit-logs', params as unknown as Record<string, unknown>)
@@ -55,7 +57,8 @@ export function listAuditLogs(params: AuditLogQuery): Promise<PageResponse<Audit
 
 /**
  * 分页查询在线用户列表。
- * @param params 分页参数
+ * @param params 分页参数（page/size）及可选 username 筛选
+ * @returns OnlineUser 分页（list/total），与 auth/v1/sessions 的裸数组接口不同
  */
 export function listOnlineUsers(params: OnlineUserQuery): Promise<PageResponse<OnlineUser>> {
   return get<PageResponse<OnlineUser>>('/admin-api/v1/online-users', params as unknown as Record<string, unknown>)
@@ -109,6 +112,7 @@ export interface ApiCallLogQuery extends PageQuery {
 /**
  * 分页查询 API 调用日志（对外 HTTP 调用回溯）。
  * @param params 分页与筛选参数（serviceName/status 精确，traceId/path 模糊）
+ * @returns ApiCallLog 分页（list/total），traceId 供后端日志关联
  */
 export function listApiCallLogs(
   params: ApiCallLogQuery

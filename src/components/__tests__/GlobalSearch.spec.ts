@@ -2,10 +2,11 @@
  * GlobalSearch 单元测试
  * ------------------------------------------------------------------
  * 覆盖：弹层打开、关键词防抖搜索与重置、Enter 立即搜索、结果渲染与跳转、
- * 重建索引、结果分页翻页；不含真实 Meilisearch 检索与弹层定位。
+ * 重建索引、结果分页翻页；清空关键词用例未先建立非空结果，不证明旧结果清除。
+ * 不含真实 Meilisearch 检索与弹层定位。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import GlobalSearch from '@/components/GlobalSearch/index.vue'
 import type { SearchResult } from '@/api/search'
@@ -128,7 +129,7 @@ function mountSearch() {
   })
 }
 
-/** 输入关键词后按 Enter 立即搜索，并冲刷防抖定时器与微任务 */
+/** 输入关键词并触发 Enter 搜索，推进 0ms 到期任务及微任务；不等待 300ms 防抖间隔。 */
 async function searchNow(wrapper: ReturnType<typeof mountSearch>, keyword: string) {
   const input = wrapper.find('input.input-stub')
   await input.setValue(keyword)
@@ -184,16 +185,37 @@ describe('GlobalSearch 弹层与搜索', () => {
     wrapper.unmount()
   })
 
-  it('清空关键词清空结果且不再触发搜索', async () => {
-    mocks.search.mockResolvedValue({ list: [], total: 0 })
+  it('清空关键词后结果消失且不再触发搜索', async () => {
+    // 先返回非空结果，才能验证“清空时旧结果被移除”
+    mocks.search.mockResolvedValue({
+      list: [
+        {
+          resourceType: 'user',
+          resourceId: '1',
+          title: '张三',
+          subtitle: '研发部',
+          description: '',
+          highlightSnippet: '',
+          score: 1,
+          status: 1,
+          createdAt: '',
+          updatedAt: '',
+        },
+      ],
+      total: 1,
+    })
     const wrapper = mountSearch()
     const input = wrapper.find('input.input-stub')
     await input.setValue('用户')
     await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
     expect(mocks.search).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('张三')
+
     await input.setValue('')
     await vi.advanceTimersByTimeAsync(300)
     expect(mocks.search).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).not.toContain('张三')
     expect(wrapper.text()).toContain('请输入关键词搜索')
     wrapper.unmount()
   })

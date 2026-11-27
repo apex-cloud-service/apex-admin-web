@@ -25,8 +25,9 @@ export function enableTotp(): Promise<TotpSetupInfo> {
 }
 
 /**
- * 用动态验证码激活 TOTP
+ * 用动态验证码激活 TOTP。
  * @param code 6 位动态码
+ * @returns MfaActivationResult（success/backupCodes）；本函数不将 success=false 转为异常
  */
 export function activateTotp(code: string): Promise<MfaActivationResult> {
   return post<MfaActivationResult>(`/api/mfa/totp/activate?code=${encodeURIComponent(code)}`)

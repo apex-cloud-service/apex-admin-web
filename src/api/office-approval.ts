@@ -148,7 +148,9 @@ export function cancelApproval(processInstanceId: string): Promise<void> {
 
 /**
  * 查询待我审批列表；后端返回裸数组，平台筛选与分页在前端完成。
- * @param query 查询参数（approverId 必填）
+ * @param query 查询参数，approverId 必填；pageNum/pageSize 仅用于客户端切页
+ * @returns 筛选后的当前页 list 与全量 total，以及 pages/hasNext
+ * @throws Error approverId 缺失或全为空白；校验失败时不发起 HTTP 请求
  */
 export async function getPendingApprovals(
   query: ApprovalListQuery,
@@ -162,7 +164,9 @@ export async function getPendingApprovals(
 
 /**
  * 查询我发起的完整审批列表，供列表分页与终态区块派生使用。
- * @param query 查询参数（initiatorId 必填）
+ * @param query 查询参数，initiatorId 必填；platform/status 在客户端筛选，分页字段不切页
+ * @returns 筛选后的完整 ApprovalProcess 数组，不包含 total 等分页元数据
+ * @throws Error initiatorId 全为空白；校验失败时不发起 HTTP 请求
  */
 export async function listMyInitiatedApprovals(
   query: MyInitiatedApprovalsQuery,
@@ -177,7 +181,9 @@ export async function listMyInitiatedApprovals(
 
 /**
  * 查询我发起的审批分页（客户端分页）。
- * @param query 查询参数（initiatorId 必填）
+ * @param query 查询参数，initiatorId 必填；按 platform/status 筛选后使用 pageNum/pageSize 切页
+ * @returns 当前页 list、筛选后的总数 total 及 pages/hasNext
+ * @throws Error 发起人 ID 全为空白（由 listMyInitiatedApprovals 校验）
  */
 export async function getMyInitiatedApprovals(
   query: MyInitiatedApprovalsQuery,

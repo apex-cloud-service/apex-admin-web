@@ -90,7 +90,7 @@ export default defineConfig(({ mode }) => {
         target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
-      // 授权同意端点：仅 POST 反代后端；GET 是前端 SPA 同意页路由，回退 index.html
+      // GET 返回前端 SPA 同意页；其余方法进入反代，当前授权同意提交使用 POST
       '/oauth2/consent': {
         target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
         changeOrigin: true,

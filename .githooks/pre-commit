@@ -6,7 +6,7 @@ set -u
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-STAGED=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null || true)
+STAGED=$(git diff --cached --name-only --diff-filter=ACMRDT 2>/dev/null || true)
 [ -z "$STAGED" ] && exit 0
 
 # 0. 记忆台账同步（规范 §5.4，所有改动都查，警告模式）
@@ -14,8 +14,8 @@ if [ -x scripts/governance/check-memory-sync.sh ]; then
   bash scripts/governance/check-memory-sync.sh 2>&1 || true
 fi
 
-# 只在改动涉及治理范围时触发
-TRIGGER=$(echo "$STAGED" | grep -E "^(docs/|AGENTS\.md|scripts/governance/|\.githooks/)" || true)
+# 图表删除属于独立触发范围，不能因没有新增/修改文档而漏查纯删除提交。
+TRIGGER=$(echo "$STAGED" | grep -E "^(docs/|AGENTS\.md|scripts/governance/|\.githooks/)|\.(svg|mmd)$" || true)
 [ -z "$TRIGGER" ] && exit 0
 
 echo "[governance] 改动涉及文档治理范围，运行自检（警告模式）"
@@ -33,7 +33,7 @@ if [ -x scripts/governance/audit-frontend-rules.sh ] && echo "$STAGED" | grep -q
   echo "[governance] 检测到前端改动，跳过全量红线扫描（提交后请手动跑 audit-frontend-rules.sh）"
 fi
 
-# 3. 图表删除告警（防止误删 SVG/MMD）
+# 3. 独立检测图表删除（纯删除也触发）；本钩子按现有治理约定仅告警。
 DEL=$(git diff --cached --name-only --diff-filter=D 2>/dev/null | grep -E "\.(svg|mmd)$" || true)
 if [ -n "$DEL" ]; then
   echo "[governance] ⚠️ 本提交删除图表文件（如有意为之请忽略）："

@@ -994,7 +994,9 @@ function openTaskDialog(taskId: number) {
 }
 
 /**
- * 每 2 秒轮询一次任务进度，终态停止并加载产物清单
+ * 立即查询并每 2 秒轮询任务进度；非 PENDING/RUNNING 时停止并加载产物，
+ * 查询失败时停止并提示，不自动重试。关闭任务弹窗不会停止轮询；
+ * 页面卸载清除定时器，不取消已发出的请求。
  * @param taskId 任务 ID
  */
 function startPolling(taskId: number) {

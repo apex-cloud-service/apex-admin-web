@@ -9,7 +9,8 @@
   - 文件类型校验
   - 支持删除
   - 自动携带认证Token
-  （上传进度展示/预览未实现；需要进度与裁剪/压缩/分片请用 FileUploadEnhanced）
+  进度使用 el-upload 默认列表的内置展示，无独立进度弹窗或大图预览；
+  自定义进度、裁剪、压缩与分片能力见 FileUploadEnhanced。
   
   使用示例：
   ```vue

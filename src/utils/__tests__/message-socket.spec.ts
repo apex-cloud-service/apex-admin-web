@@ -80,7 +80,8 @@ describe('message-socket', () => {
       `ws://${window.location.host}/api/v1/messages/ws?ticket=${encodeURIComponent('t-1')}`,
     )
     expect(states[states.length - 1]).toBe('open')
-  })
+  // vi.resetModules + 动态 import 在高负载下可能超过默认 5s，本用例显式放宽（不改全局配置）
+  }, 15000)
 
   it('ping 帧回文本 pong（心跳保活）', async () => {
     const { subscribeMessagePush } = await loadModule()

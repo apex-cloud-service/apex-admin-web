@@ -51,6 +51,7 @@ export function getCurrentDatabaseInfo(): Promise<CurrentDatabaseInfo> {
  * 分页查询数据源列表
  * @param pageNum 页码（从 1 开始）
  * @param pageSize 每页条数
+ * @returns 数据源分页（list/total），密码不应由列表响应回显
  */
 export function listDataSources(pageNum: number, pageSize: number): Promise<PageResponse<DataSourceInfo>> {
   return get<PageResponse<DataSourceInfo>>('/admin-api/v1/database/datasources', { pageNum, pageSize })

@@ -149,10 +149,11 @@ export interface CalendarEventsQuery {
 /**
  * 创建日历事件。
  *
- * <p>后端按 Bean 名 {@code <platform>CalendarClient} 选择实现，平台标识必须是
- * 小写（feishu/dingtalk/wecom）；大写会返回「不支持的办公平台」。
+ * 后端按 `<platform>CalendarClient` Bean 名选择实现；本函数将调用方的
+ * 大写 OfficePlatform 枚举转换为小写 feishu/dingtalk/wecom 后再提交。
  *
- * @param request 创建请求
+ * @param request 创建请求，组织者和事件类型由调用方提供
+ * @returns 后端创建的 CalendarEvent；本函数不对详情响应的 platform 字段再归一
  */
 export function createCalendarEvent(request: CreateEventRequest): Promise<CalendarEvent> {
   return post<CalendarEvent>('/api/office/calendar/events', toWireEvent(request))
@@ -198,13 +199,13 @@ export function deleteCalendarEvent(eventId: string): Promise<void> {
 /**
  * 查询日历事件列表。
  *
- * <p>后端契约（OfficeCalendarRouter）只提供按时间范围的列表端点
- * {@code GET /api/office/calendar/events/range}：参数为无时区的
- * {@code LocalDateTime}，返回裸数组，且没有服务端分页与附加筛选。
- * 这里统一做时间格式转换、平台/状态/日历/创建人筛选和真分页，调用方按
- * {@link PageResponse} 消费即可。
+ * 后端列表端点 `GET /api/office/calendar/events/range` 使用无时区的
+ * `LocalDateTime` 参数，返回裸数组，不提供该端点的服务端分页与附加筛选。
+ * 本函数转换时间格式，将列表中的平台标识归一为大写，再按平台/状态/
+ * 日历/创建人筛选并切页；缺失的时间边界回退为浏览器本地自然月边界。
  *
- * @param query 查询参数
+ * @param query 查询参数；pageNum/pageSize 用于客户端分页，时间范围可选
+ * @returns PageResponse：list 为当前页事件，total 为筛选后的全量事件数
  */
 export async function getCalendarEvents(
   query: CalendarEventsQuery,
@@ -249,7 +250,7 @@ function resolveRange(startTime?: string, endTime?: string): { startTime: string
 /**
  * 转换为后端可解析的无时区 LocalDateTime 文本。
  *
- * <p>Date 控件的值形如 {@code 2026-11-17 09:30:00}，先补 `T`；带 `Z` 或
+ * Date 控件的值形如 `2026-11-17 09:30:00`，先补 `T`；带 `Z` 或
  * `+08:00` 偏移的时间按浏览器本地墙钟重新格式化，而不是粗暴删掉时区
  * 后缀，避免跨时区把 09:30 送成 01:30。
  */

@@ -65,8 +65,8 @@ export const staticRoutes: RouteRecordRaw[] = [
     name: 'Root',
     component: AdminLayout,
     redirect: '/dashboard',
-    // 工作台为登录后默认页，不依赖后端菜单，须作为静态路由注册；
-    // 否则未登录访问 / 时因 dashboard 动态路由尚未生成而命中 404 而非跳转登录页。
+    // 静态注册工作台，使其在动态菜单未生成或加载失败时仍可匹配；
+    // 未登录访问（包括 NotFound）仍由全局守卫跳转登录页。
     children: shallowReactive<RouteRecordRaw[]>([
       {
         path: 'dashboard',
@@ -122,14 +122,18 @@ let dynamicRoutesAdded = false
 
 /**
  * 登录后（或刷新后）生成菜单驱动的动态路由。
- * 由前端路由守卫调用；失败时保留静态路由，后续导航可重试。
+ * 由前端路由守卫调用；失败时回滚已注册的动态路由并保留静态路由，
+ * 后续导航可重试。挂载分两步：逐条 addRoute('Root') 使路由立即可匹配，
+ * 再同步推入根记录 children 使 AdminLayout 菜单渲染可见；两处必须一致。
  */
 export async function setupDynamicRoutes(): Promise<void> {
   if (dynamicRoutesAdded) return
   const userStore = useUserStore()
+  // 记录每条 addRoute 的卸载函数：中途失败时逆序回滚，避免残留半套动态路由
   const removeRoutes: Array<() => void> = []
   try {
     const routes = await buildDynamicRoutes(userStore.permissions)
+    // 双重检查：并发调用（如守卫重入）时只在首个完成注册
     if (dynamicRoutesAdded) return
     const rootRecord = router.options.routes.find((r) => r.name === 'Root')
     if (!rootRecord?.children) return
@@ -166,6 +170,8 @@ router.beforeEach(async (to) => {
   if (!dynamicRoutesAdded) {
     await setupDynamicRoutes()
   }
+  // 动态路由刚生成时，本次导航可能已按旧路由表解析成 NotFound；
+  // 重新解析后可匹配则 replace 到真实路径（保留 query/hash，避免丢参数）
   if (dynamicRoutesAdded && to.name === 'NotFound' && router.resolve(to.fullPath).name !== 'NotFound') {
     return { path: to.path, query: to.query, hash: to.hash, replace: true }
   }

@@ -14,7 +14,7 @@ dist-ssr
 .DS_Store
 *.local
 
-# 文档与日志（不进入构建上下文）
+# Markdown 与指定日志文件（不进入构建上下文；未整体排除非 Markdown 文档资产）
 *.md
 *.log
 npm-debug.log*

@@ -12,13 +12,13 @@ import { ref } from 'vue'
 /**
  * 办公平台 Store
  * 
- * @description 管理办公平台的配置和用户绑定状态
+ * @description 保存当前平台字符串与各平台绑定布尔状态，不管理平台应用配置或持久化
  */
 export const useOfficeStore = defineStore('office', () => {
   /**
    * 当前选中的平台标识
    * 
-   * @description 任意字符串，setter 不做枚举或格式校验；页面约定值为 feishu/dingtalk/wechat
+   * @description 任意字符串，setter 不校验；当前无生产调用方，不构成办公 API 的平台枚举契约
    */
   const currentPlatform = ref<string>('')
 

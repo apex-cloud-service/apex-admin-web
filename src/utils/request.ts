@@ -72,7 +72,8 @@ function handleUnauthorized(): void {
  * 以及无响应体的网络错误（回退到 Axios message）。
  * @param error Axios 错误对象
  * @param fallback 提取不到时的默认文案
- * @returns 提取到的消息；无可用响应消息时依次回退 fallback、Axios message、空串
+ * @returns 纯文本或非空 msg 优先；对象 msg 为空白时直接回退 fallback。
+ * 无可提取的响应消息字段时依次回退 fallback、Axios message、空串。
  */
 function extractServerMessage(error: unknown, fallback = ''): string {
   const data = (error as { response?: { data?: unknown } })?.response?.data

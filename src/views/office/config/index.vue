@@ -1,7 +1,8 @@
 <!--
   办公平台配置页面
   ------------------------------------------------------------------
-  功能：飞书、钉钉、企业微信平台配置管理（AppId、AppSecret、回调 URL）
+  功能：飞书、钉钉、企业微信应用配置（AppId、密钥/签名密钥引用标识、回调 URL）。
+  页面填写 secretReference/signingSecretReference，不以这些字段保存明文 AppSecret。
 
   权限：
     - office:app:create - 创建平台配置

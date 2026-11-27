@@ -1,7 +1,7 @@
 /**
  * EmptyState 单元测试
  * ------------------------------------------------------------------
- * 覆盖：props 默认值、type 内置空态图映射、自定义 image/description、默认插槽
+ * 覆盖：props 默认值、type 场景 SVG 资产、自定义 image/description、默认插槽
  */
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -47,16 +47,15 @@ describe('EmptyState 组件', () => {
     wrapper.unmount()
   })
 
-  it('按 type 映射内置空态图标识', () => {
-    const search = mountEmpty({ type: 'search' })
-    expect(search.stub.props('image')).toBe('search')
-    search.wrapper.unmount()
-    const network = mountEmpty({ type: 'network' })
-    expect(network.stub.props('image')).toBe('network')
-    network.wrapper.unmount()
-    const permission = mountEmpty({ type: 'permission' })
-    expect(permission.stub.props('image')).toBe('permission')
-    permission.wrapper.unmount()
+  it('按 type 解析仓库内场景 SVG 地址（不是裸场景字符串）', () => {
+    for (const type of ['search', 'network', 'permission'] as const) {
+      const { wrapper, stub } = mountEmpty({ type })
+      const image = stub.props('image') as string
+      expect(image).not.toBe(type)
+      // 生产方式为哈希资源 URL；测试环境 Vite 可能内联为 data:image/svg+xml
+      expect(image).toMatch(/^data:image\/svg\+xml|\.svg(\?.*)?$/)
+      wrapper.unmount()
+    }
   })
 
   it('自定义 image 优先于 type 内置图', () => {

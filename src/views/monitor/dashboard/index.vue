@@ -314,7 +314,7 @@
  * 监控大盘脚本
  * - 轮询 /admin-api/v1/monitor/{overview,system,middleware,governance,business}
  * - 用 ECharts 渲染各板块图表；CPU/网络保留最近 30 个采样点绘制趋势
- * - 所有指标接口失败时置灰展示，不阻塞页面
+ * - 各指标接口失败独立回退 null；仅非空响应更新，失败保留旧数据或初始占位，不提供置灰失败态
  */
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import * as echarts from '@/utils/echarts'

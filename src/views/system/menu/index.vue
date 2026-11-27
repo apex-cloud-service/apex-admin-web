@@ -99,7 +99,7 @@
  * 菜单管理脚本
  * - 树形表格展示后端菜单树
  * - 新增/编辑支持 目录/菜单/按钮 三种类型
- * - 删除/启停操作带二次确认
+ * - 删除带二次确认；启停直接提交状态更新，不弹确认框
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'

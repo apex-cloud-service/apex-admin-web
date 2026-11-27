@@ -66,7 +66,8 @@ export function removeRefreshToken(): void {
 /**
  * 获取用户身份信息
  * 
- * @returns 用户身份对象，未登录返回 null
+ * @returns 已存身份缓存；键缺失或 JSON 解析失败时 null，不表示当前登录有效
+ * 本函数不检查令牌；Storage 访问异常可能向外抛出。
  */
 export function getIdentity(): UserIdentity | null {
   const identity = localStorage.getItem(IDENTITY_KEY)

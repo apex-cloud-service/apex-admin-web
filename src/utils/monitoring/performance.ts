@@ -24,8 +24,10 @@ interface PerformanceEntryWithProcessing extends PerformanceEntry {
  */
 export class PerformanceMonitor {
   /**
-   * 初始化监控：注册 FCP/LCP/FID 观察者，并在页面 load 后上报加载耗时
-   * SSR 环境（无 window）下自动跳过
+   * 注册 FCP/LCP/FID 观察者与未来的 load 事件回调；无 window 时跳过。
+   * 应在 load 前调用一次；不补报已发生的 load，也不保护重复初始化或提供释放入口。
+   * 调用方需确认 PerformanceObserver 和所需指标可用，不支持时可能抛错。
+   * FCP/LCP 为相对导航起点的毫秒时间，FID 为毫秒延迟；当前仅打印控制台。
    */
   static init(): void {
     if (typeof window === 'undefined') return
@@ -75,7 +77,7 @@ export class PerformanceMonitor {
     observer.observe({ entryTypes: ['first-input'] })
   }
 
-  /** 页面 load 后上报整体加载耗时（页面加载/DOM 就绪/TTFB，单位 ms） */
+  /** 在 load 回调中打印旧版 performance.timing 原始差值（毫秒）；loadEventEnd 可能尚未完成写入。 */
   private static reportPageLoad(): void {
     const timing = performance.timing
     const pageLoadTime = timing.loadEventEnd - timing.navigationStart

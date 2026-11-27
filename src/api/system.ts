@@ -119,6 +119,7 @@ export function deleteDept(id: number): Promise<void> {
 
 /* ==================== 字典管理 ==================== */
 
+/** 校验并返回字典 ID 路径段；DictId 允许后端返回字符串 ID，非法值（非正整数形态）提前抛错而非拼出坏 URL */
 function dictIdSegment(id: DictId): string {
   if (typeof id === 'string' ? !/^[1-9][0-9]*$/.test(id) : !Number.isSafeInteger(id) || id <= 0) {
     throw new Error('字典 ID 无效，请刷新列表后重试')
@@ -154,17 +155,34 @@ export function createDictType(payload: DictTypePayload): Promise<void> {
   return post<void>('/admin-api/v1/dict/types', payload)
 }
 
-/** 更新字典类型 */
+/**
+ * 更新字典类型。
+ * @param id 正整数字符串或正安全整数，保留大整数字符串的精度
+ * @param payload 字典名称、编码与可选备注
+ * @returns 请求完成的 Promise，不返回更新记录
+ * @throws Error ID 形态非法或数字超出安全整数范围；同步抛出且不发送请求
+ */
 export function updateDictType(id: DictId, payload: DictTypePayload): Promise<void> {
   return put<void>(`/admin-api/v1/dict/types/${dictIdSegment(id)}`, payload)
 }
 
-/** 删除字典类型 */
+/**
+ * 删除字典类型。
+ * @param id 正整数字符串或正安全整数
+ * @returns 请求完成的 Promise；操作确认由调用方负责
+ * @throws Error ID 无效；同步抛出且不发送请求
+ */
 export function deleteDictType(id: DictId): Promise<void> {
   return del<void>(`/admin-api/v1/dict/types/${dictIdSegment(id)}`)
 }
 
-/** 启停字典类型 */
+/**
+ * 启停字典类型。
+ * @param id 正整数字符串或正安全整数
+ * @param enabled true=启用，false=停用；以 JSON 布尔值提交
+ * @returns 请求完成的 Promise，不返回更新记录
+ * @throws Error ID 无效；同步抛出且不发送请求
+ */
 export function updateDictTypeStatus(id: DictId, enabled: boolean): Promise<void> {
   return put<void>(`/admin-api/v1/dict/types/${dictIdSegment(id)}/status`, { enabled })
 }
@@ -179,17 +197,34 @@ export function createDictData(payload: DictDataPayload): Promise<void> {
   return post<void>('/admin-api/v1/dict/data', payload)
 }
 
-/** 更新字典数据 */
+/**
+ * 更新字典数据项。
+ * @param id 正整数字符串或正安全整数
+ * @param payload 字典编码、标签、值与可选排序/默认标记
+ * @returns 请求完成的 Promise，不返回更新记录
+ * @throws Error ID 无效；同步抛出且不发送请求
+ */
 export function updateDictData(id: DictId, payload: DictDataPayload): Promise<void> {
   return put<void>(`/admin-api/v1/dict/data/${dictIdSegment(id)}`, payload)
 }
 
-/** 删除字典数据 */
+/**
+ * 删除字典数据项。
+ * @param id 正整数字符串或正安全整数
+ * @returns 请求完成的 Promise；操作确认由调用方负责
+ * @throws Error ID 无效；同步抛出且不发送请求
+ */
 export function deleteDictData(id: DictId): Promise<void> {
   return del<void>(`/admin-api/v1/dict/data/${dictIdSegment(id)}`)
 }
 
-/** 启停字典数据 */
+/**
+ * 启停字典数据项。
+ * @param id 正整数字符串或正安全整数
+ * @param enabled true=启用，false=停用；以 JSON 布尔值提交
+ * @returns 请求完成的 Promise，不返回更新记录
+ * @throws Error ID 无效；同步抛出且不发送请求
+ */
 export function updateDictDataStatus(id: DictId, enabled: boolean): Promise<void> {
   return put<void>(`/admin-api/v1/dict/data/${dictIdSegment(id)}/status`, { enabled })
 }
@@ -270,18 +305,18 @@ export function listJobs(): Promise<SysJob[]> {
  * 分页查询定时任务列表
  * 
  * @param params 查询参数（支持分页、任务名称、分组、状态筛选）
- * @returns 分页结果
+ * @returns SysJob 分页（list/total）；使用 pageNum/pageSize，不是全量 listJobs 数组接口
  * 
  * @example
  * ```typescript
  * // 查询第1页，每页20条
- * const result = await pageJobs({ pageNum: 1, pageSize: 20 })
+ * const firstPage = await pageJobs({ pageNum: 1, pageSize: 20 })
  * 
  * // 按任务名称筛选
- * const result = await pageJobs({ pageNum: 1, pageSize: 20, jobName: '数据同步' })
+ * const byName = await pageJobs({ pageNum: 1, pageSize: 20, jobName: '数据同步' })
  * 
  * // 按分组和状态筛选
- * const result = await pageJobs({ 
+ * const byGroup = await pageJobs({
  *   pageNum: 1, 
  *   pageSize: 20, 
  *   jobGroup: 'DEFAULT',
@@ -318,7 +353,12 @@ export function runJobOnce(id: number): Promise<void> {
   return post<void>(`/admin-api/v1/jobs/${id}/run`)
 }
 
-/** 查询任务执行日志 */
+/**
+ * 查询某任务的最近执行日志。
+ * @param id 定时任务数字 ID
+ * @param limit 返回条数上限（可选，默认 20）
+ * @returns JobLog 数组，不包含分页总数
+ */
 export function listJobLogs(id: number, limit = 20): Promise<JobLog[]> {
   return get<JobLog[]>(`/admin-api/v1/jobs/${id}/logs`, { limit })
 }

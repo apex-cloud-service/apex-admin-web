@@ -3,6 +3,8 @@
  * ------------------------------------------------------------------
  * 覆盖：按需查询、分页与乱序保护、权限、读取失败隔离、确认取消、删除/重试接受语义及加载状态。
  * 接口与组件传输使用桩，不替代真实后台任务、对象存储和索引清理验证。
+ * 乱序用例覆盖新页请求期间旧响应返回，未验证新页已展示后旧响应再到达。
+ * 删除/重试异常用例检查提示、loading 与查询次数，未直接断言原数据仍显示。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
@@ -335,6 +337,30 @@ describe('知识文档后台清理记录', () => {
     expect(wrapper.find('.cleanup-table').attributes('data-loading')).toBe('false')
   })
 
+  it('新页结果已展示后旧页响应返回也不得覆盖新页', async () => {
+    const firstPage = deferred<PageResponse<KnowledgeDocumentCleanupDTO>>()
+    const secondPage = deferred<PageResponse<KnowledgeDocumentCleanupDTO>>()
+    mocks.listDocumentCleanups.mockReturnValueOnce(firstPage.promise).mockReturnValueOnce(secondPage.promise)
+    const wrapper = mountPage()
+    await flushPromises()
+    const drawer = await openCleanups(wrapper)
+    await drawer.findAll('button').find(button => button.text() === '下一页')!.trigger('click')
+    await flushPromises()
+
+    // 新页先完成并渲染，旧页随后才返回
+    secondPage.resolve(pageOf([cleanup(10, 'PENDING')], 45))
+    await flushPromises()
+    expect(wrapper.find('.cleanup-drawer').text()).toContain('清理文档 10')
+    expect(wrapper.find('.cleanup-table').attributes('data-loading')).toBe('false')
+
+    firstPage.resolve(pageOf([cleanup(9, 'FAILED')], 45))
+    await flushPromises()
+
+    expect(wrapper.find('.cleanup-drawer').text()).toContain('清理文档 10')
+    expect(wrapper.find('.cleanup-drawer').text()).not.toContain('清理文档 9')
+    expect(wrapper.find('.cleanup-table').attributes('data-loading')).toBe('false')
+  })
+
   it('空间选择器失败不影响文档和清理查询', async () => {
     const error = new Error('无空间读取权限')
     mocks.listSpaces.mockRejectedValueOnce(error)
@@ -415,11 +441,15 @@ describe('清理重试', () => {
     const wrapper = mountPage()
     await flushPromises()
     await openCleanups(wrapper)
+    const cleanupRowsBefore = wrapper.findAll('.el-table-stub tbody tr').length
     await clickButton(wrapper, '重试')
     expect(mocks.showError).toHaveBeenCalledWith(error, '清理重试提交失败')
     expect(mocks.success).not.toHaveBeenCalled()
     expect(mocks.listDocumentCleanups).toHaveBeenCalledTimes(1)
     expect(buttons(wrapper, '重试')[0].props('loading')).toBe(false)
+    // 失败不清空本地清理记录：行数不变且仍可再次点击重试
+    expect(wrapper.findAll('.el-table-stub tbody tr').length).toBe(cleanupRowsBefore)
+    expect(buttons(wrapper, '重试').length).toBeGreaterThan(0)
   })
 })
 
@@ -483,5 +513,8 @@ describe('删除接受语义', () => {
     expect(mocks.success).not.toHaveBeenCalled()
     expect(mocks.listDocuments).toHaveBeenCalledTimes(1)
     expect(buttons(wrapper, '删除')[0].props('loading')).toBe(false)
+    // 失败不得隐藏或移除本地文档行，用户仍可重试该操作
+    expect(wrapper.text()).toContain('现有文档')
+    expect(buttons(wrapper, '删除').length).toBeGreaterThan(0)
   })
 })

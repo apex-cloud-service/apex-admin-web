@@ -72,16 +72,34 @@
 - **结果（2026-11-24）**：三条新用例修复前全部失败（`3 failed | 12 passed`），修复后 **15/15 通过**；全量 `npm run test:report` **188 文件 / 546 项全通过**（原 543 + 新增 3）；`npm run build` 含 `vue-tsc --noEmit` 成功（51.02s）；生产预览 `PLAYWRIGHT_USE_PREVIEW=1 npm run test:e2e -- --workers=2` **13/13 通过**；`verify-docs.sh --strict`、`check-doc-refs.sh --strict`、`audit-frontend-rules.sh --strict`、`git diff --check` 均无阻断。改动仅 `src/utils/request-cache.ts`（+89/−? 行）与对应 spec；无公共 API 变更。**报告归属说明**：本轮 `npm run test:report` 刷新了 `reports/unit/**` 与 `reports/coverage/**`，该路径属 FE-029 写入范围；产物保留真实结果但不计作 FE-030 独立证据，FE-030 证据以本条命令输出与 spec 用例为准。本结论未获独立 R5（复核执行环境模型服务不可用），**不据此关闭 FE-030**。
 
 ### FE-030 Wave B2 实验租约（匿名入口图标负载）
-
 - **R0 / 执行 / 复核**：当前 Codex 串行单写；独立 R5 Curie 只读，2026-11-24（Asia/Shanghai）至实验证据交接；集成 `WAITING`。
 - **基线 / 范围**：从 `aec9c444dc113ce7b64f78c0956304b54d304727` 导出新副本，固定锁文件和生产预览 Chromium。不叠加 B1；只在副本尝试按认证布局加载完整图标目录，交接时原仓仅写 B2 治理记录。若达到目标，也须单独核定实施规格、租约和复核，才可提升应用改动。
 - **验收 / 回滚**：登录页解码 JS 至少减少 10%，认证后工作台和用户页各不增加超过 5%；同夹具对照并披露请求数。已知、缺省、未知菜单图标和匿名 OAuth2 授权页行为不变；使用隔离报告，保留 FE-029 共享报告、应用、认证与契约差异。不达标不提升；回滚只撤销本次治理增量，不改共享产物。
 - **结果 / 释放**：构建、专项 A/B 各 1/1、候选 543 单测和 14 项 E2E 通过；本地解码体积达标，但认证页各增加 9 个 JS 资源条目。Curie 确认隔离证据可采信，不放行生产采纳；[记录](../records/2026-11-23-fe030-wave-a-test-report.md#wave-b2-匿名入口图标对照)已归档，实验租约释放，不提升应用改动。
 
+### FE-032 执行租约（2026-11-25）
+
+- **R0 / 执行 / 复核**：ZCode 串行单写；独立 R5 由未参与实施的新上下文只读承担，结论绑定最终 source diff SHA256；全局集成租约 `HOLDING`（仅本次范围）。
+- **授权与边界**：用户 2026-11-25 明确授权本会话担任主控（补登 FE-031、登记 FE-032、追加记忆台账）并接管本次修复涉及文件的写入范围及隔离联调租约。FE-029/FE-030 保持开放，不改其验收标准与未完成项；不改认证拦截器/租户头/权限语义/后端契约。
+- **基线 / 保留**：`dev` / `71d823040e94e987ec2df0cf39e0caea7517aa3b`；保留上一轮 117 个注释改动、未跟踪 `docs/records/2026-11-25-comment-review-handover.md` 及用户原有 `MEMORY-CARD.md`、`docs/reference/ai-knowledge/01-current-state.md` 差异。
+- **写入范围**：见 FE-032 验收列所列应用/测试/脚本/CI/文档；不写 `reports/**` 共享产物（验证用临时/独立输出），不改 `components.d.ts`、契约矩阵或 FE-029 联调证据。
+- **回滚**：按批次文件撤回本次逻辑修复；禁止 `reset --hard` 或整区回退；已保留的注释/用户差异不动。
+
+### FE-032 执行结果（2026-11-26）
+
+- **已修复**：下载 Blob、上传 MIME/压缩/分片/裁剪顺序与 XHR 真实终结、maskGeneral 边界、空态场景图、草稿取消防抖、表格配置校验与回滚、套餐能力成员判断、请求重试收窄、治理台账改 Python 校验、CI 严格门禁与 Node 24、上线探测证据边界、E2E DTO 与并发单飞、单测真实断言。
+- **顺带修复**：`podman-verify.sh` cleanup 在 down 报 "no such container" 时残留资源，改为按实际资源判定并二次清理。
+- **验证**：`vue-tsc` 0；`vitest` 68 文件 586 用例；`npm run build` 44.61s；mock E2E 14/14；Podman `--frontend-test` 14/14；治理自测 33/33；严格文档/引用/目录/红线与 `git diff --check` 通过。
+- **真实后端**：`--monitor-reads` 认证/角色/权限/菜单与 5 个监控接口均 HTTP 200/code 0；页面渲染断言间歇超时（一次通过一次失败），登记为未稳定通过。
+- **阻塞**：office/workflow/file/integration 与知识库需部署方授权材料（`VERIFY_AUTHORIZATION_CONFIG_DIR`、可信 CA、reader token、共享身份命名空间），未运行不宣称通过。
+- **状态**：源码指纹 `0f72c3f3…`（HEAD `71d8230`），交独立 R5；未提交、未推送、未部署。
+
 ## 2. 本期已完成（治理基线）
 
 | ID | 优先级 | 任务 | 状态 | 完成日期 | 产出 |
 | --- | --- | --- | --- | --- | --- |
+| FE-031 | P2 | 【P2】注释-全仓事实评审与 JSDoc 契约补全（仅注释/文档字符串） | 已完成 | 2026-11-25 | 产出：219 个 TS/Vue 与 72 个页面/组件/布局逐文件核对，115 个源码/脚本/配置文件注释修正，新增交接记录与两级索引；验证：`check:comments` 221 文件通过、`vue-tsc` 0、`vitest` 68 文件 546 用例全绿、去注释源码等价 115 文件 0 差异、严格治理/目录/红线通过；独立 R5 **APPROVE**（绑定 source diff `0ee9f549…`）；未提交；范围外逻辑问题转 FE-032 | [交接记录](../records/2026-11-25-comment-review-handover.md)；台账 #136 |
+| FE-032 | P1 | 【P1】修复-注释评审移交的逻辑与脚本缺陷 | 已完成 | 2026-11-26 | 产出：修复交接 §5 全部 12 类问题 + R5 四轮建议；下载改 Blob、上传 MIME/压缩/分片/裁剪顺序与 XHR 真实终结、maskGeneral 边界、空态场景 SVG、草稿取消防抖、表格配置校验与导入单写、套餐能力成员判断、重试收窄（4xx/未知不重试、code<0 网络可重试）、生产 `any` 清零；治理台账改 Python append-only 校验、CI 严格门禁+Node 24、上线探测证据边界、E2E 真实 DTO 与并发单飞、单测补真实断言；顺带修 podman-verify 清理残留。验证：`vue-tsc` 0、分片全量 **592 用例 0 失败**、`build` 24.19s、mock E2E **14/14**（四轮复跑均通过）、Podman `--frontend-test` **14/14**、治理自测 **33/33**、严格文档/引用/目录/红线/台账/diff 全通过。独立 R5 **最终 APPROVE**（无必修项，绑定 `ada29c2d…`）。未提交；真实后端 `--system-reads`/`--monitor-reads` 通过（监控组已修同路由重复导航导致的超时，连续 2 次 passed），默认 `npx vitest run` 连续 3 次全量稳定（限制 maxWorkers=4 消除 worker 启动超时）；`--integration-reads` 仍 403，office/workflow/file/integration 受保护链路与知识库需部署方授权材料，未运行 | [记录](../records/2026-11-25-logic-remediation.md)；FE-031；与 FE-029/FE-030 未完成项分开 |
 | FE-026 | P1 | 【P1】联调-修复办公列表、日期与用户状态契约 | 已完成 | 2026-11-18 | 产出：office-approval 裸数组客户端真分页（仅上送 approverId/initiatorId，total/pages/hasNext 与切片一致）、office-calendar `/range` 本地时间换算与读大写/写小写平台归一、用户状态 1=正常 0=禁用；验证：`vue-tsc` 0 error、`vitest` 68 文件 533 用例全绿、真实网关 18 条接口 **18/18**（2026-11-17 登记，记录 §4/§8）；提交 `95a7f62`/`c988870`；R5 复核 **APPROVE**（2026-11-18）；未验证边界（日历写后端客户端、审批发起凭据）见记录 §7.2/§8 | [记录](../records/2026-11-17-integration-contract-repair.md)、[复核报告](../reviews/2026-11-18-fe026-028-review.md)；台账 #37~#42/#48 |
 | FE-027 | P2 | 【P2】注释-全仓质量评审与六批整改（仅注释行，零逻辑变更） | 已完成 | 2026-11-18 | 产出：220 文件 9 组审计（P1×25/P2×9/P3×31）→ 6 批整改：auth-config 失真头注、open-app/sso 幽灵端点、auth/generator 影子头注与虚构权限码、tenant-package features 空集合语义、job/query 端点路径、状态枚举口径（页面渲染取证）；验证：`vue-tsc` 0、`check:comments` 通过、`vitest` 533 全绿；R5 复核 **APPROVE**（全量 diff 非注释行零变更、六项事实抽查全过）；提交 `38e23fc` | [记录](../records/2026-11-18-comment-quality-audit.md)、[复核报告](../reviews/2026-11-18-fe026-028-review.md)；台账 #44/#48 |
 | FE-028 | P2 | 【P2】清理-范围外死代码与预检附录 A 基线同步 | 已完成 | 2026-11-18 | 产出：login/dashboard 死 CSS、auth 死弹窗、零引用 `TaskActions.vue` 删除（AGENTS.md §7.3 同步）、oauth2/callback 无效 `<el-loading>` 改 `v-loading`、AgendaPanel 文案去硬编码；预检附录 A 基线 712→700 行有意更新；验证：grep 零残留、`vue-tsc` 0、`check:comments` 219、`vitest` 533 全绿、`preflight` FAIL=0；R5 复核 **APPROVE_WITH_NITS**（2 条文档级建议已处置，见评审报告 §4）；提交 `62855d2` | [记录（追加段）](../records/2026-11-18-comment-quality-audit.md)、[复核报告](../reviews/2026-11-18-fe026-028-review.md)；台账 #45/#46/#48 |

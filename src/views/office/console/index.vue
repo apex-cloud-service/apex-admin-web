@@ -87,7 +87,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Connection, ChatDotRound, Checked, Calendar } from '@element-plus/icons-vue'
-import { listApps, listBindingsPage, PLATFORM_NAMES, type OfficePlatform } from '@/api/office-platform'
+import { listApps, listBindingsPage, PLATFORM_NAMES, type OfficeAppResponse, type OfficePlatform } from '@/api/office-platform'
 import { showError } from '@/utils/request'
 
 /** ========== 状态定义 ========== */
@@ -95,8 +95,8 @@ import { showError } from '@/utils/request'
 const router = useRouter()
 /** 管理的三大平台（固定顺序渲染卡片） */
 const platforms: OfficePlatform[] = ['FEISHU', 'DINGTALK', 'WECOM']
-/** 各平台应用配置列表 */
-const apps = ref<any[]>([])
+/** 各平台应用配置列表（后端 OfficeAppResponse，仅使用 platform 字段做启用判断） */
+const apps = ref<OfficeAppResponse[]>([])
 /** 各平台绑定统计（来自后端真实 total；null = 未取到，error = 该平台查询失败） */
 const bindingStats = ref<Record<OfficePlatform, { total: number | null; pending: number | null; error: boolean }>>({
   FEISHU: { total: null, pending: null, error: false },

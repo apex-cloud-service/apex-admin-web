@@ -321,7 +321,7 @@ function onPageChange(page: number, size: number): void {
   fetchList()
 }
 
-/** 打开新建租户对话框（同时刷新套餐候选） */
+/** 打开新建租户对话框；套餐候选为空时加载，已有候选时复用缓存，不每次刷新。 */
 function openCreateDialog(): void {
   Object.assign(createForm, {
     tenantCode: '',

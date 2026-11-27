@@ -29,7 +29,7 @@
     - enableChunk: 是否启用分片上传（文件超过单发上限但不超过 chunkMaxSizeMB 时生效）
     - chunkMaxSizeMB: 分片上传允许的最大文件大小（MB，默认 500）
     - compressQuality: 压缩质量（0~1）
-    - compressMaxWidth / compressMaxHeight: 压缩后最大宽/高（px）
+    - compressMaxWidth / compressMaxHeight: 等比压缩后的宽/高上限（px），同时约束两维且不放大
 
   Emits：
     - success(result: FileUploadResult): 上传成功，返回存储路径与访问 URL
@@ -202,9 +202,9 @@ interface Props {
   enablePaste?: boolean
   /** 压缩质量（0~1） */
   compressQuality?: number
-  /** 压缩后最大宽度（px） */
+  /** 等比压缩后的最大宽度（px），与最大高度同时约束 */
   compressMaxWidth?: number
-  /** 压缩后最大高度（px） */
+  /** 等比压缩后的最大高度（px），与最大宽度同时约束 */
   compressMaxHeight?: number
   /** 是否启用大文件分片上传（超过单发上限时走 /api/v1/file/chunk 流程） */
   enableChunk?: boolean
@@ -299,8 +299,8 @@ const uploadProgressText = ref('')
 /**
  * 压缩图片（canvas 重绘）
  *
- * 未启用压缩或非图片文件时原样返回；超过宽/高上限时等比缩放，
- * 再按 compressQuality 质量导出为同类型 File。
+ * 未启用压缩或非图片时原样返回；按两维限制中较小的缩放比例等比限缩，
+ * 不放大原图，再按 compressQuality 导出同类型 File。
  *
  * @param file 原始图片文件
  * @returns 压缩后的文件（失败时 reject）
@@ -320,19 +320,9 @@ const compressImage = (file: File): Promise<File> => {
         let width = img.width
         let height = img.height
 
-        if (width > props.compressMaxWidth || height > props.compressMaxHeight) {
-          if (width > height) {
-            if (width > props.compressMaxWidth) {
-              height = height * (props.compressMaxWidth / width)
-              width = props.compressMaxWidth
-            }
-          } else {
-            if (height > props.compressMaxHeight) {
-              width = width * (props.compressMaxHeight / height)
-              height = props.compressMaxHeight
-            }
-          }
-        }
+        const scale = Math.min(1, props.compressMaxWidth / width, props.compressMaxHeight / height)
+        width = Math.max(1, Math.floor(width * scale))
+        height = Math.max(1, Math.floor(height * scale))
 
         canvas.width = width
         canvas.height = height
@@ -429,8 +419,8 @@ const handleCropperCancel = (): void => {
 /**
  * 确认裁剪：导出裁剪区域为 File 后立即上传
  *
- * 流程：getCroppedCanvas → toBlob → 构造 File → uploadProcessedFile，
- * 全程由 cropping 状态控制确认按钮 loading。
+ * 流程：getCroppedCanvas → toBlob → 构造 File → 等待 uploadProcessedFile 真实终结。
+ * cropping 覆盖裁剪导出与实际 XHR 上传，所有成功/失败分支都在 finally 中结束 loading。
  */
 const handleCropperConfirm = async (): Promise<void> => {
   if (!cropperInstance.value || !pendingFile) return
@@ -478,78 +468,73 @@ const handleCropperConfirm = async (): Promise<void> => {
  * 响应按 Result{code,msg,data} 解包，code=0 时 emit success。
  *
  * @param file 处理完成（压缩/裁剪后）的待上传文件
+ * @returns HTTP 2xx 且 code=0 后兑现；启动、解析、网络、超时和取消错误均拒绝，由调用方提示
  */
 const uploadProcessedFile = async (file: File): Promise<void> => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('sex', toMultipartUploadSex(props.sex))
-  
+
   progressVisible.value = true
   uploadProgress.value = 0
   uploadStatus.value = ''
   uploadProgressText.value = '正在上传...'
-  
-  try {
-    const xhr = new XMLHttpRequest()
-    
-    xhr.upload.addEventListener('progress', (e: ProgressEvent) => {
-      if (e.lengthComputable) {
-        uploadProgress.value = Math.round((e.loaded / e.total) * 100)
-        uploadProgressText.value = `正在上传... ${uploadProgress.value}%`
-      }
-    })
-    
-    xhr.addEventListener('load', () => {
-      if (xhr.status === 200) {
-        // 后端 Result{code,msg,data}；此处按契约收类型，避免 any
-        const response = JSON.parse(xhr.responseText) as { code: number; msg?: string; data: FileUploadResponse }
-        if (response.code === 0) {
+
+  return new Promise<void>((resolve, reject) => {
+    let settled = false
+    const fail = (error: unknown): void => {
+      if (settled) return
+      settled = true
+      uploadStatus.value = 'exception'
+      uploadProgressText.value = error instanceof Error ? error.message : '上传失败'
+      setTimeout(() => {
+        progressVisible.value = false
+      }, 2000)
+      reject(error)
+    }
+
+    try {
+      const xhr = new XMLHttpRequest()
+      xhr.upload.addEventListener('progress', (e: ProgressEvent) => {
+        if (e.lengthComputable && e.total > 0) {
+          uploadProgress.value = Math.round((e.loaded / e.total) * 100)
+          uploadProgressText.value = `正在上传... ${uploadProgress.value}%`
+        }
+      })
+      xhr.addEventListener('load', () => {
+        if (settled) return
+        try {
+          if (xhr.status < 200 || xhr.status >= 300) throw new Error(`上传失败（HTTP ${xhr.status}）`)
+          const response = JSON.parse(xhr.responseText) as { code: number; msg?: string; data?: FileUploadResponse }
+          if (!response || response.code !== 0 || !response.data) {
+            throw new Error(response?.msg || '上传失败')
+          }
+          const result = toFileUploadResult(response.data)
+          settled = true
           uploadStatus.value = 'success'
+          uploadProgress.value = 100
           uploadProgressText.value = '上传成功！'
           setTimeout(() => {
             progressVisible.value = false
-            emit('success', toFileUploadResult(response.data))
-            ElMessage.success('上传成功')
           }, 1000)
-        } else {
-          uploadStatus.value = 'exception'
-          uploadProgressText.value = response.msg || '上传失败'
-          setTimeout(() => {
-            progressVisible.value = false
-            ElMessage.error(response.msg || '上传失败')
-          }, 2000)
+          resolve()
+          emit('success', result)
+          ElMessage.success('上传成功')
+        } catch (error) {
+          fail(error)
         }
-      } else {
-        uploadStatus.value = 'exception'
-        uploadProgressText.value = '上传失败'
-        setTimeout(() => {
-          progressVisible.value = false
-          ElMessage.error('上传失败')
-        }, 2000)
-      }
-    })
-    
-    xhr.addEventListener('error', () => {
-      uploadStatus.value = 'exception'
-      uploadProgressText.value = '上传失败'
-      setTimeout(() => {
-        progressVisible.value = false
-        ElMessage.error('上传失败')
-      }, 2000)
-    })
-    
-    xhr.open('POST', uploadUrl.value)
-    xhr.setRequestHeader('Authorization', uploadHeaders.value.Authorization)
-    xhr.send(formData)
-  } catch (error) {
-    console.error('上传失败：', error)
-    uploadStatus.value = 'exception'
-    uploadProgressText.value = '上传失败'
-    setTimeout(() => {
-      progressVisible.value = false
-      showError(error, '上传失败')
-    }, 2000)
-  }
+      })
+      xhr.addEventListener('error', () => fail(new Error('上传网络错误')))
+      xhr.addEventListener('timeout', () => fail(new Error('上传超时')))
+      xhr.addEventListener('abort', () => fail(new Error('上传已取消')))
+      xhr.open('POST', uploadUrl.value)
+      xhr.timeout = 30000
+      xhr.setRequestHeader('Authorization', uploadHeaders.value.Authorization)
+      xhr.send(formData)
+    } catch (error) {
+      fail(error)
+    }
+  })
 }
 
 /**
@@ -622,41 +607,45 @@ const uploadByChunks = async (file: File): Promise<void> => {
 /**
  * 上传前校验与预处理（el-upload before-upload）
  *
- * 校验大小与 MIME 类型；超过单发上限且 enableChunk 开启时改走 uploadByChunks 分片上传
- * （返回 false 中断 el-upload 默认通道）；启用压缩时先压缩；启用裁剪时打开裁剪弹窗
- * 并返回 false 中断 el-upload 默认上传（改由裁剪确认后独立上传）。
+ * 顺序固定为：MIME 校验 → 图片压缩（enableCompress）→ 按处理后文件判断大小
+ * → 超限且 enableChunk 走分片（返回 false 中断 el-upload 默认通道）
+ * → 图片裁剪（enableCropper，返回 false 后由裁剪确认走独立 XHR）。
+ *
+ * 分片分支之前已完成 MIME 与可选压缩，因此不会再绕过这两步；
+ * 裁剪在分片之后判断，超限文件优先走分片而不进入裁剪。
  *
  * @param rawFile 待上传的原始文件
- * @returns false=中断上传；File=替换为处理后的文件继续上传
+ * @returns false=中断 el-upload 默认通道（拒绝、裁剪或已启动分片）；File=处理后继续默认上传
  */
 const beforeUpload: UploadProps['beforeUpload'] = async (rawFile: UploadRawFile): Promise<boolean | File> => {
-  if (rawFile.size > MAX_UPLOAD_SIZE) {
-    if (props.enableChunk && rawFile.size <= props.chunkMaxSizeMB * 1024 * 1024) {
-      void uploadByChunks(rawFile)
-      return false
-    }
-    ElMessage.error(`文件大小不能超过 ${maxSizeMB} MB`)
-    return false
-  }
-  
   const allowedTypes = props.accept.split(',').map(t => t.trim())
   if (!allowedTypes.includes(rawFile.type)) {
     ElMessage.error(`仅支持上传 ${acceptText.value} 格式的文件`)
     return false
   }
-  
+
   try {
     let processedFile: File = rawFile
-    
+
     if (props.enableCompress && rawFile.type.startsWith('image/')) {
       processedFile = await compressImage(rawFile)
     }
-    
-    if (props.enableCropper && rawFile.type.startsWith('image/')) {
+
+    // 大小以处理后的文件为准：压缩后可能已低于单发上限
+    if (processedFile.size > MAX_UPLOAD_SIZE) {
+      if (props.enableChunk && processedFile.size <= props.chunkMaxSizeMB * 1024 * 1024) {
+        void uploadByChunks(processedFile)
+        return false
+      }
+      ElMessage.error(`文件大小不能超过 ${maxSizeMB} MB`)
+      return false
+    }
+
+    if (props.enableCropper && processedFile.type.startsWith('image/')) {
       await showCropper(processedFile)
       return false
     }
-    
+
     return processedFile
   } catch (error) {
     console.error('文件处理失败：', error)
@@ -666,14 +655,24 @@ const beforeUpload: UploadProps['beforeUpload'] = async (rawFile: UploadRawFile)
 }
 
 /**
+ * 判断某个文件是否走裁剪通道（而非 el-upload 默认通道）。
+ * 裁剪仅在 enabled 且为图片时生效；非图片仍走默认通道，必须 emit success。
+ */
+function isCropperChannel(file?: File | null): boolean {
+  return props.enableCropper && (file?.type.startsWith('image/') ?? false)
+}
+
+/**
  * 上传进度回调（el-upload 路径）
  *
- * 裁剪模式下进度由独立的 uploadProcessedFile 驱动，此处跳过避免重复弹窗。
+ * Element Plus 的 onProgress 签名为 (event, uploadFile)：raw 在第二个参数的 uploadFile 上。
+ * 仅在本文件未进入裁剪通道时驱动进度弹窗，避免与 uploadProcessedFile 重复弹窗。
  *
  * @param event 进度事件（percent 为 0~100）
+ * @param uploadFile 当前上传的文件项（含 raw 原始文件）
  */
-const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent): void => {
-  if (!props.enableCropper) {
+const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent, uploadFile?: UploadUserFile): void => {
+  if (!isCropperChannel(uploadFile?.raw)) {
     progressVisible.value = true
     uploadProgress.value = Math.round(event.percent || 0)
     uploadStatus.value = ''
@@ -685,7 +684,8 @@ const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent): 
  * 上传成功回调（el-upload 路径）
  *
  * 按 Result{code,msg,data} 解包：code=0 时更新列表预览 URL 并 emit success；
- * 失败时提示并从列表中移除对应文件。裁剪模式下由独立上传通道处理，此处跳过。
+ * 失败时提示并从列表中移除对应文件。仅裁剪通道（图片 + 已启用裁剪）跳过，
+ * 非图片仍走默认通道并必须 emit success。
  *
  * @param response 后端原始响应（未解包的 Result 结构）
  * @param uploadFile 触发本次上传的文件项
@@ -693,7 +693,7 @@ const handleProgress: UploadProps['onProgress'] = (event: UploadProgressEvent): 
 const handleSuccess: UploadProps['onSuccess'] = (response, uploadFile: UploadUserFile): void => {
   // 后端响应为 Result{code,msg,data}，此处按契约收紧类型
   const payload = response as { code: number; msg?: string; data: FileUploadResponse }
-  if (!props.enableCropper) {
+  if (!isCropperChannel(uploadFile?.raw)) {
     if (payload.code === 0) {
       uploadStatus.value = 'success'
       uploadProgressText.value = '上传成功！'
@@ -762,7 +762,7 @@ const handleRemove: UploadProps['onRemove'] = (file: UploadUserFile): void => {
  * @param e 粘贴事件
  */
 const handlePaste = async (e: ClipboardEvent): Promise<void> => {
-  if (!props.enablePaste) return
+  if (!props.enablePaste || props.disabled || e.defaultPrevented) return
   
   const items = e.clipboardData?.items
   if (!items) return
@@ -775,12 +775,17 @@ const handlePaste = async (e: ClipboardEvent): Promise<void> => {
         e.preventDefault()
         
         const result = await beforeUpload(file as UploadRawFile)
-        if (result === false) return
+        // 单个文件被拒（类型/大小/已转分片）不应跳过其余剪贴板项
+        if (result === false) continue
         
         const processedFile = result instanceof File ? result : file
         
         if (!props.enableCropper) {
-          await uploadProcessedFile(processedFile)
+          try {
+            await uploadProcessedFile(processedFile)
+          } catch (error) {
+            showError(error, '粘贴上传失败')
+          }
         }
       }
     }

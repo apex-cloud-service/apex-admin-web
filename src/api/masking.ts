@@ -6,8 +6,8 @@
  *        响应 data：Map<版本, Map<字段路径, {type, customRule}>>
  * - POST /api/v1/masking/batch - 批量脱敏（1~100 个 JSON 文档，请求体上限 256KB）
  *
- * ⚠️ 网关路由现状：dev 有 masking-domain 路由；application-prod.yml 路由列表未声明
- * masking-domain（列表整体覆盖不合并），生产环境该组接口 404，需后端补路由。
+ * 本模块只确认前端调用路径；规则服务的独立部署名称及 dev/prod 网关
+ * 是否暴露该路径，须在目标后端配置与运行环境中核验。
  */
 import { get, post } from '@/utils/request'
 import type { MaskingBatchResult, MaskingRule } from '@/types'

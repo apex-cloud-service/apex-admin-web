@@ -63,25 +63,45 @@ if [ -d docs/archived/ai-sessions/zcode-plans ]; then
 fi
 
 echo "== 8. 活文档私有路径与断链 =="
-REFS=$("$ROOT/scripts/governance/check-doc-refs.sh" 2>&1 | tail -1 | grep -oE '[0-9]+' | head -1)
-if [ "${REFS:-0}" -gt 0 ]; then
+REFS_OUT="$("$ROOT/scripts/governance/check-doc-refs.sh" 2>&1)"
+REFS_EXIT=$?
+REFS="$(printf '%s\n' "$REFS_OUT" | tail -1 | grep -oE '[0-9]+' | head -1)"
+if [ "$REFS_EXIT" -ne 0 ]; then
+  warn "check-doc-refs 执行失败（exit ${REFS_EXIT}），不能据此判定断链检查通过"
+elif [ -z "$REFS" ]; then
+  warn "check-doc-refs 输出无法解析问题数，不能据此判定断链检查通过"
+elif [ "$REFS" -gt 0 ]; then
   warn "check-doc-refs 发现 ${REFS} 项（明细见 bash scripts/governance/check-doc-refs.sh）"
 else
-  pass "活文档无私有路径残留、无断链"
+  pass "活文档无私有路径残留、无断链（check-doc-refs 0 项）"
 fi
 
 echo "== 9. 图表资产配对（.mmd ↔ 同名 .svg）=="
 if [ -f scripts/governance/check-diagram-assets.sh ]; then
-  out=$(bash scripts/governance/check-diagram-assets.sh 2>&1 | tail -2)
-  if echo "$out" | grep -q "缺失 0"; then pass "图表配对完整（${out//$'\n'/ }）"; else warn "图表配对有缺口：$(echo "$out" | tr '\n' ' ')"; fi
+  DIAGRAM_OUT="$(bash scripts/governance/check-diagram-assets.sh 2>&1)"
+  DIAGRAM_EXIT=$?
+  if [ "$DIAGRAM_EXIT" -ne 0 ]; then
+    warn "图表配对检查执行失败（exit ${DIAGRAM_EXIT}）"
+  elif echo "$DIAGRAM_OUT" | grep -q "缺失 0"; then
+    pass "图表配对完整（$(echo "$DIAGRAM_OUT" | tail -2 | tr '\n' ' ')）"
+  else
+    warn "图表配对有缺口：$(echo "$DIAGRAM_OUT" | tr '\n' ' ')"
+  fi
 else
   warn "缺少 scripts/governance/check-diagram-assets.sh"
 fi
 
 echo "== 10. 目录结构规范化（docs README / 总览覆盖 / 根目录 / reports 分层）=="
 if [ -f scripts/governance/check-doc-layout.sh ]; then
-  layout=$(bash scripts/governance/check-doc-layout.sh 2>&1)
-  if echo "$layout" | grep -q "自检通过"; then pass "目录结构规范（13 个 docs 一级目录均有 README 且被总览覆盖，reports 已分层）"; else warn "目录结构有问题：$(echo "$layout" | grep '\[WARN\]' | tr '\n' ' ')"; fi
+  LAYOUT_OUT="$(bash scripts/governance/check-doc-layout.sh 2>&1)"
+  LAYOUT_EXIT=$?
+  if [ "$LAYOUT_EXIT" -ne 0 ]; then
+    warn "目录结构检查执行失败（exit ${LAYOUT_EXIT}）"
+  elif echo "$LAYOUT_OUT" | grep -q "自检通过"; then
+    pass "目录结构规范（13 个 docs 一级目录均有 README 且被总览覆盖，reports 已分层）"
+  else
+    warn "目录结构有问题：$(echo "$LAYOUT_OUT" | grep '\[WARN\]' | tr '\n' ' ')"
+  fi
 else
   warn "缺少 scripts/governance/check-doc-layout.sh"
 fi

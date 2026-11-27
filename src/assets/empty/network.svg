@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="网络异常">
+  <rect width="160" height="160" fill="#f5f7fa"/>
+  <path d="M46 96c10-14 22-21 34-21s24 7 34 21" fill="none" stroke="#c0c4cc" stroke-width="4" stroke-linecap="round"/>
+  <path d="M60 108c7-8 13-12 20-12s13 4 20 12" fill="none" stroke="#c0c4cc" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="80" cy="120" r="4" fill="#f56c6c"/>
+  <path d="M108 52l14 14M122 52l-14 14" stroke="#f56c6c" stroke-width="4" stroke-linecap="round"/>
+</svg>

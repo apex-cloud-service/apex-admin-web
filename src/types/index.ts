@@ -1,8 +1,8 @@
 /**
  * 全局类型定义
  * ------------------------------------------------------------------
- * 与后端统一响应/分页/各业务 DTO 对应的 TypeScript 类型。
- * 字段命名与后端 JSON 保持完全一致（camelCase）。
+ * 包含后端请求/响应 DTO，以及前端适配与聚合展示模型。
+ * 字段口径以各类型局部说明和转换实现为准，不能假定所有类型与后端 JSON 完全同构。
  *
  * 字段口径已与后端（apex-scaffold）逐项核对：
  * - 统一响应 Result{code,msg,data,traceId}，成功 code=0
@@ -22,15 +22,21 @@ export interface Result<T = unknown> {
 
 /** 统一分页响应结构（与后端 PageResponse 对齐） */
 export interface PageResponse<T = unknown> {
+  /** 当前页数据列表（与 records/total 口径的工作流实例响应不同） */
   list: T[]
+  /** 服务端匹配总数，或明确标注客户端筛选口径的总数 */
   total: number
+  /** 页码，常规接口从 1 开始；实际以对应 API 为准 */
   pageNum: number
+  /** 每页数量 */
   pageSize: number
+  /** 总页数 */
   pages: number
+  /** 是否还有下一页，部分接口不返回 */
   hasNext?: boolean
 }
 
-/** 分页查询基础参数（后台管理接口统一 page/size） */
+/** 使用 page/size 口径的查询基础参数；不适用于要求 pageNum/pageSize 的接口。 */
 export interface PageQuery {
   page: number
   size: number
@@ -180,6 +186,7 @@ export interface DeptNode {
   children?: DeptNode[]
 }
 
+/** 字典类型/数据项的主键 ID；部分环境后端返回字符串形态，路径拼接前须经 api/system.ts#dictIdSegment 校验 */
 export type DictId = string | number
 
 /** 字典类型（/admin-api/v1/dict/types） */
@@ -248,6 +255,7 @@ export interface JobLog {
   exceptionInfo?: string
   startTime?: string
   endTime?: string
+  /** 执行耗时（毫秒） */
   duration?: number
 }
 
@@ -277,6 +285,7 @@ export interface AuditLog {
   requestUrl?: string
   requestParams?: string
   responseResult?: string
+  /** 操作耗时（毫秒） */
   duration?: number
   status: 'SUCCESS' | 'FAILED' | string
   createTime?: string
@@ -348,6 +357,7 @@ export interface ApiCallLog {
   path?: string
   url?: string
   responseStatus?: string
+  /** 请求执行耗时（毫秒） */
   executionTime?: number
   /** 0=成功 1=客户端错误 2=服务端错误 3=网络异常 */
   status: number
@@ -378,9 +388,11 @@ export interface MonitorOverview {
   uptimeSeconds: number
   startTime?: string
   timestamp: number
-  /** JVM 堆内存 */
+  /** 已使用 JVM 堆内存（字节） */
   heapUsed: number
+  /** JVM 堆内存上限（字节） */
   heapMax: number
+  /** 堆内存使用比例，0～1；展示百分数时乘 100 */
   heapUsedPercent: number
   /** 非堆内存 */
   nonHeapUsed: number
@@ -391,7 +403,7 @@ export interface MonitorOverview {
   threadCount: number
   /** 活跃会话数（Redis 派生，NaN 表示不可用） */
   activeSessions?: number
-  /** 今日请求量（进程启动以来累计） */
+  /** 累计请求量（进程启动以来累计，并非自然日统计） */
   totalRequests: number
   /** 4xx 错误数 */
   error4xx: number
@@ -419,12 +431,16 @@ export interface MonitorOverview {
 export interface MonitorSystem {
   timestamp: number
   jvm: {
+    /** 已使用堆内存（字节） */
     heapUsed: number
     heapCommitted: number
+    /** 堆内存上限（字节） */
     heapMax: number
     nonHeapUsed: number
     nonHeapCommitted: number
+    /** 堆内存使用比例，0～1；展示百分数时乘 100 */
     heapUsedPercent: number
+    /** 累计 GC 停顿耗时（毫秒） */
     gcPauseTotal: number
     gcPauseCount: number
     classLoaded: number
@@ -460,8 +476,11 @@ export interface MonitorSystem {
 export interface DiskUsage {
   mount: string
   type: string
+  /** 磁盘总容量（字节） */
   total: number
+  /** 空闲容量（字节） */
   free: number
+  /** 可用容量（字节） */
   usable: number
   usedPercent: number
 }
@@ -481,7 +500,9 @@ export interface NetworkUsage {
   txErrors: number
   rxDropped: number
   txDropped: number
+  /** 错误比例，展示百分数时乘 100 */
   errorRate: number
+  /** 带宽利用比例，展示百分数时乘 100 */
   bandwidthUtilization: number
   activeConnections: number
   available: boolean
@@ -494,6 +515,7 @@ export interface BlockingIoPool {
   activeTasks: number
   queuedTasks: number
   completedTasks: number
+  /** 线程池饱和比例，展示百分数时乘 100 */
   saturation: number
   up: boolean
 }
@@ -507,6 +529,7 @@ export interface MonitorMiddleware {
     activeConnections: number
     maxConnections: number
     idleConnections: number
+    /** 活跃连接占比，展示百分数时乘 100 */
     activeConnectionRatio: number
     totalRequests?: number
     totalErrors?: number
@@ -598,9 +621,13 @@ export interface GatewayStats {
   currentQps: number
   currentTps: number
   peakQps: number
+  /** 成功比例，展示百分数时乘 100 */
   successRate: number
+  /** P50 响应耗时（毫秒） */
   p50ResponseTime: number
+  /** P95 响应耗时（毫秒） */
   p95ResponseTime: number
+  /** P99 响应耗时（毫秒） */
   p99ResponseTime: number
   topPaths: PathTraffic[]
 }
@@ -621,9 +648,11 @@ export interface PathTraffic {
   path: string
   method?: string
   count: number
+  /** 平均耗时（毫秒） */
   avgTime: number
   maxTime?: number
   errorCount?: number
+  /** 错误比例，展示百分数时乘 100 */
   errorRate: number
 }
 
@@ -1545,7 +1574,7 @@ export interface OnlineStatistics {
   timestamp?: string
 }
 
-/* ==================== 跨域只读聚合概览（/internal/v1/overview，D5） ==================== */
+/* ==================== 跨域只读聚合概览（GET /api/v2/overview，D5） ==================== */
 
 /** 聚合数据源结果（UP=可用 DEGRADED=降级） */
 export interface OverviewSourceResult {
@@ -1554,7 +1583,7 @@ export interface OverviewSourceResult {
   error?: string
 }
 
-/** 跨域只读概览（后端 OverviewResponse，内部端点不经网关） */
+/** 跨域概览响应；前端读取 /api/v2/overview，与内部 /internal/v1/overview 共用模型，浏览器不调用内部端点。 */
 export interface CrossDomainOverview {
   tenantId: string
   generatedAt?: string
@@ -1566,7 +1595,7 @@ export interface CrossDomainOverview {
 /** 我的事项区块领域（工作流/办公审批/站内信/近期日程/系统通知） */
 export type AgendaDomain = 'workflow' | 'office-approval' | 'message' | 'calendar' | 'notification'
 
-/** 我的事项条目（原始字段透传展示，不做跨域语义归一化） */
+/** 五域聚合展示条目；各域适配为统一标题、类型与跳转等字段，时间值保持后端原值。 */
 export interface AgendaItem {
   domain: AgendaDomain
   /** 原始类型（TASK / messageType / msgType / APPROVAL / EVENT） */
@@ -1659,6 +1688,7 @@ export interface KnowledgeDocument {
   /** UPLOAD / MANUAL */
   sourceType: string
   contentType?: string
+  /** 文件大小（字节） */
   fileSize?: number
   /** PENDING / PARSING / PARSED / FAILED */
   parseStatus: string

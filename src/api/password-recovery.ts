@@ -44,6 +44,7 @@ export interface PasswordRecoveryConfirmResult {
  * 发起密码找回申请
  * @param channel 找回通道（EMAIL/SMS）
  * @param contact 已绑定的邮箱或手机号
+ * @returns recoveryId 与 expiresIn（秒），用于后续验证码校验
  */
 export function initiatePasswordRecovery(
   channel: PasswordRecoveryChannel,
@@ -56,6 +57,7 @@ export function initiatePasswordRecovery(
  * 校验找回验证码
  * @param recoveryId 恢复单 ID
  * @param code 验证码
+ * @returns 一次性 confirmToken 与 expiresIn（秒）；本函数不重设密码
  */
 export function verifyPasswordRecovery(
   recoveryId: string,
@@ -72,6 +74,7 @@ export function verifyPasswordRecovery(
  * @param recoveryId 恢复单 ID
  * @param confirmToken 一次性确认令牌
  * @param newPassword 新密码
+ * @returns 重设处理状态；sessionRevocation=PENDING 表示会话撤销尚未完成，不是重设失败
  */
 export function confirmPasswordRecovery(
   recoveryId: string,

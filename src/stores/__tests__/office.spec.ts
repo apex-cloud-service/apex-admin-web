@@ -1,7 +1,7 @@
 /**
  * 办公平台状态单元测试
  * ------------------------------------------------------------------
- * 覆盖当前平台设置、各平台绑定状态记录与登出清理。
+ * 覆盖当前平台设置、各平台绑定状态记录与手动 reset 清理，不验证生产登出接线。
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'

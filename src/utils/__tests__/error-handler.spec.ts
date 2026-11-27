@@ -171,8 +171,8 @@ describe('retryRequest', () => {
   it('瞬时失败按指数退避重试后成功', async () => {
     const fn = vi
       .fn()
-      .mockRejectedValueOnce(new Error('t1'))
-      .mockRejectedValueOnce(new Error('t2'))
+      .mockRejectedValueOnce(new NetworkError('t1'))
+      .mockRejectedValueOnce(new NetworkError('t2'))
       .mockResolvedValue('ok')
     vi.spyOn(console, 'log').mockImplementation(() => {})
 
@@ -191,8 +191,70 @@ describe('retryRequest', () => {
     }
   })
 
+  it('识别 request.ts 的 ApiError（不同构造器、同名不同类）并跳过 4xx 重试', async () => {
+    // 模拟 request.ts 抛出的异常：name='ApiError'，非本地类实例
+    const foreign = Object.assign(new Error('token expired'), { name: 'ApiError', code: 401 })
+    const fn = vi.fn().mockRejectedValue(foreign)
+
+    await expect(retryRequest(fn, 3, 1000)).rejects.toThrow('token expired')
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  it('其他 4xx（如 409/422）同样不重试', async () => {
+    for (const code of [409, 422]) {
+      const foreign = Object.assign(new Error('conflict'), { name: 'ApiError', code })
+      const fn = vi.fn().mockRejectedValue(foreign)
+      await expect(retryRequest(fn, 3, 1000)).rejects.toThrow('conflict')
+      expect(fn).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('5xx 继续重试', async () => {
+    const foreign = Object.assign(new Error('server error'), { name: 'ApiError', code: 500 })
+    const fn = vi.fn().mockRejectedValueOnce(foreign).mockResolvedValueOnce('ok')
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const promise = retryRequest(fn, 3, 1000)
+    await vi.advanceTimersByTimeAsync(1000)
+
+    await expect(promise).resolves.toBe('ok')
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
+  it('shouldRetry 返回 false 时立即停止重试', async () => {
+    const fn = vi.fn().mockRejectedValue(new NetworkError('offline'))
+    await expect(
+      retryRequest(fn, 3, 1000, true, () => false),
+    ).rejects.toThrow('offline')
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  it('未知错误默认不重试，即使调用方谓词返回 true', async () => {
+    const fn = vi.fn().mockRejectedValue(new Error('validation failed'))
+    await expect(retryRequest(fn, 3, 1000, true, () => true)).rejects.toThrow('validation failed')
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  it('request.ts 的网络错误（code=-1）按网络类重试', async () => {
+    const foreign = Object.assign(new Error('Network Error'), { name: 'ApiError', code: -1 })
+    const fn = vi.fn().mockRejectedValueOnce(foreign).mockResolvedValueOnce('ok')
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const promise = retryRequest(fn, 3, 1000)
+    await vi.advanceTimersByTimeAsync(1000)
+
+    await expect(promise).resolves.toBe('ok')
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
+  it('shouldRetry 不能放行 4xx', async () => {
+    const fn = vi.fn().mockRejectedValue(new ApiError(403, 'forbidden'))
+    await expect(retryRequest(fn, 3, 1000, true, () => true)).rejects.toThrow('forbidden')
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
   it('重试次数用尽后抛出最后一次错误', async () => {
-    const fn = vi.fn().mockRejectedValue(new Error('always-fail'))
+    const fn = vi.fn().mockRejectedValue(new NetworkError('always-fail'))
     vi.spyOn(console, 'log').mockImplementation(() => {})
 
     const promise = retryRequest(fn, 3, 1000)

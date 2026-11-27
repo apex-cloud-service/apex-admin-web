@@ -311,7 +311,7 @@ onMounted(() => {
   window.addEventListener('resize', handleResize)
 })
 
-// 主题切换后重绘图表（沿用渲染函数内的配色逻辑）
+// 主题变化时重绘；渲染函数使用固定/默认颜色，不根据 theme 选择明暗配色
 watch(
   () => appStore.theme,
   () => {

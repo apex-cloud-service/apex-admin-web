@@ -8,7 +8,7 @@
  * 随机时间段，直接提交会泄露本机目录结构，并在跨机器执行时产生无意义 diff。
  *
  * 处理内容：
- *   1. 绝对路径 → 仓库相对路径（`src/...`）
+ *   1. 当前仓库根路径前缀 → 相对路径（`src/...`），不处理其他机器或仓库外路径
  *   2. JUnit 的 hostname 统一为 `localhost`
  *   3. 覆盖率摘要的绝对路径键 → 相对路径键
  *
@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const REPORTS = path.join(ROOT, 'reports')
 
-/** 把任意绝对路径改写为相对仓库根目录的 POSIX 路径 */
+/** 删除字符串中的当前仓库根路径并统一分隔符；不处理仓库外或其他机器的绝对路径。 */
 function toRelative(value) {
   if (typeof value !== 'string') return value
   const normalized = value.replaceAll(ROOT + path.sep, '').replaceAll(ROOT, '')

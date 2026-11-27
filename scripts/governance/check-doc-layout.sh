@@ -5,7 +5,8 @@
 #   2) 一级目录在 EXPECTED 白名单内（新增目录须同步本文与总览表）
 #   3) docs/README.md「🗂 目录总览」覆盖全部一级目录
 #   4) 仓库根目录无散落业务 Markdown（白名单之外报缺）
-#   5) reports/ 按类型分层：e2e/ unit/ coverage/ lighthouse/ stress/ audit/ 存在说明件
+#   5) reports/ 的 e2e/unit/coverage/lighthouse/stress 目录与 reports/README.md 存在。
+#      audit 目录可选；不检查各子目录自己的说明件。
 # 只读；默认警告，--strict exit 1
 set -uo pipefail
 cd "$(dirname "$0")/../.." || exit 2

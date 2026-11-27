@@ -47,7 +47,7 @@ export interface ChartPayload {
 /**
  * 分页查询图表列表
  * @param params 查询参数（关键词、类型、分类、状态等）
- * @returns 分页结果
+ * @returns Chart 分页（list 为当前页，total 为服务端匹配总数）
  */
 export function listCharts(params: ChartListQuery): Promise<PageResponse<Chart>> {
   return get<PageResponse<Chart>>('/admin-api/v1/charts', params as unknown as Record<string, unknown>)

@@ -71,7 +71,7 @@ export interface OfficeAppResponse {
   appId: string
   /** OAuth2 授权回调地址 */
   redirectUri: string
-  /** 是否启用（启用后登录页展示该平台入口） */
+  /** 是否启用该平台配置；当前登录页未调用本模块的应用配置查询接口 */
   enabled: boolean
   /** 版本号（乐观锁，更新/删除时回传） */
   version: number
@@ -101,7 +101,7 @@ export interface OfficeBindingResponse {
   platform: OfficePlatform
   /** 平台侧用户唯一标识 */
   externalUserId: string
-  /** 绑定状态（如 PENDING=待审批 / APPROVED=已绑定 / UNBOUND=已解绑） */
+  /** 绑定状态：PENDING=待审批、APPROVED=已绑定、REJECTED=已拒绝、REVOKED=已解绑 */
   status: string
   /** 是否生效 */
   enabled: boolean
@@ -117,7 +117,7 @@ export interface OfficeBindingReviewRequest {
   version: number
 }
 
-/** ========== 公开接口（登录页使用） ========== */
+/** ========== 平台授权回调（回调页使用，不表示当前登录页接入办公授权入口） ========== */
 
 /**
  * 办公平台授权回调：用授权码换取本系统会话令牌
@@ -195,7 +195,8 @@ export function deleteApp(platform: OfficePlatform, version: number): Promise<bo
 /** ========== 绑定审批管理（管理端） ========== */
 
 /**
- * 分页查询账号绑定列表（数组口径，固定 page=1,size=100 时用于统计概览）
+ * 查询账号绑定的单页记录（旧数组口径，不含总数）。
+ * 需要真实总数或状态过滤时使用 listBindingsPage；当前控制台统计也使用该分页接口。
  *
  * @param platform 平台类型
  * @param page 页码（从 1 开始）

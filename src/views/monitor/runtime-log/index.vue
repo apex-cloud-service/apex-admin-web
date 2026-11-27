@@ -110,7 +110,7 @@ import { showError } from '@/utils/request'
 const loading = ref(false)
 /** 日志列表（无分页，一次返回） */
 const logList = ref<RuntimeLog[]>([])
-/** 符合条件的日志总数（列表按 limit 截断时用于提示全量规模） */
+/** 时间与级别范围内的日志总数；计数请求不含 logger/message，不能表示所有列表筛选后的总量。 */
 const logTotal = ref<number | null>(null)
 /** 时间范围（yyyy-MM-dd HH:mm:ss 字符串） */
 const timeRange = ref<string[]>([])

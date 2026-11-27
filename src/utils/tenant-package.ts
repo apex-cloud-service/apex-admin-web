@@ -37,6 +37,21 @@ export function withParentChain(ids: number[], tree: MenuNode[]): number[] {
   return Array.from(result)
 }
 
+/**
+ * 判断已选能力是否覆盖能力目录全部编码（按编码成员比对，而非数量）。
+ * @param features 已选能力编码
+ * @param catalogCodes 能力目录全部编码
+ * @returns true=目录非空且每个编码均已选中；空集合或目录为空时返回 false（未订阅/无法判定）
+ */
+export function isAllFeaturesSelected(
+  features: readonly string[] | undefined,
+  catalogCodes: readonly string[],
+): boolean {
+  if (!features?.length || !catalogCodes.length) return false
+  const selected = new Set(features)
+  return catalogCodes.every((code) => selected.has(code))
+}
+
 /** 套餐表单与选项快照 */
 export interface PackagePayloadInput {
   packageCode: string

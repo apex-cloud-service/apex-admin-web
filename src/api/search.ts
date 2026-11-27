@@ -48,7 +48,8 @@ export interface SearchParams {
 
 /**
  * 全文搜索
- * @param params 搜索参数（keyword 必填，types 可选资源类型数组）
+ * @param params keyword 必填；types 可选并以逗号分隔发送，page/size 缺省为 1/20
+ * @returns SearchResult 分页（list/total），高亮片段和资源跳转由调用方处理
  */
 export function search(params: SearchParams): Promise<PageResponse<SearchResult>> {
   return get<PageResponse<SearchResult>>('/admin-api/v1/search', {

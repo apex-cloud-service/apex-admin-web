@@ -1,10 +1,9 @@
 /**
  * Vitest 全局测试环境搭建
  * ------------------------------------------------------------------
- * 在所有用例执行前补充 happy-dom 缺失的浏览器 API：
- *   - ResizeObserver：ECharts/布局组件依赖
- *   - window.matchMedia：Element Plus 响应式断点依赖
- * 由 vitest.config.ts 的 setupFiles 引入。
+ * 提供确定性的浏览器 API 桩，无条件覆盖 ResizeObserver 与 window.matchMedia。
+ * ResizeObserver 仅提供方法形状；matchMedia 固定 matches=false，不模拟媒体查询变化。
+ * 由 vitest.config.ts 的 setupFiles 引入，不等同真实浏览器行为。
  */
 import { vi } from 'vitest'
 

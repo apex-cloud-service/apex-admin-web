@@ -45,7 +45,8 @@ export function getCurrentUserInfo(): Promise<UserIdentity> {
 
 /**
  * 分页查询后台用户列表。
- * @param params 分页与筛选参数
+ * @param params page/size 与可选 keyword/status 筛选
+ * @returns 后台用户分页（list/total），不包含当前用户的权限初始化结果
  */
 export function listUsers(params: UserListQuery): Promise<PageResponse<AdminUser>> {
   return get<PageResponse<AdminUser>>('/admin-api/v1/users', params as unknown as Record<string, unknown>)

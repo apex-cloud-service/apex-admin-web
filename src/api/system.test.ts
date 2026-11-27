@@ -3,7 +3,8 @@
  * ------------------------------------------------------------------
  * 覆盖：HTTP 方法、路径与关键参数透传（易错契约：部门字段为 name/orderNum；
  * 参数配置与定时任务列表为全量数组、任务分页才走 /jobs/page 的
- * pageNum/pageSize；各资源启停统一提交 { enabled } 布尔请求体）。
+ * pageNum/pageSize；各资源启停统一提交 { enabled } 布尔请求体）；字典写
+ * 操作对大整数字符串 ID 的原样透传与不安全数字 ID 的拒发（dictIdSegment）。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

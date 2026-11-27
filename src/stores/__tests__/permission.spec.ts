@@ -4,7 +4,7 @@
  * 覆盖 hasPermission 的判定口径：
  * - 空权限码与空权限集合放行
  * - 单码命中、逗号多码任一命中
- * - 权限数组包含空白项时按 trim 匹配
+ * - 查询权限码的逗号片段按 trim 处理；权限集合本身按原值精确匹配
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'

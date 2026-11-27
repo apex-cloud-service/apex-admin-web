@@ -49,7 +49,7 @@ function page<T>(list: T[], total: number): PageResponse<T> {
   return { list, total, pageNum: 1, pageSize: 5, pages: 1 }
 }
 
-/** 默认成功响应（workflow 2 条 + total 6 用于 truncated 判定） */
+/** 默认成功响应（workflow 1 条 + total 6 用于 truncated 判定） */
 function mockAllSuccess(): void {
   getMyPendingTasksMock.mockResolvedValue(
     page([{ id: 1, taskName: '任务A', assigneeName: '张三', startTime: '2026-11-11 10:00:00' }], 6),

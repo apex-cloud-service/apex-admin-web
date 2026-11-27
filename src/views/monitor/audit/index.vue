@@ -47,7 +47,7 @@
 <script setup lang="ts">
 /**
  * 操作审计日志脚本
- * - 分页 + 关键字筛选（操作人/模块/URL）
+ * - 分页与操作人/模块筛选；URL 仅展示，不作为当前查询条件
  */
 import { onMounted, reactive, ref } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'

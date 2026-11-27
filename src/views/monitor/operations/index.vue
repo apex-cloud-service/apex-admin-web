@@ -283,7 +283,7 @@
 <script setup lang="ts">
 /**
  * 运维健康脚本
- * - 报告/快照/趋势/导出四块；除现场采集快照为写操作外，其余为查询或导出
+ * - 报告/快照/趋势/导出/租户摘要五块；写操作包括现场采集快照与异步导出任务提交
  * - 快照分页使用后端 page/size 口径
  */
 import { computed, onMounted, reactive, ref } from 'vue'

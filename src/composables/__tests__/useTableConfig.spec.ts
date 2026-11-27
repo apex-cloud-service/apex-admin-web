@@ -6,10 +6,26 @@
  * - 保存后可重新加载，且新增默认列会合并进已存配置
  * - 列可见性/宽度、筛选与排序更新
  * - 重置与导入导出
+ * - 持久化结构非法时回退默认值，导入失败不替换状态
+ * - 默认列快照与深拷贝隔离
  */
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTableConfig } from '@/composables/useTableConfig'
 import { TABLE_CONFIG_KEY_PREFIX } from '@/settings'
+
+/** 可切换的写入失败开关 + 写入次数计数，用于验证导入持久化语义。 */
+const storageState = vi.hoisted(() => ({ failWrite: false, writes: 0 }))
+vi.mock('@/utils/storage', async () => {
+  const actual = await vi.importActual<typeof import('@/utils/storage')>('@/utils/storage')
+  return {
+    ...actual,
+    writeJSON: (key: string, value: unknown) => {
+      if (storageState.failWrite) return false
+      storageState.writes += 1
+      return actual.writeJSON(key, value)
+    },
+  }
+})
 
 /** 每次构造独立的默认列，避免用例间共享可变对象 */
 function createColumns() {
@@ -115,5 +131,101 @@ describe('useTableConfig', () => {
     table.config.value.pageSize = 40
 
     expect(JSON.parse(table.exportConfig()).pageSize).toBe(40)
+  })
+
+  it('结构非法的缓存不会被加载，且不污染当前配置', () => {
+    localStorage.setItem(
+      `${TABLE_CONFIG_KEY_PREFIX}user`,
+      JSON.stringify({ columns: 'oops', pageSize: 30, filters: {} }),
+    )
+    const table = useTableConfig('user', createColumns())
+    expect(table.loadConfig()).toBe(false)
+    expect(table.config.value.columns).toEqual(createColumns())
+    expect(table.config.value.pageSize).toBe(20)
+  })
+
+  it('导入结构合法但字段类型错误的配置返回 false 且不替换状态', () => {
+    const table = useTableConfig('user', createColumns())
+    const before = JSON.stringify(table.config.value)
+
+    expect(table.importConfig(JSON.stringify({ columns: [], pageSize: -1, filters: {} }))).toBe(false)
+    expect(JSON.stringify(table.config.value)).toBe(before)
+  })
+
+  it('reset 使用默认列快照，外部修改默认数组不会影响重置结果', () => {
+    const external = createColumns()
+    const table = useTableConfig('user', external)
+
+    external[0].label = '被外部改名'
+    external.push({ prop: 'extra', label: '新增', visible: true })
+
+    table.resetConfig()
+    expect(table.config.value.columns).toEqual(createColumns())
+  })
+
+  it('深拷贝隔离：修改内部列不会污染调用方默认列', () => {
+    const external = createColumns()
+    const table = useTableConfig('user', external)
+
+    table.toggleColumn('name', false)
+    expect(external[0].visible).toBe(true)
+  })
+
+  it('导入成功后只持久化一次，不因 watch 重复写入', async () => {
+    const table = useTableConfig('user', createColumns())
+    storageState.writes = 0
+    const payload = JSON.stringify({ columns: createColumns(), pageSize: 50, filters: { a: 1 } })
+    expect(table.importConfig(payload)).toBe(true)
+    // 等待深度 watch 的异步 flush 完成
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(storageState.writes).toBe(1)
+    expect(JSON.parse(localStorage.getItem(`${TABLE_CONFIG_KEY_PREFIX}user`)!).pageSize).toBe(50)
+  })
+
+  it('width=0 的历史缓存仍被视为合法配置', () => {
+    localStorage.setItem(
+      `${TABLE_CONFIG_KEY_PREFIX}user`,
+      JSON.stringify({
+        columns: [{ prop: 'name', label: '名称', visible: true, width: 0 }],
+        pageSize: 20,
+        filters: {},
+      }),
+    )
+    const table = useTableConfig('user', createColumns())
+    expect(table.loadConfig()).toBe(true)
+    expect(table.config.value.columns[0]?.width).toBe(0)
+  })
+
+  it('存储写入失败时导入返回 false 且保留原配置，不写入内存变更', () => {
+    const table = useTableConfig('user', createColumns())
+    const before = JSON.stringify(table.config.value)
+    storageState.failWrite = true
+    try {
+      const result = table.importConfig(JSON.stringify({ columns: createColumns(), pageSize: 50, filters: {} }))
+      expect(result).toBe(false)
+      expect(JSON.stringify(table.config.value)).toBe(before)
+    } finally {
+      storageState.failWrite = false
+    }
+  })
+
+  it('列字段类型错误（visible 非布尔）不被当作合法配置', () => {
+    localStorage.setItem(
+      `${TABLE_CONFIG_KEY_PREFIX}user`,
+      JSON.stringify({ columns: [{ prop: 'name', label: '名称', visible: 'yes' }], pageSize: 20, filters: {} }),
+    )
+    const table = useTableConfig('user', createColumns())
+    expect(table.loadConfig()).toBe(false)
+    expect(table.config.value.columns).toEqual(createColumns())
+  })
+
+  it('sortOrder 非法枚举不被当作合法配置', () => {
+    localStorage.setItem(
+      `${TABLE_CONFIG_KEY_PREFIX}user`,
+      JSON.stringify({ columns: createColumns(), pageSize: 20, filters: {}, sortOrder: 'up' }),
+    )
+    const table = useTableConfig('user', createColumns())
+    expect(table.loadConfig()).toBe(false)
   })
 })

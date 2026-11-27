@@ -1,7 +1,9 @@
 /**
  * 请求缓存工具单元测试
  * ------------------------------------------------------------------
- * 覆盖缓存命中/过期、并发去重、强制刷新、失败不缓存、预加载与统计。
+ * 覆盖缓存命中/过期、并发去重、强制刷新、失败不缓存、预加载与统计；
+ * 并发与失效语义（FE-030 Wave C）：旧 TTL 定时器不淘汰新值、清空后
+ * 旧请求完成不清除新 pending、清除构成失效屏障（飞行中响应不回填）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -92,8 +94,7 @@ describe('request-cache', () => {
   })
 
   it('请求失败不缓存，下次调用重新发起', async () => {
-    // dedupe:false：源实现对共享 pending promise 附加 finally()，其派生拒绝无人观察会触发
-    // unhandledRejection；失败不缓存的语义以 dedupe 关闭口径验证（该实现问题记入测试报告）。
+    // 关闭去重，单独验证失败不缓存以及下一次调用重新执行
     const fn = vi.fn().mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce('ok')
     const opts = { key: 'k', dedupe: false }
 
@@ -196,6 +197,42 @@ describe('request-cache', () => {
       resolveFn('stale')
       await p
 
+      expect(globalCache.has('k')).toBe(false)
+    })
+
+    it('forceRefresh 只失效已存缓存，dedupe 开启时仍复用同 key 在途请求', async () => {
+      const resolvers: Array<(v: string) => void> = []
+      const fn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolvers.push(resolve)
+          }),
+      )
+
+      const inFlight = cachedRequest(fn, { key: 'k' })
+      // 强制刷新不会取消或移除尚未完成的 pending 记录
+      const forced = cachedRequest(fn, { key: 'k', forceRefresh: true })
+
+      expect(fn).toHaveBeenCalledTimes(1)
+      resolvers[0]('shared')
+      await expect(inFlight).resolves.toBe('shared')
+      await expect(forced).resolves.toBe('shared')
+    })
+
+    it('clearCache 不取消在途请求，旧结果仍返回原调用方但不回填', async () => {
+      let resolveFn!: (v: string) => void
+      const fn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveFn = resolve
+          }),
+      )
+
+      const p = cachedRequest(fn, { key: 'k' })
+      clearCache('k')
+      resolveFn('late')
+
+      await expect(p).resolves.toBe('late')
       expect(globalCache.has('k')).toBe(false)
     })
   })

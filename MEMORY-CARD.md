@@ -94,8 +94,9 @@ src/
 | 集成/IoT/在线会话/密码找回页 404 或返回 HTML | 代理须覆盖 `/integration/v1`、`/auth/v1\|v2`（带版本前缀，勿用裸 `/integration` 撞菜单路由）；`/oauth2/consent` 仅 POST 反代 |
 | 站内信模板编辑/删除 404 | 网关 office 路由须含 `/admin-api/v1/message-templates/**`（后端已修，环境需滚动新配置） |
 
-## 7. 当前状态（2026-11-21）
+## 7. 当前状态（2026-11-25）
 
+- 11-24～11-25（发布聚合与请求缓存修复）：`8a839cb` 发布工作区更新，新增 6 篇 `docs/specs|plans|records|reviews` 文档（11-23 前端韧性方案、API 契约矩阵、FE-030 Wave A 基线与测试报告、任务归属交接），`docs/` Markdown 98→**104**；`748a8f6` 澄清历史 AI 缓存引用口径；`71d8230` 修复 `utils` 请求缓存并发缺陷（仅 `src/utils`，页面与接口文件数不变）。`src/views` 仍 **65**、`src/api` 仍 **40**、`*.test.ts` 仍 **31**。
 - 11-19～11-21（全栈联调与记忆同步）：`a0be46bb`/`52a4e5c` 提交全栈联调验证变更（容器化与联调脚本收口）、`f41e385` 隔离 Podman 验证、`aec9c44` 登记三仓全栈分支同步留痕，新增 `docs/specs/2026-11-18-fullstack-integration.md`、`docs/records/2026-11-19-fullstack-integration.md`、`docs/records/2026-11-19-api-route-matrix.md`，`docs/` Markdown 95→**98**；`src/views` 仍 **65**、`src/api` 仍 **40**、`*.test.ts` 仍 **31**。
 - 11-18（注释评审 + 死代码清理 + 复核收口）：`38e23fc` 全仓注释质量评审整改（仅注释行，零逻辑变更）；`62855d2` 清理范围外死代码并修复无效加载态，删除 0 引用页 `views/workflow/components/TaskActions.vue`，`src/views` 66→**65**（业务目录仍 15、`src/api` 仍 **40**、`*.test.ts` 仍 **31**）；`c611f56`～`93bd38f`/`371095d`/`f03bb68` 登记 FE-026/027/028 复核要点、三卡置「已完成」并将协作规则升级 v1.2，新增 `docs/reviews/2026-11-18-fe026-028-review.md`、`docs/records/2026-11-18-comment-quality-audit.md`，`docs/` Markdown 93→**95**。
 

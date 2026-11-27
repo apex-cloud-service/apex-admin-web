@@ -3,7 +3,8 @@
  * ------------------------------------------------------------------
  * 覆盖：HTTP 方法、路径与关键参数透传（快照分页为 page/size 口径而非
  * pageNum/pageSize、导出任务查询串由 URLSearchParams 构造、CSV 流走
- * 通用 request 且 responseType=blob、不存在根端点）。
+ * 通用 request 且 responseType=blob）。本测试只验证已封装子路径，
+ * 不调用根路径，也不验证后端根端点是否存在。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

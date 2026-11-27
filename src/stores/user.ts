@@ -102,7 +102,7 @@ export const useUserStore = defineStore('user', () => {
     ])
     identity.value = {
       ...info,
-      // 兼容旧字段：UserDTO 无 username，回退为手机号/昵称
+      // 兼容 username；缺失时依次回退 nickName、phone、空串
       username: info.username || info.nickName || info.phone || '',
       nickname: info.nickname || info.nickName || '',
       roles,

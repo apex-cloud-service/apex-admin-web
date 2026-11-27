@@ -922,7 +922,7 @@ async function loadOnlineUsers() {
   }
 }
 
-/** 记录表格勾选的在线用户会话 ID */
+/** 记录勾选行的用户 ID，供按用户强退会话；不是 sessionId 会话唯一标识。 */
 function handleSelectionChange(val: OnlineUser[]) {
   selectedSessions.value = val.map((v) => v.id)
 }

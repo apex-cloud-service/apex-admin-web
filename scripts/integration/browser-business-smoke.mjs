@@ -232,17 +232,25 @@ export async function exerciseBusinessSmoke(page, origin, group) {
     }
     if (group === 'monitor-dashboard') {
       const passed = await run('Monitor dashboard API and rendering', async () => {
-        const sidebar = page.locator('.layout-aside')
-        const dashboardLink = sidebar.getByText('监控大盘', { exact: true })
-        if (!await dashboardLink.isVisible().catch(() => false)) {
-          await sidebar.locator('.el-sub-menu__title').filter({ hasText: '监控中心' }).click()
-        }
-        await dashboardLink.waitFor({ state: 'visible' })
-        await dashboardLink.click()
+        // 登录跳转目标即 /monitor/dashboard，页面已在登录后被路由渲染并发出 5 个请求。
+        // 旧实现在此再点一次同名菜单：vue-router 对同路由跳转去重、不重复发请求，
+        // 导致 waitForResponse 只能等满 32s 超时。这里改为先确认已渲染，
+        // 已取到的响应用缓存；缺失的用页内刷新按钮触发一次真实重取。
         const dashboard = page.locator('.monitor-dashboard')
         await dashboard.waitFor({ state: 'visible', timeout: 15000 })
         console.log('Monitor dashboard route root rendered')
-        const responses = await Promise.all(monitorPaths.map((path) => initialRead(path)))
+
+        let responses = await Promise.all(monitorPaths.map((path) => initialRead(path)))
+        if (responses.some((response) => !response)) {
+          // 首屏请求未全部捕获（如早于监听建立）：点“立即刷新”触发一次真实请求
+          const pending = monitorPaths.map((path) => page.waitForResponse(
+            (response) => initialGetPath(response.request()) === path,
+            { timeout: 32000 },
+          ).catch(() => null))
+          await page.getByRole('button', { name: /立即刷新/ }).click()
+          responses = await Promise.all(pending)
+        }
+
         for (const [index, response] of responses.entries()) {
           const body = await response?.json().catch(() => null)
           await check(response, `GET ${monitorPaths[index]} (code ${Number.isSafeInteger(body?.code) ? body.code : 'none'})`)

@@ -9,6 +9,12 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, nextTick, ref, type Ref } from 'vue'
 import { useFormDraft, type UseFormDraftOptions } from '@/composables/useFormDraft'
 
+/** 推进防抖定时器（组件自维护 setTimeout 防抖） */
+async function flushDebounce(ms = 1000) {
+  await vi.advanceTimersByTimeAsync(ms)
+  await flushPromises()
+}
+
 const {
   readJSONMock,
   writeJSONMock,
@@ -42,10 +48,6 @@ vi.mock('@/settings', () => ({
 vi.mock('element-plus/es/components/message-box/index.mjs', () => ({
   ElMessageBox: { confirm: confirmMock },
 }))
-vi.mock('@vueuse/core', () => ({
-  // 直接透传，使「表单变化→保存」在测试中同步触发
-  useDebounceFn: (fn: unknown) => fn,
-}))
 
 const STORAGE_KEY = 'draft_user-edit'
 const TIMESTAMP_KEY = 'draft_user-edit_timestamp'
@@ -66,6 +68,7 @@ function mountDraft(options: UseFormDraftOptions = {}) {
 
 describe('useFormDraft', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     vi.clearAllMocks()
     writeJSONMock.mockReturnValue(true)
     writeRawMock.mockReturnValue(true)
@@ -73,19 +76,46 @@ describe('useFormDraft', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
-  it('表单变化即写入草稿键与独立时间戳键', async () => {
+  it('表单变化在防抖到期后写入草稿键与独立时间戳键', async () => {
     const { form } = mountDraft()
     await nextTick()
 
     form.value.name = '张三'
     await nextTick()
-    await flushPromises()
+    expect(writeJSONMock).not.toHaveBeenCalled()
+
+    await flushDebounce()
 
     expect(writeJSONMock).toHaveBeenCalledWith(STORAGE_KEY, { name: '张三' })
     expect(writeRawMock).toHaveBeenCalledWith(TIMESTAMP_KEY, expect.any(String))
+  })
+
+  it('清除草稿会取消待执行的防抖保存，不会被写回', async () => {
+    const { form, api } = mountDraft({ warnOnLeave: false })
+    await nextTick()
+
+    form.value.name = '李四'
+    await nextTick()
+    api.clearDraft()
+
+    await flushDebounce(2000)
+
+    expect(writeJSONMock).not.toHaveBeenCalled()
+  })
+
+  it('时间戳非法（非数字/非正）按过期处理并清除草稿', () => {
+    readJSONMock.mockReturnValue({ name: '脏草稿' })
+    readRawMock.mockReturnValue('not-a-timestamp')
+
+    const { api } = mountDraft({ warnOnLeave: false })
+
+    expect(api.loadDraft()).toBeNull()
+    expect(removeItemMock).toHaveBeenCalledWith(STORAGE_KEY)
+    expect(removeItemMock).toHaveBeenCalledWith(TIMESTAMP_KEY)
   })
 
   it('loadDraft：草稿与时间戳齐全且未过期时返回草稿', () => {
@@ -172,6 +202,23 @@ describe('useFormDraft', () => {
     wrapper.unmount()
 
     expect(writeJSONMock).toHaveBeenCalledWith(STORAGE_KEY, { name: '离开前输入' })
+  })
+
+  it('卸载会取消待执行防抖，卸载后推进定时器不重复写入', async () => {
+    const { wrapper, form } = mountDraft({ warnOnLeave: false })
+    await nextTick()
+
+    form.value.name = '未到期即卸载'
+    await nextTick()
+
+    wrapper.unmount()
+    writeJSONMock.mockClear()
+    writeRawMock.mockClear()
+
+    await flushDebounce(3000)
+
+    expect(writeJSONMock).not.toHaveBeenCalled()
+    expect(writeRawMock).not.toHaveBeenCalled()
   })
 
   it('warnOnLeave 开启时挂载注册 beforeunload、卸载时移除', () => {

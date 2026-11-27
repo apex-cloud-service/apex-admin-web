@@ -57,7 +57,7 @@ export function sendMessage(payload: SendMessagePayload): Promise<InternalMessag
  * 查询收件箱
  * @param pageNum 页码（从 1 开始）
  * @param pageSize 每页条数
- * @returns 当前页消息数组（后端不分页包装，total 以数组长度为准）
+ * @returns 当前页消息数组；不提供 total，数组长度仅为本次返回条数，不能确定总量
  */
 export function listInboxMessages(pageNum: number, pageSize: number): Promise<InternalMessage[]> {
   return get<InternalMessage[]>('/api/v1/messages/inbox', { pageNum, pageSize })
@@ -67,7 +67,7 @@ export function listInboxMessages(pageNum: number, pageSize: number): Promise<In
  * 查询已发送消息
  * @param pageNum 页码（从 1 开始）
  * @param pageSize 每页条数
- * @returns 当前页消息数组（后端不分页包装，total 以数组长度为准）
+ * @returns 当前页消息数组；不提供 total，数组长度仅为本次返回条数，不能确定总量
  */
 export function listSentMessages(pageNum: number, pageSize: number): Promise<InternalMessage[]> {
   return get<InternalMessage[]>('/api/v1/messages/sent', { pageNum, pageSize })
@@ -134,8 +134,10 @@ export interface MessageDelivery {
 }
 
 /**
- * 查询消息的渠道投递记录（发送人可见全部接收人，接收人仅可见本人；无权限返回空数组）
+ * 查询消息渠道投递记录，发送人/接收人的数据可见范围由后端控制。
+ * 归属过滤产生的空数组不等同于鉴权失败；HTTP/业务错误仍由请求层抛出。
  * @param messageId 消息 ID
+ * @returns MessageDelivery 数组，送达状态与收件箱已读状态互不覆盖
  */
 export function listMessageDeliveries(messageId: number): Promise<MessageDelivery[]> {
   return get<MessageDelivery[]>(`/api/v1/messages/${messageId}/deliveries`)

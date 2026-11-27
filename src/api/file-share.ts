@@ -2,6 +2,7 @@
  * 文件分享 API
  * ------------------------------------------------------------------
  * 后端接口（apex-file-service FileShareRouter）：
+ * - GET    /api/v2/files/{fileId}/shares             - 查询分享分页（仅文件所有者，page/size）
  * - POST   /api/v2/files/{fileId}/shares             - 创建分享（返回一次性明文 token）
  * - DELETE /api/v2/file-shares/{shareId}             - 撤销分享（幂等）
  * - POST   /api/v2/file-shares/exchange              - 凭 token 换取分享元信息（匿名）
@@ -39,7 +40,8 @@ export interface FileSharePage {
 /**
  * 查询指定文件的分享列表（仅文件所有者）
  * @param fileId 文件 ID
- * @param query 状态与分页
+ * @param query 状态与 page/size 分页参数
+ * @returns FileSharePage（list/total），列表项不包含明文分享 token
  */
 export function listFileShares(fileId: number, query: FileShareListQuery): Promise<FileSharePage> {
   return get<FileSharePage>(
@@ -71,7 +73,8 @@ export interface FileShareExchangeResult {
 /**
  * 创建文件分享
  * @param fileId 文件 ID
- * @param expireSeconds 有效期秒数（不传由服务端按配置收敛）
+ * @param expireSeconds 有效期秒数（可选，不传由服务端按配置收敛）
+ * @returns FileShareCreated，明文 token 仅创建时返回；本函数不持久化或自动展示
  */
 export function createFileShare(fileId: number, expireSeconds?: number): Promise<FileShareCreated> {
   return post<FileShareCreated>(
@@ -99,6 +102,7 @@ export function exchangeFileShare(token: string): Promise<FileShareExchangeResul
 /**
  * 凭分享令牌下载文件（匿名，返回二进制流）
  * @param token 分享令牌
+ * @returns 文件内容 Blob；保存文件与撤销对象 URL 由调用方负责
  */
 export function downloadFileShare(token: string): Promise<Blob> {
   return request<Blob>({

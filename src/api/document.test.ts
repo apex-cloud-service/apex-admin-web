@@ -2,7 +2,8 @@
  * 文档管理 API 测试
  * ------------------------------------------------------------------
  * 覆盖：HTTP 方法、路径与关键参数透传（状态操作为 PUT /{id}/status 且
- * status 放请求体；下载为独立 GET /{id}/download 端点，返回 Blob）。
+ * status 放请求体；下载为独立 GET /{id}/download 端点，必须以
+ * responseType='blob' 走通用 request，否则 Axios 按 JSON 解码）。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,6 +12,7 @@ const request = vi.hoisted(() => ({
   post: vi.fn(),
   put: vi.fn(),
   del: vi.fn(),
+  request: vi.fn(),
 }))
 
 vi.mock('@/utils/request', () => request)
@@ -67,8 +69,19 @@ describe('文档管理 API', () => {
     expect(request.put).toHaveBeenCalledWith('/admin-api/v1/documents/3/status', { status: 2 })
   })
 
-  it('下载走独立 GET /{id}/download 端点', () => {
+  it('下载使用 request + responseType=blob，保证拿到二进制而非 JSON 解包', () => {
     downloadDocument('3')
-    expect(request.get).toHaveBeenCalledWith('/admin-api/v1/documents/3/download')
+    expect(request.get).not.toHaveBeenCalled()
+    expect(request.request).toHaveBeenCalledWith({
+      method: 'GET',
+      url: '/admin-api/v1/documents/3/download',
+      responseType: 'blob',
+    })
+  })
+
+  it('下载拒绝时保留请求层错误，不被吞掉', async () => {
+    const failure = new Error('download failed')
+    request.request.mockRejectedValueOnce(failure)
+    await expect(downloadDocument('3')).rejects.toBe(failure)
   })
 })

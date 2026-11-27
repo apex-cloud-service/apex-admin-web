@@ -32,6 +32,7 @@ export interface OpenAppQuery {
 /**
  * 分页查询开放应用
  * @param query page 从 0 开始、size 上限 100
+ * @returns 当前页 OpenApp 数组，不包含 total，不能用数组长度推断全量总数
  */
 export function listOpenApps(query: OpenAppQuery): Promise<OpenApp[]> {
   return get<OpenApp[]>('/api/v1/open-apps', query as unknown as Record<string, unknown>)
@@ -40,6 +41,7 @@ export function listOpenApps(query: OpenAppQuery): Promise<OpenApp[]> {
 /**
  * 创建开放应用
  * @param payload 应用注册信息（clientId / appName 必填）
+ * @returns 创建后的 OpenApp；clientSecret 明文仅本次返回，应即时展示且不持久化
  */
 export function createOpenApp(payload: OpenAppPayload): Promise<OpenApp> {
   return post<OpenApp>('/api/v1/open-apps', payload)
@@ -55,8 +57,9 @@ export function updateOpenApp(clientId: string, payload: OpenAppPayload): Promis
 }
 
 /**
- * 重置开放应用密钥（明文仅本响应返回一次）
+ * 重置开放应用密钥（明文仅本响应返回一次）。
  * @param clientId 客户端 ID
+ * @returns OpenApp 与新密钥；本函数不确认操作、不保存明文，由调用方负责一次性展示
  */
 export function resetOpenAppSecret(clientId: string): Promise<OpenApp> {
   return post<OpenApp>(`/api/v1/open-apps/${encodeURIComponent(clientId)}/reset-secret`)
@@ -79,6 +82,7 @@ export function exportOpenAppMigration(): Promise<OpenAppImportItem[]> {
 /**
  * 批量导入存量开放应用（逐条写入，单条失败不影响其余）
  * @param items 迁移清单（通常来自 export 响应）
+ * @returns 汇总与逐条错误（OpenAppMigrationSummary），应检查明细而非只看请求是否成功
  */
 export function importOpenAppMigration(items: OpenAppImportItem[]): Promise<OpenAppMigrationSummary> {
   return post<OpenAppMigrationSummary>('/admin-api/v1/open-apps/migration/import', items)

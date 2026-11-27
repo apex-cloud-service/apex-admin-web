@@ -5,7 +5,7 @@
  * 以及菜单父链补全、菜单/权限空集合 = 该维度全量的既有语义。
  */
 import { describe, expect, it } from 'vitest'
-import { buildPackagePayload, withParentChain } from '../tenant-package'
+import { buildPackagePayload, isAllFeaturesSelected, withParentChain } from '../tenant-package'
 import type { MenuNode } from '@/types'
 
 /** 构造三层菜单树：1 → 2 → 3，另含独立节点 4 */
@@ -85,5 +85,28 @@ describe('buildPackagePayload', () => {
   it('能力目录为空时全量展开得到空集合（该租户无任何订阅）', () => {
     const payload = buildPackagePayload({ ...baseInput(), capabilityCodes: [] })
     expect(payload.features).toEqual([])
+  })
+})
+
+describe('isAllFeaturesSelected', () => {
+  const catalog = ['file-storage', 'workflow', 'user-org']
+
+  it('编码成员全覆盖时判定为全量', () => {
+    expect(isAllFeaturesSelected(catalog, catalog)).toBe(true)
+    expect(isAllFeaturesSelected([...catalog, 'extra'], catalog)).toBe(true)
+  })
+
+  it('数量相同但编码不同时判定为非全量', () => {
+    expect(isAllFeaturesSelected(['file-storage', 'workflow', 'unknown'], catalog)).toBe(false)
+  })
+
+  it('缺编码或空集合时为非全量', () => {
+    expect(isAllFeaturesSelected(['file-storage'], catalog)).toBe(false)
+    expect(isAllFeaturesSelected([], catalog)).toBe(false)
+    expect(isAllFeaturesSelected(undefined, catalog)).toBe(false)
+  })
+
+  it('能力目录为空时无法判定为全量', () => {
+    expect(isAllFeaturesSelected(['file-storage'], [])).toBe(false)
   })
 })

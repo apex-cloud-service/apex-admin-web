@@ -2,12 +2,13 @@
  * FileUploadEnhanced 单元测试
  * ------------------------------------------------------------------
  * 覆盖：上传地址与请求层同源拼接（VITE_API_BASE_URL）、props 缺省与提示文案生成、
- * beforeUpload 大小/类型校验、enableChunk 分片编排与结果映射、document 粘贴监听
- * 注册与注销；不含 Canvas/裁剪与真实分片传输。
+ * beforeUpload 大小/类型校验、enableChunk 分片编排与结果映射（含 sex 表单值
+ * 映射与 fileName→objectName 归一）、document 粘贴监听注册与注销；不含
+ * Canvas/裁剪与真实分片传输。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, type ComponentInternalInstance } from 'vue'
 import FileUploadEnhanced from '@/components/FileUploadEnhanced.vue'
 import { MAX_UPLOAD_SIZE } from '@/settings'
 import type {
@@ -163,6 +164,60 @@ describe('FileUploadEnhanced props 缺省与提示文案', () => {
     }
   })
 
+  it('启用裁剪但上传非图片时仍走默认通道并 emit success', () => {
+    vi.useFakeTimers()
+    const metadata = { bucketName: 'apex', url: '/files/AM/report.pdf', expiresIn: 0 }
+    const { wrapper, stub } = mountEnhanced({ enableCropper: true, accept: 'image/png,application/pdf' })
+    try {
+      stub.props('onSuccess')?.(
+        { code: 0, data: { ...metadata, fileName: 'AM/report.pdf' } },
+        { uid: 1, name: 'report.pdf', raw: new File(['x'], 'report.pdf', { type: 'application/pdf' }) },
+      )
+      expect(wrapper.emitted('success')).toEqual([[{ ...metadata, objectName: 'AM/report.pdf' }]])
+    } finally {
+      wrapper.unmount()
+      vi.useRealTimers()
+    }
+  })
+
+  it('粘贴多个文件时单个因 MIME 被拒不影响后续项上传', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('XMLHttpRequest', class extends EventTarget {
+      upload = new EventTarget()
+      open = vi.fn()
+      setRequestHeader = vi.fn()
+      send = vi.fn()
+      status = 200
+      responseText = JSON.stringify({ code: 0, data: { fileName: 'AM/b.png', bucketName: 'apex', url: '/b.png', expiresIn: 0 } })
+      constructor() {
+        super()
+        setTimeout(() => this.dispatchEvent(new Event('load')), 0)
+      }
+    })
+    // 坏项也是图片，才能在 beforeUpload 阶段因 MIME 不被 accept 而返回 false（而非被外层图片判断过滤）
+    const { wrapper } = mountEnhanced({ enablePaste: true, enableCompress: false, enableCropper: false, accept: 'image/png' })
+    try {
+      const bad = new File(['x'], 'bad.bmp', { type: 'image/bmp' })
+      const good = new File(['y'], 'b.png', { type: 'image/png' })
+      const event = new Event('paste', { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'clipboardData', {
+        value: { items: [
+          { type: 'image/bmp', getAsFile: () => bad },
+          { type: 'image/png', getAsFile: () => good },
+        ] },
+      })
+      wrapper.element.dispatchEvent(event)
+      await vi.advanceTimersByTimeAsync(1500)
+      expect(mocks.messageError).toHaveBeenCalled()
+      // 只有合法项上传成功；若实现误用 return，后续项被跳过则为 0
+      expect(wrapper.emitted('success')).toHaveLength(1)
+    } finally {
+      wrapper.unmount()
+      vi.useRealTimers()
+      vi.unstubAllGlobals()
+    }
+  })
+
   it.each([[0, '1'], [1, '2']] as const)('粘贴上传将 sex=%i 写入 FormData 为 %s', async (sex, expected) => {
     const send = vi.fn<(body: FormData) => void>()
     const objectName = `${sex === 0 ? 'AM' : 'AF'}/stored.png`
@@ -225,7 +280,8 @@ describe('FileUploadEnhanced beforeUpload 校验', () => {
   })
 
   it('超过大小上限且未启用分片时拒绝并提示', async () => {
-    const { wrapper, stub } = mountEnhanced()
+    // 关闭压缩：happy-dom 无 canvas，压缩路径无法在此环境执行；本用例只验证大小拒绝
+    const { wrapper, stub } = mountEnhanced({ enableCompress: false })
     await flushPromises()
     const big = new File([new ArrayBuffer(MAX_UPLOAD_SIZE + 1)], 'big.png', { type: 'image/png' })
     const result = await getBeforeUpload(stub)(big)
@@ -273,7 +329,7 @@ describe('FileUploadEnhanced beforeUpload 校验', () => {
       fileSize: 12 * 1024 * 1024,
     })
 
-    const { wrapper, stub } = mountEnhanced({ enableChunk: true })
+    const { wrapper, stub } = mountEnhanced({ enableChunk: true, accept: 'image/png,application/octet-stream' })
     await flushPromises()
     const big = new File([new ArrayBuffer(12 * 1024 * 1024)], 'big.bin', { type: 'application/octet-stream' })
     const result = await getBeforeUpload(stub)(big)
@@ -305,6 +361,202 @@ describe('FileUploadEnhanced beforeUpload 校验', () => {
         expiresIn: 0,
       },
     ])
+    wrapper.unmount()
+  })
+
+  it('超限文件类型不在 accept 内时不触发分片（MIME 校验先于分片）', async () => {
+    const { wrapper, stub } = mountEnhanced({ enableChunk: true })
+    await flushPromises()
+    const big = new File([new ArrayBuffer(12 * 1024 * 1024)], 'big.bin', { type: 'application/octet-stream' })
+    const result = await getBeforeUpload(stub)(big)
+    expect(result).toBe(false)
+    expect(mocks.initChunkUpload).not.toHaveBeenCalled()
+    expect(mocks.messageError).toHaveBeenCalledWith('仅支持上传 JPEG/PNG/GIF/WEBP 格式的文件')
+    wrapper.unmount()
+  })
+
+  it('未超限的非图片文件不触发分片并原样返回', async () => {
+    const { wrapper, stub } = mountEnhanced({ enableChunk: true, accept: 'image/png,application/octet-stream' })
+    await flushPromises()
+    const small = new File([new ArrayBuffer(64)], 'small.bin', { type: 'application/octet-stream' })
+    const result = await getBeforeUpload(stub)(small)
+    expect(mocks.initChunkUpload).not.toHaveBeenCalled()
+    expect(result).toBe(small)
+    wrapper.unmount()
+  })
+})
+
+/** 仅模拟解码与 Canvas 导出，用于验证处理后的尺寸/字节量和传输分支，不代表真实 Canvas 验收。 */
+function mockImageProcessing(outputSize: number) {
+  class Reader {
+    onload: ((event: { target: { result: string } }) => void) | null = null
+    readAsDataURL() {
+      queueMicrotask(() => this.onload?.({ target: { result: 'data:image/png;base64,test' } }))
+    }
+  }
+  class ImageStub {
+    width = 1920
+    height = 1500
+    onload: (() => void) | null = null
+    set src(_value: string) {
+      queueMicrotask(() => this.onload?.())
+    }
+  }
+  vi.stubGlobal('FileReader', Reader)
+  vi.stubGlobal('Image', ImageStub)
+  const dimensions: Array<[number, number]> = []
+  const context: Pick<CanvasRenderingContext2D, 'fillStyle' | 'fillRect' | 'drawImage'> = {
+    fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(),
+  }
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as CanvasRenderingContext2D)
+  vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (this: HTMLCanvasElement, callback: BlobCallback) {
+    dimensions.push([this.width, this.height])
+    callback(new Blob([new ArrayBuffer(outputSize)], { type: 'image/png' }))
+  })
+  return dimensions
+}
+
+describe('FileUploadEnhanced 图片处理与传输分支', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getToken.mockReturnValue('test-token')
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('压缩后低于上限时返回处理后文件，不再按原大小启动分片', async () => {
+    const dimensions = mockImageProcessing(64)
+    const { wrapper, stub } = mountEnhanced({ enableChunk: true, enableCompress: true })
+    const raw = new File([new ArrayBuffer(12 * 1024 * 1024)], 'large.png', { type: 'image/png' })
+    const result = await getBeforeUpload(stub)(raw)
+    expect(result).toBeInstanceOf(File)
+    expect((result as File).size).toBe(64)
+    expect(mocks.initChunkUpload).not.toHaveBeenCalled()
+    expect(dimensions[0][0]).toBeLessThanOrEqual(1920)
+    expect(dimensions[0][1]).toBeLessThanOrEqual(1080)
+    wrapper.unmount()
+  })
+
+  it('压缩后仍超限时分片使用处理后大小，且不进入裁剪或默认上传', async () => {
+    mockImageProcessing(12 * 1024 * 1024)
+    mocks.initChunkUpload.mockResolvedValue({ fileId: 88, bucketName: 'apex', chunkSize: 5 * 1024 * 1024, totalChunks: 3, uploadedChunks: [] })
+    mocks.uploadChunk.mockResolvedValue({ fileId: 88, chunkIndex: 0, uploaded: true, objectName: 'chunk', chunkSize: 5 * 1024 * 1024 })
+    mocks.mergeChunks.mockResolvedValue({ fileId: 88, bucketName: 'apex', fileName: 'AM/large.png', url: '/large.png', fileSize: 12 * 1024 * 1024 })
+    const { wrapper, stub } = mountEnhanced({ enableChunk: true, enableCompress: true, enableCropper: true })
+    const raw = new File([new ArrayBuffer(15 * 1024 * 1024)], 'large.png', { type: 'image/png' })
+    expect(await getBeforeUpload(stub)(raw)).toBe(false)
+    await flushPromises()
+    expect(mocks.initChunkUpload).toHaveBeenCalledWith(expect.objectContaining({ fileSize: 12 * 1024 * 1024 }))
+    expect(mocks.uploadChunk).toHaveBeenCalledTimes(3)
+    expect(wrapper.emitted('success')).toHaveLength(1)
+    wrapper.unmount()
+  })
+
+  it('普通图片启用裁剪时中断默认通道，不启动分片', async () => {
+    mockImageProcessing(64)
+    const { wrapper, stub } = mountEnhanced({ enableChunk: true, enableCompress: true, enableCropper: true })
+    const raw = new File([new ArrayBuffer(64)], 'small.png', { type: 'image/png' })
+    expect(await getBeforeUpload(stub)(raw)).toBe(false)
+    expect(mocks.initChunkUpload).not.toHaveBeenCalled()
+    expect(mocks.messageError).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+})
+
+/** 访问组件内部上传 Promise 验证终结时机，不将该方法新增到生产对外接口。 */
+function getProcessedUpload(wrapper: ReturnType<typeof mountEnhanced>['wrapper']) {
+  const instance = wrapper.vm.$ as ComponentInternalInstance & {
+    setupState: { uploadProcessedFile: (file: File) => Promise<void> }
+  }
+  return instance.setupState.uploadProcessedFile
+}
+
+describe('FileUploadEnhanced XHR 终结语义', () => {
+  const instances: XhrStub[] = []
+  class XhrStub extends EventTarget {
+    upload = new EventTarget()
+    status = 0
+    responseText = ''
+    timeout = 0
+    open = vi.fn()
+    setRequestHeader = vi.fn()
+    send = vi.fn()
+    constructor() {
+      super()
+      instances.push(this)
+    }
+  }
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    instances.length = 0
+    mocks.getToken.mockReturnValue('test-token')
+    vi.stubGlobal('XMLHttpRequest', XhrStub)
+  })
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('Promise 在 load 成功前保持 pending，成功后返回对象键且只发一次事件', async () => {
+    const { wrapper } = mountEnhanced({ enableCompress: false })
+    const upload = getProcessedUpload(wrapper)
+    let completed = false
+    const pending = upload(new File(['data'], 'small.png', { type: 'image/png' }))
+    const completion = pending.then(() => { completed = true })
+    await flushPromises()
+    expect(completed).toBe(false)
+    const xhr = instances[0]
+    xhr.status = 200
+    xhr.responseText = JSON.stringify({ code: 0, data: { fileName: 'AM/key.png', bucketName: 'apex', url: '/key.png', expiresIn: 0 } })
+    xhr.dispatchEvent(new Event('load'))
+    await completion
+    expect(completed).toBe(true)
+    expect(wrapper.emitted('success')).toHaveLength(1)
+    expect(wrapper.emitted('success')?.[0]).toEqual([{ objectName: 'AM/key.png', bucketName: 'apex', url: '/key.png', expiresIn: 0 }])
+    wrapper.unmount()
+  })
+
+  it.each(['error', 'timeout', 'abort'])('%s 会拒绝 Promise，不挂起或报告成功', async (event) => {
+    const { wrapper } = mountEnhanced({ enableCompress: false })
+    const upload = getProcessedUpload(wrapper)
+    const pending = upload(new File(['data'], 'small.png', { type: 'image/png' }))
+    const assertion = expect(pending).rejects.toThrow()
+    instances[0].dispatchEvent(new Event(event))
+    await assertion
+    expect(wrapper.emitted('success')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it.each(['{invalid', JSON.stringify({ code: 403, msg: '拒绝上传' })])('无效 JSON 或业务错误会拒绝 Promise', async (response) => {
+    const { wrapper } = mountEnhanced({ enableCompress: false })
+    const upload = getProcessedUpload(wrapper)
+    const pending = upload(new File(['data'], 'small.png', { type: 'image/png' }))
+    const assertion = expect(pending).rejects.toThrow()
+    instances[0].status = 200
+    instances[0].responseText = response
+    instances[0].dispatchEvent(new Event('load'))
+    await assertion
+    expect(wrapper.emitted('success')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('粘贴事件冒泡到 document 时不重复上传', async () => {
+    const { wrapper } = mountEnhanced({ enablePaste: true, enableCompress: false })
+    const event = new Event('paste', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'clipboardData', { value: { items: [{ type: 'image/png', getAsFile: () => new File(['data'], 'paste.png', { type: 'image/png' }) }] } })
+    wrapper.element.dispatchEvent(event)
+    await flushPromises()
+    expect(instances).toHaveLength(1)
+    instances[0].status = 200
+    instances[0].responseText = JSON.stringify({ code: 0, data: { fileName: 'AM/paste.png', bucketName: 'apex', url: '/paste.png', expiresIn: 0 } })
+    instances[0].dispatchEvent(new Event('load'))
+    await flushPromises()
+    expect(wrapper.emitted('success')).toHaveLength(1)
     wrapper.unmount()
   })
 })

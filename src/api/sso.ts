@@ -204,8 +204,10 @@ export function terminateSSOSession(id: number): Promise<void> {
 }
 
 /**
- * 批量强制终止SSO会话(后端无批量端点,并发调用单条撤销)
- * @param ids 会话主键ID列表
+ * 批量撤销 SSO 会话；后端无批量端点，本函数并发调用单条撤销。
+ * 不去重，任一请求失败即拒绝，但其他已发请求不会取消，已成功项不回滚。
+ * @param ids 会话数字主键 ID 列表
+ * @returns 所有请求成功后兑现，不返回逐项结果
  */
 export function batchTerminateSSOSessions(ids: number[]): Promise<void> {
   return Promise.all(ids.map((id) => terminateSSOSession(id))).then(() => undefined)

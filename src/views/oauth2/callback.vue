@@ -5,7 +5,8 @@
     1. 校验 state（防 CSRF，消费 consumeAuthorization 一次性上下文）
     2. 用授权码 exchangeToken 换取会话令牌
     3. 保存 accessToken/refreshToken 并加载用户身份
-    4. 成功跳工作台，失败清理会话回登录页
+    4. 成功跳工作台；换令牌或身份加载异常会清理会话并回登录页
+  缺参数、授权错误或上下文校验失败时直接回登录页，不执行同样的会话清理。
 
   后端接口：
     - POST /oauth2/token - 授权码换取令牌（见 api/oauth2.ts）

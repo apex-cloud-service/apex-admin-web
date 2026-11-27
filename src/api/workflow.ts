@@ -36,11 +36,14 @@ import type {
 
 /**
  * 获取流程实例列表
- * @param params - 查询参数，包含分页、状态、发起人等过滤条件
- * @returns 流程实例列表和总数
+ * @param params - 查询参数，pageNum/pageSize 为分页字段，其余为状态与发起人等过滤条件
+ * @returns 流程实例分页：records 为当前页列表，total 为匹配总数（不是常规 list/total）
  */
 export function listWorkflowInstances(params: InstanceQueryParams) {
-  return get<{ records: WorkflowInstance[]; total: number }>('/admin-api/v1/workflows/instances', params as any)
+  return get<{ records: WorkflowInstance[]; total: number }>(
+    '/admin-api/v1/workflows/instances',
+    params as Record<string, unknown>,
+  )
 }
 
 /**
@@ -78,7 +81,7 @@ export function getWorkflowTrend(days: number = 7) {
  * @param params - 查询参数
  * @param params.pageNum - 页码
  * @param params.pageSize - 每页数量
- * @returns 当前用户的待办任务分页结果
+ * @returns 当前用户的待办任务分页，list 为当前页任务，total 为匹配总数
  */
 export function getMyPendingTasks(params: { pageNum: number; pageSize: number }) {
   return get<PageResponse<WorkflowPendingTask>>('/api/v1/workflows/tasks/pending', params)
@@ -95,7 +98,7 @@ export function completeTask(taskId: number, comment?: string) {
 
 /**
  * 发起流程实例（发起人取当前登录用户，无需传入）
- * @param workflowCode - 流程定义编码（后端无定义列表接口，需调用方提供）
+ * @param workflowCode - 流程定义编码，由调用方提供；可通过 listWorkflowDefinitions 查询可用定义
  * @param payload - businessKey 必填（≤200），contextJson 选填（JSON 字符串，≤10000）
  * @returns 新建的流程实例（status 固定 RUNNING）
  */
@@ -163,7 +166,8 @@ export function resumeInstance(instanceId: number, data: ResumeInstancePayload) 
 
 /**
  * 分页查询流程定义
- * @param params - workflowCode（精确）、status（DRAFT/PUBLISHED/DISABLED）与分页
+ * @param params - workflowCode（精确）、status（DRAFT/PUBLISHED/DISABLED）与 pageNum/pageSize
+ * @returns 查询 DTO 分页（list/total）；元素使用 code/name 等查询字段，不是写接口的领域实体
  */
 export function listWorkflowDefinitions(params: {
   workflowCode?: string
@@ -185,6 +189,7 @@ export function getWorkflowDefinition(definitionId: number) {
 /**
  * 创建流程定义（初始为草稿）
  * @param payload - 流程编码、名称与 DAG JSON
+ * @returns WorkflowDefinitionEntity，使用 workflowCode/workflowName 等领域字段，与查询 DTO 不同
  */
 export function createWorkflowDefinition(payload: WorkflowDefinitionCreatePayload) {
   return post<WorkflowDefinitionEntity>('/api/v2/workflow-definitions', payload)
@@ -194,6 +199,7 @@ export function createWorkflowDefinition(payload: WorkflowDefinitionCreatePayloa
  * 更新流程定义（仅草稿可改；无流程编码与版本字段）
  * @param definitionId - 流程定义 ID
  * @param payload - 名称、描述与 DAG JSON
+ * @returns 更新后的 WorkflowDefinitionEntity，不要按查询 DTO 的 code/name 读取
  */
 export function updateWorkflowDefinition(
   definitionId: number,

@@ -42,7 +42,8 @@ export function listSubscribedCapabilities(): Promise<CapabilityInfo[]> {
 
 /**
  * 查询能力调用用量
- * @param query 能力编码、租户与时间区间
+ * @param query 能力编码必填；租户与时间区间可选，pageNum/pageSize 为服务端分页参数
+ * @returns 能力用量分页（list/total）；只读统计，不触发计费
  */
 export function queryCapabilityUsage(query: CapabilityUsageQuery): Promise<PageResponse<CapabilityUsage>> {
   return get<PageResponse<CapabilityUsage>>(

@@ -376,7 +376,7 @@ const handleQuery = async () => {
   }
 }
 
-/** 拉取当月全部事件到本地缓存（供月历视图展示） */
+/** 缓存当月前 1000 条事件供月历展示；不遍历后续页，也不应用列表的 platform/status 条件。 */
 const loadAllEvents = async () => {
   try {
     const startOfMonth = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth(), 1)
@@ -386,7 +386,7 @@ const loadAllEvents = async () => {
       startTime: startOfMonth.toISOString(),
       endTime: endOfMonth.toISOString(),
       pageNum: 1,
-      // 单月事件数上限假设 1000：超出截断、月历少显（后端无更大窗口的专用端点）
+      // 本视图只取第 1 页的 1000 条；超过时月历少显，本页不遍历后续分页
       pageSize: 1000,
     })
     allEvents.value = res.list

@@ -2,10 +2,11 @@
 /**
  * 注释规范检查（只读，不修改任何文件）
  * ------------------------------------------------------------------
- * 依据 docs/reference/comment-style.md 检查两类问题：
- *   1. 文件头注释缺失：.ts 检查首个非空行；.vue 兼容两种合法形式——
- *      <template> 之前的 HTML 头注、<script> 块内 JSDoc（只看 script 会误报）
- *   2. 导出函数/类/接口/枚举/常量缺少文档注释
+ * 依据 docs/reference/comment-style.md 检查两类注释存在性问题：
+ *   1. 文件头：.ts 的首个非空行；.vue 的顶部 HTML 注释或 script 首行注释。
+ *      文本规则接受普通注释，不验证是否为完整 JSDoc。
+ *   2. 正则匹配到的导出 function/class/const/interface/enum/type 声明前是否有注释。
+ * 不解析标签、参数或内容真实性；通过仅代表当前文本模式未发现缺失。
  * 退出码：0 = 通过，1 = 存在违规。
  *
  * 用法：npm run check:comments（或 node scripts/quality/check-comments.mjs）
@@ -30,7 +31,7 @@ function walk(dir, out = []) {
   return out
 }
 
-/** .vue 文件头注：文件首个非空行为 HTML 注释，或 <script> 块内首个非空行为 JSDoc */
+/** 检查 Vue 顶部 HTML 注释或 script 首行普通注释；只看文本开头，不解析 JSDoc。 */
 function hasVueHeader(lines) {
   const firstNonEmpty = lines.find((l) => l.trim() !== '')
   if (firstNonEmpty && /^<!--/.test(firstNonEmpty.trim())) return true

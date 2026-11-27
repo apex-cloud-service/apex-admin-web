@@ -40,7 +40,8 @@ export const CONNECTOR_TYPE_NAMES: Record<string, string> = {
 
 /**
  * 分页查询连接器配置
- * @param query 类型过滤与分页
+ * @param query 类型过滤与 pageNum/pageSize 分页
+ * @returns ConnectorConfig 分页（list 为当前页，total 为匹配总数）
  */
 export function listConnectors(query: ConnectorQuery): Promise<PageResponse<ConnectorConfig>> {
   return get<PageResponse<ConnectorConfig>>(

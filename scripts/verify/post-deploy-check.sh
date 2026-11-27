@@ -8,7 +8,8 @@
 # 环境变量：
 #   BASE_URL        必填，前端站点根地址（不带尾部斜杠）
 #   API_BASE        选填，接口根地址；跨域部署时填网关地址，缺省等于 BASE_URL
-#   TOKEN           选填，管理员访问令牌；提供后才执行鉴权类与长连接检查
+#   TOKEN           选填，管理员访问令牌；启用 C10 与 WS 票据/握手检查。
+#                   非法令牌与 SSE 探测始终执行，无 TOKEN 的 SSE 401 记为告警。
 #   TENANT_ID       选填，随请求附带 X-Tenant-Id
 #   INSECURE=1      选填，跳过 TLS 证书校验（自签证书环境）
 #   SKIP_UPLOAD=1   选填，跳过请求体边界检查（含大文件，较慢）
@@ -23,6 +24,8 @@ API_BASE="${API_BASE:-$BASE_URL}"
 TOKEN="${TOKEN:-}"
 TENANT_ID="${TENANT_ID:-}"
 INSECURE="${INSECURE:-0}"
+# 握手/预检使用的同源 Origin（取 BASE_URL 的 scheme://host[:port]）
+ORIGIN="${ORIGIN:-$(printf '%s' "$BASE_URL" | sed -E 's#^(https?://[^/]+).*#\1#')}"
 SKIP_UPLOAD="${SKIP_UPLOAD:-0}"
 SKIP_WS="${SKIP_WS:-0}"
 
@@ -159,20 +162,28 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# C6 集群内部端点必须不可从外部访问
-# 通过 Nginx 时内部端点不应被反代到后端：命中 403/404，或落到 SPA 回退（HTML）均可接受
+# C6 逐个探测内部端点，逐条判定是否可达。
+# 通过只证明被探测路径在当前 GET 方法下不可达，不证明整个 /internal/v1/** 命名空间。
+# 403/404 或回退到 SPA（HTML）视为不可达；HTML 不进一步区分回退来源。
 # ---------------------------------------------------------------------------
-code=$(request GET "$API_BASE/internal/v1/overview")
-ctype=$(lowercase "$(header_value content-type)")
-if [ "$code" = "403" ] || [ "$code" = "404" ]; then
-  pass "C6 /internal/v1/** 被拒绝（HTTP ${code}）"
-elif [ "$code" = "000" ]; then
-  fail "C6 /internal/v1/** 无法连通（HTTP 000），先确认站点可达"
-elif printf '%s' "$ctype" | grep -q 'text/html'; then
-  pass "C6 /internal/v1/** 未反代到后端（回退 SPA），内部端点不可达"
-else
-  fail "C6 /internal/v1/** 返回 HTTP ${code}（content-type=${ctype}），内部端点疑似对外可达"
-fi
+INTERNAL_PATHS="/internal/v1/overview /internal/v1/notify /internal/v1/iot/devices"
+C6_FAIL=0
+for path in $INTERNAL_PATHS; do
+  code=$(request GET "$API_BASE$path")
+  ctype=$(lowercase "$(header_value content-type)")
+  if [ "$code" = "403" ] || [ "$code" = "404" ]; then
+    pass "C6 ${path} 不可达（HTTP ${code}）"
+  elif [ "$code" = "000" ]; then
+    fail "C6 ${path} 无法连通（HTTP 000），先确认站点可达"
+    C6_FAIL=1
+  elif printf '%s' "$ctype" | grep -q 'text/html'; then
+    pass "C6 ${path} 未反代到后端（返回 HTML，疑似 SPA 回退）"
+  else
+    fail "C6 ${path} 返回 HTTP ${code}（content-type=${ctype}），内部端点疑似对外可达"
+    C6_FAIL=1
+  fi
+done
+[ "$C6_FAIL" -eq 0 ] && pass "C6 已探测 $(echo $INTERNAL_PATHS | wc -w | tr -d ' ') 条内部路径均不可达（仅为该 GET 探测结论）"
 
 # ---------------------------------------------------------------------------
 # C7 非法令牌必须 401
@@ -185,28 +196,34 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# C8 请求体边界（413）：仅同域时检查，跨域直连网关会绕过 Nginx
+# C8 请求体边界（413）：仅 API_BASE 与 BASE_URL 相同时检查。
+# 状态码来自整条链路，不能单凭 413 判断拒绝来自 Nginx 或其 20m 配置是否生效。
 # ---------------------------------------------------------------------------
 if [ "$SKIP_UPLOAD" = "1" ]; then
   skip "C8 请求体边界检查（SKIP_UPLOAD=1）"
 elif [ "$API_BASE" != "$BASE_URL" ]; then
-  skip "C8 请求体边界检查：API_BASE 与 BASE_URL 不同源，无法验证 Nginx 限制"
+  skip "C8 请求体边界检查：API_BASE 与 BASE_URL 不同源，无法验证本仓库 Nginx 层"
 else
+  server_header() { header_value server; }
+
   dd if=/dev/zero of="$TMP_DIR/big.bin" bs=1048576 count=15 2>/dev/null
   code=$(request POST "$API_BASE/api/v1/files/generic" -F "file=@$TMP_DIR/big.bin;filename=deploy-check.bin")
+  srv="$(server_header)"
   if [ "$code" = "413" ]; then
-    fail "C8 15MB 上传被拒绝（413），client_max_body_size 未生效"
+    # 413 来自整条链路，不能据此断言 Nginx 配置
+    fail "C8 15MB 请求返回 413（server=${srv:-未知}），需定位拒绝层；不能单凭状态码断定 Nginx 配置"
   elif [ "$code" = "000" ]; then
-    fail "C8 15MB 上传无响应，检查 Nginx 上游与超时"
+    fail "C8 15MB 上传无响应，检查上游与超时"
   else
-    pass "C8 15MB 请求体未被 Nginx 拒绝（HTTP ${code}，未鉴权属预期）"
+    pass "C8 15MB 请求未被链路拒绝（HTTP ${code}，server=${srv:-未知}；未鉴权属预期）"
 
     dd if=/dev/zero of="$TMP_DIR/huge.bin" bs=1048576 count=25 2>/dev/null
     code=$(request POST "$API_BASE/api/v1/files/generic" -F "file=@$TMP_DIR/huge.bin;filename=deploy-check.bin")
+    srv="$(server_header)"
     if [ "$code" = "413" ]; then
-      pass "C8b 25MB 请求体被 Nginx 拒绝为 413（上限已生效）"
+      pass "C8b 25MB 请求返回 413（server=${srv:-未知}）；仅证明链路存在请求体上限，未确认来自本仓库 Nginx 20m"
     else
-      warn "C8b 25MB 请求体返回 HTTP ${code}（未出现 413）；若上限为 20m，请核对是否经过本仓库 Nginx"
+      warn "C8b 25MB 请求返回 HTTP ${code}；未出现 413，若上限为 20m 请核对是否经过本仓库 Nginx"
     fi
   fi
   rm -f "$TMP_DIR/big.bin" "$TMP_DIR/huge.bin"
@@ -271,7 +288,9 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# C11 WebSocket 握手（需 TOKEN）
+# C11 WebSocket 握手（需 TOKEN）。
+# 请求携带 BASE_URL 的同源 Origin，以覆盖浏览器来源白名单校验；
+# 403 只说明握手被拒，具体原因仍以服务端日志为准。
 # ---------------------------------------------------------------------------
 if [ "$SKIP_WS" = "1" ]; then
   skip "C11 WebSocket 握手检查（SKIP_WS=1）"
@@ -285,13 +304,14 @@ else
   else
     ws_code=$("${CURL_STREAM[@]}" --max-time 6 -o /dev/null -D "$TMP_DIR/ws_header" -w '%{http_code}' \
       -H "Connection: Upgrade" -H "Upgrade: websocket" \
+      -H "Origin: $ORIGIN" \
       -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
       --http1.1 "$API_BASE/api/v1/messages/ws?ticket=$ticket" 2>/dev/null || true)
     status_line=$(head -1 "$TMP_DIR/ws_header" 2>/dev/null | tr -d '\r')
     if printf '%s' "$status_line" | grep -q ' 101 '; then
       pass "C11 WebSocket 握手返回 101"
     elif [ "$ws_code" = "403" ]; then
-      warn "C11 WebSocket 握手 403：office.messages.allowed-origins 可能未包含当前 Origin"
+      warn "C11 WebSocket 握手 403（Origin=${ORIGIN}）：可能为来源白名单、票据或网关路由问题，需查服务端日志"
     else
       fail "C11 WebSocket 握手失败（${status_line:-无响应}），检查 Upgrade/Connection 头与长超时"
     fi

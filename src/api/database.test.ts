@@ -1,8 +1,8 @@
 /**
  * 数据库配置 API 测试
  * ------------------------------------------------------------------
- * 覆盖：HTTP 方法、路径与关键参数透传（连接测试/部署配置生成 POST 提交含密码配置、
- * 数据源分页 pageNum/pageSize、密码仅上行不回显契约）。
+ * 覆盖：HTTP 方法、路径与含密码请求体的透传、数据源 pageNum/pageSize 分页参数。
+ * 请求层为 mock；不验证后端响应脱敏或页面密码回显。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

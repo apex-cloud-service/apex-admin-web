@@ -1,6 +1,17 @@
 /**
  * 请求缓存工具
- * 提供请求级别的缓存机制，减少重复请求
+ * ------------------------------------------------------------------
+ * 用途：提供按 key 的 TTL 缓存，适用于调用方允许缓存的读取操作，
+ * 不检查 HTTP 方法。cachedRequest 可按 dedupe 复用在途请求；
+ * prefetchRequest 每次执行，不读取缓存或参与去重。当前无业务调用点。
+ *
+ * 失效屏障：delete 递增该 key 的 version，clear 递增全局 epoch；
+ * 响应返回时核对请求发起前的快照，已失效的响应仍返回给原调用方，
+ * 但不回填缓存。delete 不清 pending；clear 清 pending 但不取消网络请求。
+ *
+ * pending 映射每个 key 仅记录一个 Promise，覆盖不取消旧请求；
+ * 旧 Promise 仅在仍是当前记录时清理映射。重新写入会取消旧 TTL 定时器，
+ * 定时器到期也核对条目身份，避免误删同 key 的新值。
  */
 
 interface CacheItem<T> {
@@ -15,8 +26,9 @@ interface CacheItem<T> {
  * 请求缓存管理器
  */
 class RequestCache {
-  private cache = new Map<string, CacheItem<any>>()
-  private pendingRequests = new Map<string, Promise<any>>()
+  // 值类型由各方法泛型决定，容器内部按 unknown 保存，读取时由调用方断言为 T
+  private cache = new Map<string, CacheItem<unknown>>()
+  private pendingRequests = new Map<string, Promise<unknown>>()
   /** 每 key 失效版本，delete 时递增 */
   private versions = new Map<string, number>()
   /** 全局失效纪元，clear 时递增；用于让所有在途请求失效 */
@@ -38,7 +50,7 @@ class RequestCache {
       return null
     }
 
-    return item.data
+    return item.data as T
   }
 
   /**
@@ -113,7 +125,7 @@ class RequestCache {
    * 获取待处理的请求
    */
   getPendingRequest<T>(key: string): Promise<T> | null {
-    return this.pendingRequests.get(key) || null
+    return (this.pendingRequests.get(key) as Promise<T> | undefined) || null
   }
 
   /**
@@ -173,16 +185,19 @@ export interface CacheOptions {
   key?: string
   /** 缓存时间（毫秒），默认 5 分钟 */
   ttl?: number
-  /** 是否强制刷新（忽略缓存） */
+  /** 使已存缓存失效（默认 false）；不清 pending，dedupe=true 时仍可能复用旧在途请求 */
   forceRefresh?: boolean
   /** 是否启用请求去重 */
   dedupe?: boolean
 }
 
 /**
- * 带缓存的请求
- * @param requestFn 请求函数
- * @param options 缓存配置
+ * 执行带 TTL 缓存和可选在途去重的请求。
+ * @param requestFn 调用方提供的请求函数，本工具不检查 HTTP 方法
+ * @param options 缓存配置（可选）；需复用缓存时显式提供 key
+ * @returns 缓存命中值或请求结果；null 作为未命中标记，不能可靠缓存为命中值
+ * forceRefresh 只失效缓存，dedupe=true 时仍可能复用旧 pending；
+ * 失效只阻止旧结果回填，不阻止原调用返回，也不取消网络请求。
  */
 export async function cachedRequest<T>(
   requestFn: () => Promise<T>,
@@ -239,8 +254,12 @@ export async function cachedRequest<T>(
 }
 
 /**
- * 预加载请求（提前加载并缓存）。
- * 失败语义：仅记录日志不抛出、不写缓存，调用方无法感知失败；需要失败感知时自行调用 requestFn
+ * 预加载请求，每次执行，不检查缓存或参与在途去重。
+ * 同 key 的并发结果在快照仍有效时按完成顺序写入，不能保证发起顺序。
+ * @param requestFn 允许预加载的请求函数
+ * @param key 缓存键
+ * @param ttl 缓存时间（可选，毫秒，默认 5 分钟）
+ * @returns 无结果；失败仅记录日志、不抛出、不写缓存，需要感知失败时自行调用 requestFn
  */
 export async function prefetchRequest<T>(
   requestFn: () => Promise<T>,
@@ -262,14 +281,16 @@ export async function prefetchRequest<T>(
 }
 
 /**
- * 清除指定缓存
+ * 清除指定缓存并使该 key 的在途快照失效。
+ * @param key 缓存键
+ * 不清 pending 或取消请求；后续去重调用仍可能复用旧请求，但旧结果不会回填。
  */
 export function clearCache(key: string): void {
   globalCache.delete(key)
 }
 
 /**
- * 清除所有缓存
+ * 清空缓存及 pending 映射，推进全局失效纪元；不取消已发网络请求。
  */
 export function clearAllCache(): void {
   globalCache.clear()
@@ -278,6 +299,7 @@ export function clearAllCache(): void {
 /**
  * 获取缓存统计。
  * @returns items 中 size 为 JSON 序列化后的字符数（非字节数）、age/ttl 单位毫秒
+ * @throws Error 缓存值不能序列化为 JSON 字符串时可能抛错，如循环引用、BigInt 或 undefined
  */
 export function getCacheStats() {
   return {

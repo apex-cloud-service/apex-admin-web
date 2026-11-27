@@ -490,7 +490,7 @@ const handleChartResize = (): void => {
   chartInstance?.resize()
 }
 
-// 主题切换后重绘当前图表（沿用渲染函数内的配色逻辑）
+// 主题变化时重绘当前图表；renderChart 使用固定/默认颜色，不根据 theme 选择明暗配色
 watch(
   () => appStore.theme,
   () => {

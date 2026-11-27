@@ -3,7 +3,9 @@
  * ------------------------------------------------------------------
  * 覆盖：HTTP 方法、路径与关键参数透传（分片上传契约：upload 为原始字节流且
  * 定位参数走 query、status 为 GET /{fileId} 断点续传端点；本模块全部函数均经
- * 统一请求层，不含组件级 Element Plus/XHR 上传通道）。
+ * 统一请求层，不含组件级 Element Plus/XHR 上传通道）；普通上传 sex=0/1 到
+ * 表单值 '1'/'2' 的映射与 fileName→objectName 归一（见 utils/upload-sex、
+ * utils/upload-result）。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

@@ -6,7 +6,6 @@
  * 禁止在本文件直接调用 localStorage。
  */
 import { watch, onMounted, onBeforeUnmount, type Ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 import { readJSON, writeJSON, readRaw, writeRaw, removeItem, hasItem } from '@/utils/storage'
 import { DRAFT_KEY_PREFIX, DRAFT_TIMESTAMP_KEY_SUFFIX } from '@/settings'
@@ -27,7 +26,7 @@ export interface UseFormDraftOptions {
  * @param form 表单数据的 Ref（深层监听其 value）
  * @param options 配置选项
  */
-export function useFormDraft<T extends Record<string, any>>(
+export function useFormDraft<T extends Record<string, unknown>>(
   formKey: string,
   form: Ref<T>,
   options: UseFormDraftOptions = {}
@@ -59,7 +58,8 @@ export function useFormDraft<T extends Record<string, any>>(
 
   /**
    * 加载草稿
-   * @returns 草稿数据；不存在、已过期（超过 ttl）或数据损坏时返回 null
+   * @returns 草稿数据；缺草稿/时间戳、JSON 解析失败、时间戳非法或超过 ttl 时返回 null
+   * 不校验草稿结构；缺失或非法时间戳按过期处理并清除。
    */
   const loadDraft = (): T | null => {
     const draftStr = readJSON<T>(storageKey)
@@ -69,9 +69,9 @@ export function useFormDraft<T extends Record<string, any>>(
       return null
     }
 
-    // 检查是否过期（超期草稿直接清除）
-    const timestamp = parseInt(timestampStr)
-    if (Date.now() - timestamp > ttl) {
+    // 时间戳非法（NaN/非正）按已过期处理，避免永不过期的草稿
+    const timestamp = Number(timestampStr)
+    if (!Number.isSafeInteger(timestamp) || timestamp <= 0 || Date.now() - timestamp > ttl) {
       clearDraft()
       return null
     }
@@ -80,10 +80,28 @@ export function useFormDraft<T extends Record<string, any>>(
     return draftStr
   }
 
+  // 自行维护防抖定时器（useDebounceFn 返回的函数不带 cancel，无法在 clearDraft 中取消）
+  let saveTimer: ReturnType<typeof setTimeout> | null = null
+  const cancelPendingSave = () => {
+    if (saveTimer !== null) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+  }
+  const debouncedSave = () => {
+    cancelPendingSave()
+    saveTimer = setTimeout(() => {
+      saveTimer = null
+      saveDraft()
+    }, debounce)
+  }
+
   /**
-   * 清除草稿
+   * 删除当前草稿与时间戳键、复位 dirty，并取消待执行的防抖保存。
+   * 取消防抖后，清除前已排期的写入不会再把草稿写回。
    */
   const clearDraft = () => {
+    cancelPendingSave()
     removeItem(storageKey)
     removeItem(timestampKey)
     isDirty = false
@@ -99,7 +117,9 @@ export function useFormDraft<T extends Record<string, any>>(
   }
 
   /**
-   * 恢复草稿（带确认）
+   * 确认后将草稿浅合并到当前表单，不整体替换。
+   * @returns 合并成功为 true，无草稿为 false；确认或合并异常统一清除草稿并返回 false
+   * 异常不向外传播，也不保证撤销已经发生的部分合并。
    */
   const restoreDraft = async (): Promise<boolean> => {
     const draft = loadDraft()
@@ -121,23 +141,20 @@ export function useFormDraft<T extends Record<string, any>>(
       Object.assign(form.value, draft)
       return true
     } catch {
-      // 用户选择放弃
+      // 取消确认或合并异常均清除草稿，不保证撤销已发生的部分合并
       clearDraft()
       return false
     }
   }
 
-  // 防抖保存
-  const debouncedSave = useDebounceFn(saveDraft, debounce)
-
   // 监听表单变化
-  watch(
+  const stopWatching = watch(
     form,
     () => {
       isDirty = true
       debouncedSave()
     },
-    { deep: true }
+    { deep: true, flush: 'sync' }
   )
 
   // 页面离开前提示（使用浏览器 beforeunload，不拦截 SPA 路由切换）
@@ -165,8 +182,10 @@ export function useFormDraft<T extends Record<string, any>>(
     }
   })
 
-  // 组件卸载前保存
+  // 卸载前取消定时器与监听，再同步保存一次，避免卸载后旧防抖任务重复写入
   onBeforeUnmount(() => {
+    cancelPendingSave()
+    stopWatching()
     if (isDirty) {
       saveDraft()
     }

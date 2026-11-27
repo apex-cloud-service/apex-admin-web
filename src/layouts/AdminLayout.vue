@@ -60,7 +60,7 @@
               {{ item.title }}
             </el-breadcrumb-item>
           </el-breadcrumb>
-          <!-- 权限码为空提示：前端空集合放行，但后端会按套餐/角色拒绝，避免用户误判 -->
+          <!-- 权限码为空时给出提示；前端空集合放行不代表后端授权，实际操作可能被独立鉴权拒绝 -->
           <el-tooltip
             v-if="permissionWarning"
             content="当前账号未获得任何权限码：按钮仍会显示，但操作可能被后端拒绝；请检查租户套餐与角色授权"
@@ -155,7 +155,7 @@ const breadcrumbs = computed(() => {
   return matched.map((item) => ({ path: item.path, title: item.meta.title as string }))
 })
 
-/** 身份已初始化但权限码为空：按钮仍可见，后端会拒绝，给用户可见提示 */
+/** 身份已初始化但权限码为空时提示；前端按钮仍可能展示，不能据此判断后端一定放行或拒绝。 */
 const permissionWarning = computed(() => userStore.initialized && userStore.permissions.length === 0)
 
 /** 用户头像占位文本（取昵称首字符） */
@@ -236,7 +236,7 @@ function handleCommand(command: string): void {
         router.push('/login')
       })
       .catch(() => {
-        /* 用户取消退出 */
+        // 取消确认或退出流程异常均在此静默结束
       })
   }
 }

@@ -105,7 +105,7 @@ function toRouteRecord(node: MenuNode): RouteRecordRaw | null {
       title: node.menuName,
       icon: node.icon,
       perms: node.perms,
-      // 隐藏菜单（visible=0）：路由仍注册，侧边栏不展示
+      // visible=0 只设置 hidden，仍注册路由；侧栏仅过滤 Root 直接子项，目录子项不再次过滤
       hidden: node.visible === 0,
     },
   }

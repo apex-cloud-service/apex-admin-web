@@ -1,13 +1,15 @@
 /**
  * 敏感信息脱敏工具
- * 用于在界面上展示敏感数据时进行脱敏处理
+ * ------------------------------------------------------------------
+ * 用途：为界面展示提供字符串掩码与顶层字段批量适配，不验证证件或输入格式。
+ * 多种短输入会原样返回；不能仅凭调用本模块保证所有输入均已脱敏。
  */
 
 /**
  * 手机号脱敏
  * @param phone 手机号
  * @param format 格式：'middle' 中间脱敏（默认）, 'start' 开头脱敏, 'end' 结尾脱敏
- * @returns 脱敏后的手机号，如 138****5678
+ * @returns 掩码手机号，如 138****5678；空输入返回空串，去空白后不足 7 位原样返回
  */
 export function maskPhone(phone: string, format: 'middle' | 'start' | 'end' = 'middle'): string {
   if (!phone) return ''
@@ -49,7 +51,7 @@ export function maskEmail(email: string): string {
 /**
  * 身份证号脱敏
  * @param idCard 身份证号
- * @returns 脱敏后的身份证号，如 110101********1234
+ * @returns 15/18 位号码的掩码结果；其他长度原样返回，空输入返回空串，不校验身份证有效性
  */
 export function maskIdCard(idCard: string): string {
   if (!idCard) return ''
@@ -70,7 +72,7 @@ export function maskIdCard(idCard: string): string {
 /**
  * 银行卡号脱敏
  * @param bankCard 银行卡号
- * @returns 脱敏后的银行卡号，如 6222 ******** 1234
+ * @returns 掩码卡号，如 6222 ******** 1234；去空白后不足 8 位原样返回，8 位仅插入空格而不隐藏字符
  */
 export function maskBankCard(bankCard: string): string {
   if (!bankCard) return ''
@@ -92,7 +94,7 @@ export function maskBankCard(bankCard: string): string {
 /**
  * 姓名脱敏
  * @param name 姓名
- * @returns 脱敏后的姓名，如 张*、王**
+ * @returns 去首尾空白后的掩码姓名，如 张*、王**；空输入返回空串，单字符原样返回
  */
 export function maskName(name: string): string {
   if (!name) return ''
@@ -111,7 +113,7 @@ export function maskName(name: string): string {
  * 地址脱敏
  * @param address 地址
  * @param keepLength 保留前面的字符数，默认 6
- * @returns 脱敏后的地址，如 北京市朝阳区******
+ * @returns 掩码地址，如 北京市朝阳区******；长度不超过 keepLength 时原样返回
  */
 export function maskAddress(address: string, keepLength: number = 6): string {
   if (!address) return ''
@@ -128,7 +130,7 @@ export function maskAddress(address: string, keepLength: number = 6): string {
 /**
  * IP 地址脱敏
  * @param ip IP 地址
- * @returns 脱敏后的 IP，如 192.168.*.*
+ * @returns 点分四段的掩码结果，如 192.168.*.*；非四段原样返回，不处理 IPv6 或验证 IPv4 合法性
  */
 export function maskIp(ip: string): string {
   if (!ip) return ''
@@ -142,7 +144,7 @@ export function maskIp(ip: string): string {
 /**
  * 护照号码脱敏
  * @param passport 护照号码
- * @returns 脱敏后的护照号码，如 E12****89
+ * @returns 先转大写再掩码，如 E12****89；不足 5 位返回大写原值，5 位也不隐藏字符
  */
 export function maskPassport(passport: string): string {
   if (!passport) return ''
@@ -163,10 +165,10 @@ export function maskPassport(passport: string): string {
 /**
  * 通用脱敏（保留前后部分，中间用星号替换）
  * @param value 要脱敏的值
- * @param keepStart 保留开头字符数
- * @param keepEnd 保留结尾字符数
+ * @param keepStart 保留开头字符数（可选，默认 3）；负数/非有限值归 0，小数向下取整
+ * @param keepEnd 保留结尾字符数（可选，默认 3）；负数/非有限值/0 不保留尾部，不会回填原文
  * @param maskChar 脱敏字符，默认 '*'
- * @returns 脱敏后的字符串
+ * @returns 掩码字符串；保留总数不小于原文长度时原样返回，空输入返回空串
  */
 export function maskGeneral(
   value: string,
@@ -175,25 +177,28 @@ export function maskGeneral(
   maskChar: string = '*'
 ): string {
   if (!value) return ''
-  
+
   const valueStr = String(value)
   const length = valueStr.length
-  
-  if (length <= keepStart + keepEnd) {
+  // 归一保留长度：负数与 0 均按 0 处理，避免 slice(-0) 取整段原文
+  const startKeep = Number.isFinite(keepStart) ? Math.max(0, Math.floor(keepStart)) : 0
+  const endKeep = Number.isFinite(keepEnd) ? Math.max(0, Math.floor(keepEnd)) : 0
+
+  if (startKeep + endKeep >= length) {
     return valueStr
   }
-  
-  const start = valueStr.slice(0, keepStart)
-  const end = valueStr.slice(-keepEnd)
-  const middle = maskChar.repeat(length - keepStart - keepEnd)
-  
+
+  const start = valueStr.slice(0, startKeep)
+  const end = endKeep > 0 ? valueStr.slice(-endKeep) : ''
+  const middle = maskChar.repeat(length - startKeep - endKeep)
+
   return `${start}${middle}${end}`
 }
 
 /**
  * 车牌号脱敏
  * @param plateNumber 车牌号
- * @returns 脱敏后的车牌号，如 京A***123
+ * @returns 掩码车牌，如 京A***123；去首尾空白后不足 6 位原样返回，不验证车牌格式
  */
 export function maskPlateNumber(plateNumber: string): string {
   if (!plateNumber) return ''
@@ -209,23 +214,24 @@ export function maskPlateNumber(plateNumber: string): string {
 }
 
 /**
- * 批量脱敏
- * @param data 数据对象
- * @param rules 脱敏规则 { 字段名: 脱敏函数 }
- * @returns 脱敏后的数据对象
+ * 浅拷贝对象并按规则处理真值的顶层字段，不递归处理嵌套字段。
+ * @param data 数据对象，原对象顶层字段不被赋值，嵌套引用仍共享
+ * @param rules 自有顶层字段到脱敏函数的映射；真值转为字符串，0/false/空串/null/undefined 跳过
+ * @returns 顶层适配后的浅拷贝对象；规则回调异常直接向调用方传播
  */
-export function maskBatch<T extends Record<string, any>>(
+export function maskBatch<T extends Record<string, unknown>>(
   data: T,
   rules: Record<string, (value: string) => string>
 ): T {
-  const result = { ...data } as any
-  
+  const result: Record<string, unknown> = { ...data }
+
   for (const [field, maskFn] of Object.entries(rules)) {
-    if (result[field]) {
-      result[field] = maskFn(result[field] as string)
+    const value = result[field]
+    if (Object.prototype.hasOwnProperty.call(result, field) && value) {
+      result[field] = maskFn(typeof value === 'string' ? value : String(value))
     }
   }
-  
+
   return result as T
 }
 

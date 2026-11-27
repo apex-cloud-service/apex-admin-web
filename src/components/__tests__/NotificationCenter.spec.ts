@@ -1,8 +1,9 @@
 /**
  * NotificationCenter 单元测试
  * ------------------------------------------------------------------
- * 覆盖：未读角标展示与隐藏、SSE 订阅/退订与推送刷新、面板打开拉取列表、
- * 单条已读与全部已读、60 秒轮询与卸载清理；不含真实 SSE 流连接与弹层定位。
+ * 覆盖：未读角标展示与隐藏、SSE 订阅/退订与推送刷新、面板打开拉取列表
+ * （popover after-enter 触发）、单条已读与全部已读、60 秒轮询与卸载清理；
+ * 不含真实 SSE 流连接与弹层定位。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'

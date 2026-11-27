@@ -6,6 +6,7 @@
 
 已登记记录：
 
+- [FE-032 评审遗留逻辑修复](./2026-11-25-logic-remediation.md) — 始于 2026-11-25，2026-11-26 继续核验，尚未关闭。
 - [2026-11-16 文档治理与目录重构](./2026-11-16-docs-governance.md)
 - [2026-11-19 前后端联调执行记录](./2026-11-19-fullstack-integration.md)
 - [2026-11-23 API 契约追踪矩阵](./2026-11-23-api-contract-matrix.md)（静态生成证据）
@@ -24,3 +25,4 @@
 | 2026-11-19 | [2026-11-19-fullstack-integration.md](./2026-11-19-fullstack-integration.md) | FE-029/BE-043 Podman 联调证据，含真实网关登录修复、通知只读验证与剩余覆盖项 |
 | 2026-11-23 | [2026-11-23-task-ownership-handoff.md](./2026-11-23-task-ownership-handoff.md) | FE-029 租约接管与 FE-030 独立优化任务登记 |
 | 2026-11-23 | [2026-11-23-fe030-wave-a-test-report.md](./2026-11-23-fe030-wave-a-test-report.md) | FE-030 Wave A 历史产物审计、隔离复验与独立 R5 结论 |
+| 2026-11-25 | [2026-11-25-comment-review-handover.md](./2026-11-25-comment-review-handover.md) | 全仓代码注释事实评审、JSDoc 补全、验证与未修逻辑交接；未提交、待主控补登 |

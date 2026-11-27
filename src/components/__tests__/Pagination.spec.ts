@@ -3,7 +3,7 @@
  * ------------------------------------------------------------------
  * 覆盖 Pagination 的对外事件契约：
  * - 页码变化向上抛出 change(page, size)
- * - 每页条数变化重置到第一页
+ * - 在第一页改变每页条数时抛出 change(1, size)，未测试非第一页的重置场景
  * - total 变小时当前页回退到最后一页
  */
 import { describe, expect, it } from 'vitest'
@@ -60,10 +60,15 @@ describe('Pagination 组件', () => {
     expect(wrapper.emitted('change')?.[0]).toEqual([2, DEFAULT_PAGE_SIZE])
   })
 
-  it('每页条数变化时重置到第一页', () => {
+  it('非第一页改变每页条数时重置到第一页', () => {
     const { wrapper, stub } = mountPagination(100)
+    const vm = stub.vm as unknown as { next: () => void; changeSize: (size: number) => void }
 
-    ;(stub.vm as unknown as { changeSize: (size: number) => void }).changeSize(50)
+    // 先切到第 2 页，确保“重置”不是初始页造成的假通过
+    vm.next()
+    wrapper.emitted('change')?.splice(0)
+
+    vm.changeSize(50)
 
     expect(wrapper.emitted('change')?.[0]).toEqual([1, 50])
   })

@@ -81,7 +81,14 @@ fi
 cleanup() {
   local status=$?
   trap - EXIT
-  if ! "${compose[@]}" down >/dev/null 2>&1 || ! project_is_empty; then
+  # down 会因未启动的服务报 "no such container"；清理结果以实际资源为准，不能因该报错留下容器/网络。
+  "${compose[@]}" down >/dev/null 2>&1 || true
+  if ! project_is_empty; then
+    # 二次清理：按项目标签删除残留容器，再删除专属网络（不删除卷）
+    podman ps -aq --filter "$label" | xargs -r podman rm -f >/dev/null 2>&1 || true
+    podman network ls -q --filter "$network" | xargs -r podman network rm >/dev/null 2>&1 || true
+  fi
+  if ! project_is_empty; then
     printf 'Isolated cleanup incomplete\n' >&2
     release_project_lock
     exit 1

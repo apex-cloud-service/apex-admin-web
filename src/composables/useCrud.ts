@@ -23,7 +23,7 @@ export interface CrudApi<T> {
 
 /** useCrud 可选配置项 */
 export interface UseCrudOptions {
-  /** 各操作成功后的提示文案（缺省为「创建/更新/删除成功」） */
+  /** 未传整个对象时使用默认成功文案；传部分对象不逐字段补默认值，需提供所用操作文案 */
   successMessage?: {
     /** 创建成功提示 */
     create?: string
@@ -94,7 +94,7 @@ export function useCrud<T>(api: CrudApi<T>, options: UseCrudOptions = {}) {
   /**
    * 创建记录：成功后提示并刷新当前页
    * @param data 新建数据
-   * @returns 创建后的记录
+   * @returns 写入与刷新均成功后返回创建记录；写成功后刷新失败仍拒绝，已写数据不回滚
    */
   const create = async (data: Partial<T>) => {
     try {
@@ -112,7 +112,7 @@ export function useCrud<T>(api: CrudApi<T>, options: UseCrudOptions = {}) {
    * 更新记录：成功后提示并刷新当前页
    * @param id 记录 ID
    * @param data 更新数据
-   * @returns 更新后的记录
+   * @returns 写入与刷新均成功后返回更新记录；刷新失败不回滚写入，不能据此直接重试写操作
    */
   const update = async (id: string, data: Partial<T>) => {
     try {
@@ -127,7 +127,8 @@ export function useCrud<T>(api: CrudApi<T>, options: UseCrudOptions = {}) {
   }
 
   /**
-   * 删除单条记录：按配置弹出二次确认，成功后刷新（末页删空自动回退上一页）
+   * 删除单条记录：按配置弹出二次确认，成功后刷新（末页删空自动回退上一页）。
+   * 删除成功后刷新失败仍会拒绝，但删除不回滚；拒绝不必然表示写操作失败。
    * @param id 记录 ID
    */
   const remove = async (id: string) => {
@@ -160,7 +161,8 @@ export function useCrud<T>(api: CrudApi<T>, options: UseCrudOptions = {}) {
 
   /**
    * 批量删除：始终弹出确认，确认后并发调用单条删除。
-   * 部分失败不会回滚已成功项，也不进入成功提示或列表刷新；调用方需自行处理重试。
+   * 部分失败不会回滚已成功项，也不进入成功提示或列表刷新；其他已发请求不会取消。
+   * 全部删除成功后若刷新失败也会拒绝，不能据此重新删除；调用方需区分写入与刷新阶段。
    * @param ids 待删除的记录 ID 列表（空列表时仅提示）
    */
   const batchRemove = async (ids: string[]) => {

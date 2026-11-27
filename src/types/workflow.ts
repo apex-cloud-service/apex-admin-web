@@ -261,6 +261,8 @@ export interface InstanceQueryParams {
   status?: string
   /** 发起人ID过滤 */
   initiatorId?: number
+  /** 允许透传后端新增查询字段，避免调用点使用 any/双重断言 */
+  [key: string]: unknown
 }
 
 /**

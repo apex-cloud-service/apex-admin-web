@@ -12,7 +12,7 @@
  * - PUT /admin-api/v1/documents/{id}/status - 更新文档状态
  * - GET /admin-api/v1/documents/{id}/download - 下载文档
  */
-import { del, get, post, put } from '@/utils/request'
+import { del, get, post, put, request } from '@/utils/request'
 import type { Document, PageQuery, PageResponse } from '@/types'
 
 /** 文档列表查询参数 */
@@ -102,10 +102,14 @@ export function updateDocumentStatus(id: string, status: number): Promise<void> 
 }
 
 /**
- * 下载文档
- * @param id 文档ID
- * @returns 文件二进制数据
+ * 下载文档。
+ * @param id 文档 ID
+ * @returns 以 responseType='blob' 接收的文件二进制内容；外层 Result 解包不适用于二进制流
  */
 export function downloadDocument(id: string): Promise<Blob> {
-  return get<Blob>(`/admin-api/v1/documents/${id}/download`)
+  return request<Blob>({
+    method: 'GET',
+    url: `/admin-api/v1/documents/${id}/download`,
+    responseType: 'blob',
+  })
 }

@@ -3,10 +3,8 @@
  * ------------------------------------------------------------------
  * 提供文档和图表管理的 Mock 数据，用于前端开发和测试。
  * 
- * 使用方式：
- * 1. 在 main.ts 中引入并启用：import './mock'
- * 2. 开发时自动拦截 API 请求并返回 Mock 数据
- * 3. 生产环境自动禁用
+ * 使用方式：main.ts 在 import.meta.env.DEV 条件下动态导入本模块。
+ * 生产入口不加载；模块自身不会阻止 Mock 注册，不能改为无条件静态导入。
  */
 import Mock from 'mockjs'
 import type { Document, Chart, ChartData, PageResponse } from '@/types'

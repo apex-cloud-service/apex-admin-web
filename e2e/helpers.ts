@@ -48,7 +48,7 @@ export const MENUS = [
   },
 ]
 
-/** 扩展菜单树夹具：系统管理（用户/租户）+ 工作流 + 办公审批（FE-003 主链路用例使用） */
+/** 扩展菜单树夹具：系统管理（用户）+ 工作流 + 办公审批；租户菜单在 MENUS_WITH_TENANT 中。 */
 export const MENUS_FULL = [
   ...MENUS,
   {

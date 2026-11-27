@@ -67,7 +67,8 @@ export interface BusinessLogQuery {
 
 /**
  * 查询运行时日志
- * @param params 查询参数（startTime/endTime 格式：yyyy-MM-dd HH:mm:ss）
+ * @param params 查询参数（startTime/endTime 格式：yyyy-MM-dd HH:mm:ss，limit 可选）
+ * @returns RuntimeLog 数组；没有分页 total，limit 是结果数量限制
  */
 export function queryRuntimeLogs(params: RuntimeLogQuery): Promise<RuntimeLog[]> {
   return get<RuntimeLog[]>('/admin-api/v1/logs/runtime', params as unknown as Record<string, unknown>)
@@ -84,6 +85,7 @@ export function countRuntimeLogs(params: Pick<RuntimeLogQuery, 'startTime' | 'en
 /**
  * 查询业务日志（分页）
  * @param params 查询参数（logType: login/operation/api，时间格式：yyyy-MM-dd HH:mm:ss）
+ * @returns BusinessLog 分页（list/total），状态口径见 BusinessLog.status
  */
 export function queryBusinessLogs(params: BusinessLogQuery): Promise<PageResponse<BusinessLog>> {
   return get<PageResponse<BusinessLog>>('/admin-api/v1/logs/business', params as unknown as Record<string, unknown>)

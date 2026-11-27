@@ -6,7 +6,7 @@
  * - 创建/更新成功后提示并刷新列表
  * - 删除确认取消不调用接口、不提示失败
  * - 末页删空自动回退上一页
- * - 批量删除空列表只提示；并发删除单条失败整体抛出
+ * - 批量删除空列表只提示；确认后并发删除并刷新；部分失败拒绝且不回滚已成功项
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -43,7 +43,7 @@ function createApi(rows: Row[] = []) {
     list: vi.fn(async (): Promise<PageResponse<Row>> => ({ list: rows, total: rows.length, pageNum: 1, pageSize: 20, pages: 1 })),
     create: vi.fn(async (data: Partial<Row>) => ({ id: 'new', name: data.name ?? '' })),
     update: vi.fn(async (id: string, data: Partial<Row>) => ({ id, name: data.name ?? '' })),
-    delete: vi.fn(async () => undefined),
+    delete: vi.fn(async (_id: string) => undefined),
   }
 }
 
@@ -172,6 +172,24 @@ describe('useCrud', () => {
     expect(api.delete).toHaveBeenCalledTimes(2)
     expect(ElMessage.success).toHaveBeenCalledWith('成功删除 2 项')
     expect(api.list).toHaveBeenCalledTimes(1)
+  })
+
+  it('批量删除部分失败时拒绝，且不提示成功、不刷新列表', async () => {
+    const api = createApi()
+    confirmMock.mockResolvedValueOnce(undefined)
+    api.delete.mockImplementation(async (id: string) => {
+      if (id === '2') throw new Error('delete failed')
+      return undefined
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const crud = useCrud<Row>(api)
+
+    await expect(crud.batchRemove(['1', '2'])).rejects.toThrow('delete failed')
+
+    // 已成功项不回滚：两条删除请求都已发出
+    expect(api.delete).toHaveBeenCalledTimes(2)
+    expect(ElMessage.success).not.toHaveBeenCalled()
+    expect(api.list).not.toHaveBeenCalled()
   })
 
   it('reset 回到第一页后查询', async () => {

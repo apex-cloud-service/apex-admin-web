@@ -98,8 +98,13 @@ const defaultAllowedAttrs: Record<string, string[]> = {
 }
 
 /**
- * 简易 HTML 清理器（轻量级实现）
- * 注意：生产环境建议使用 DOMPurify 库
+ * 按白名单清理 HTML（依赖浏览器 DOM，轻量级实现）。
+ * 自定义白名单替换默认值；属性取标签专属项与 '*' 的并集。
+ * 不允许的标签连同子树删除；href/src 经过 URL 清理，但 style 不做 CSS 清理。
+ * @param html HTML 字符串
+ * @param options 可选标签和属性白名单
+ * @returns 清理后的 HTML，空输入返回空串；不构成完整的不可信 HTML 安全净化保证
+ * 生产环境需使用经过验证的 HTML 净化方案，本函数不能覆盖所有输出上下文。
  */
 export function sanitizeHtml(
   html: string,
@@ -157,8 +162,9 @@ export function sanitizeHtml(
 }
 
 /**
- * 解析 JSON 并对全部字符串值与对象键做 HTML 转义，防止注入。
- * 解析失败返回 null（不抛出），调用方需判空
+ * 解析 JSON，递归对字符串值与对象键做 HTML 实体转义，不提供 JS/CSS/URL 上下文净化。
+ * @param input JSON 文本
+ * @returns 转义后的结构；解析失败和合法 JSON null 均返回 null，不能据此区分二者
  */
 export function sanitizeJson(input: string): unknown {
   try {
@@ -188,7 +194,10 @@ export function sanitizeJson(input: string): unknown {
 }
 
 /**
- * 验证和清理用户输入
+ * 按输入类别清理字符，不验证邮箱或数值的格式有效性。
+ * @param input 输入文本，先转换为字符串并去首尾空白
+ * @param type 清理类别（可选，默认 text）：HTML 转义、邮箱字符、URL 协议或数字字符
+ * @returns 清理后的字符串，空输入返回空串；字符保留不等于业务校验通过
  */
 export function sanitizeInput(input: string, type: 'text' | 'email' | 'url' | 'number' = 'text'): string {
   if (!input) return ''
@@ -212,7 +221,7 @@ export function sanitizeInput(input: string, type: 'text' | 'email' | 'url' | 'n
       break
       
     case 'number':
-      // 数字：只保留数字和小数点
+      // 数字：保留数字、小数点和负号，不校验多个点或负号是否组成有效数值
       sanitized = sanitized.replace(/[^0-9.-]/g, '')
       break
   }

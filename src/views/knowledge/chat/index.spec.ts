@@ -2,6 +2,7 @@
  * 知识问答页面流式错误测试
  * ------------------------------------------------------------------
  * 覆盖：JSON/旧纯文本错误、部分答案保留、终止帧、读取异常、UTF-8 跨分片与状态复位。
+ * 正常 done 用例检查内容、释放锁及会话刷新，不断言 done 后 reader.read 次数。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
@@ -167,6 +168,8 @@ describe('知识问答 SSE 错误', () => {
     expect(wrapper.get('.assistant .message-content').text()).toBe('中文答案')
     expect(stream.reader.releaseLock).toHaveBeenCalledOnce()
     expect(api.listConversations).toHaveBeenCalledTimes(2)
+    // done 帧后必须停止读取：仅供两块数据，读取次数不应超过块数
+    expect(stream.reader.read).toHaveBeenCalledTimes(2)
     wrapper.unmount()
   })
 })

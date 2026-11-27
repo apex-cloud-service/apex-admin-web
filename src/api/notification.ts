@@ -44,7 +44,7 @@ export interface NotificationInboxQuery {
 /**
  * 分页查询当前用户的通知收件箱。
  * @param query 分页与过滤参数
- * @returns 分页数据（PageResponse 包装）
+ * @returns PageResponse：list 为当前页通知，total 为服务端匹配总数
  */
 export function listNotifications(query: NotificationInboxQuery): Promise<PageResponse<SystemNotification>> {
   return get<PageResponse<SystemNotification>>('/api/v1/notifications/inbox', { ...query })
