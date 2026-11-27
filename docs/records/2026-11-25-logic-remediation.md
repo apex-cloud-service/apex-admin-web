@@ -60,16 +60,51 @@
 
 ### 已解决（2026-11-26 第二轮）
 
-1. **vitest worker 启动超时（已根因修复）**：本机 12 CPU 下 vitest 按 CPU 数起 forks worker，出现 `Failed to start forks worker` / `Timeout waiting for worker`，导致用例被跳过或误报失败。已在 `vitest.config.ts` 设置 `maxWorkers:4`（`pool` 本就是 vitest 5 默认 forks，故未重复声明；`minWorkers` 经核实不是 vitest 5 有效键，已删除避免误导）；改后默认命令 `npx vitest run` **连续 3 次全量 68 文件 / 592 用例通过，无 worker 错误**。此前的“分片汇总”口径不再需要。
-2. **监控大盘渲染间歇超时（已根因修复）**：`browser-business-smoke.mjs` 的 `monitor-dashboard` 组在登录跳转目标已是 `/monitor/dashboard`、页面早已发出 5 个请求的情况下，又点击同名侧栏菜单；vue-router 对同路由跳转去重、不重复请求，`waitForResponse` 只能等满 32s。已改为：先确认页面已渲染，已捕获响应用缓存，缺失时点“立即刷新”触发一次真实重取。改后 `--monitor-reads` **连续 2 次 `Monitor dashboard API and rendering: passed`**（五个接口 200/code=0）。
+1. **vitest worker 启动超时**：`vitest.config.ts` 设 `maxWorkers:4`（`pool:forks` 为默认不重复声明，`minWorkers` 非有效键已删）。默认命令 `npx vitest run` 连续多次 **68 文件 / 592 用例通过**。
+2. **监控大盘渲染间歇超时**：`browser-business-smoke.mjs` 删除“同路由二次点击”（vue-router 去重导致 waitForResponse 等满 32s），改为断言已渲染 + 缓存响应 + 缺失时点“立即刷新”重取。`--monitor-reads` 连续 2 次 passed。
 
-### 仍阻塞（外部前置，不可由前端伪造）
+### 授权材料问题（2026-11-27 已解决）
 
-3. **受保护接口与知识库真实联调**：`/integration/v1/connectors` 等返回 **HTTP 403（无业务 code）**。该组依赖部署方通过安全渠道提供的 `VERIFY_AUTHORIZATION_CONFIG_DIR`（`authorization.yml` + `truststore.p12`）、可信 HTTPS 授权中心 `base-url`、经确认的 `shared-user-namespace` 与按真实租户精确映射的专用 reader token。当前变量未设置；仓库文档明确规定**不能用浏览器管理员凭据代替**，也不得把 token 写入仓库/命令/日志。因此 office/workflow/file/integration 受保护链路与知识库（隔离编排未启动 KB profile）**未运行，不宣称通过**。
-   - 解除条件：部署方提供只读授权材料目录（`0700`/`0600`，仅两个文件），设置 `VERIFY_AUTHORIZATION_CONFIG_DIR`，并保证 auth 与 system 使用同一租户命名空间。
-   - 已验证可用的部分：`--system-reads`、`--monitor-reads` 全通过（认证、角色、权限、菜单、监控五接口、系统用户/部门/参数）。
-4. **独立 R5 复核（第二轮）已完成**：第五轮 `APPROVE_WITH_NITS`（唯一发现 `minWorkers` 为无效键，已删除并清理冗余 `pool` 声明），第六轮**最终 `APPROVE`，无必修项、无建议**，绑定 HEAD `71d8230` + 指纹 `e6e7568c…`。
-5. **仍有真实环境阻塞**：见上条 3。
+原判断“需部署方提供”不完整：经核对后端源码，三项前置**均可在隔离栈内真实生成**，无需伪造：
+
+| 材料 | 实际来源 |
+| --- | --- |
+| reader 账号 | 栈内 `apex_auth.auth_user` 的 admin(1001)，同租户启用 |
+| reader token | 由**栈内 auth-service 真实登录签发**，且必须在栈内迁移完成后签发并就地写入配置（auth-service 走 Redis 密钥轮换，预签 token 在栈重建后失效） |
+| HTTPS base-url | 新增仅隔离验证用 nginx TLS 终结（自签 CA，栈内 `:8443`，只允许 GET） |
+| truststore.p12 | 同一 CA 用 openssl 导出，口令 changeit |
+| shared-user-namespace | 隔离栈共用 default 租户，事实成立 |
+
+新增 `prepare-authorization.sh` 生成上述材料；过程中修复 5 个真实缺陷（compose 变量未 export、未建库致迁移失败、OAuth2 公钥缺 PKCS#8 DER、`$VAR（` 在 `set -u` 下被当作变量名、TLS 代理早于上游 DNS 启动）。链路已验证：TLS 代理成功转发，auth 返回 401（非 403），证明请求确实到达认证中心。
+
+### 最终阻塞：后端租户上下文未装配（不属于本仓库可改范围）
+
+`/integration/v1/connectors` 的失败在授权通过之后，真实错误为：
+
+```
+IllegalStateException: 租户上下文未装配，拒绝执行租户 SQL
+（DefaultTenantLineHandler.getTenantId）
+```
+
+成因链（后端源码定位）：租户上下文由 `IdentityRelayAuthenticationFilter` 在 JWT 验签成功后写入 Reactor Context；验签失败时该过滤器直接 `chain.filter(exchange)` 不注入上下文，随后 MyBatis `TenantLineInnerInterceptor` 拒绝执行租户 SQL。
+
+**判定：不在本仓库修复。** 理由：
+1. 位于后端仓库，属 BE-043/FE-029 契约与租户语义范围，AGENTS §0.6.2 要求先出方案并经 R3 评审；
+2. 涉及 JWT 验签与租户隔离，属安全边界，本任务红线明确“不改认证/租户/权限语义”；
+3. 前端无法在不降低安全性的前提下规避（伪造租户头或跳过租户过滤均不可接受）。
+
+**交接建议**：按上面成因链与文件定位，在后端仓库作为缺陷登记（`IdentityRelayAuthenticationFilter` 验签失败分支的租户上下文注入，与 `DefaultTenantLineHandler` 的拒绝语义），由后端评估是补注入还是给出明确的 403 语义。
+
+### 当前可用结论
+
+| 项目 | 结果 |
+| --- | --- |
+| `--system-reads` | 通过 |
+| `--monitor-reads` | 连续 2 次通过 |
+| 授权材料本地生成 | 已打通并可复用 |
+| `--integration-reads` | 阻塞于后端租户上下文（已定位到具体文件与方法） |
+| office / workflow / file 受保护链路 | 同源阻塞，未运行 |
+| 知识库 | 隔离编排未启动 KB profile，未运行 |
 
 ## 边界与回滚
 

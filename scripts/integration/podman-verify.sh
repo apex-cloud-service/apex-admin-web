@@ -58,8 +58,9 @@ if [[ -n ${VERIFY_AUTHORIZATION_CONFIG_DIR:-} ]]; then
   shopt -s nullglob dotglob
   config_entries=("$config_dir"/*)
   shopt -u nullglob dotglob
-  ((${#config_entries[@]} == 2)) || {
-    printf 'Authorization config directory must contain only the YAML config and truststore\n' >&2
+  # 允许 2 件（authorization.yml + truststore.p12）或 3 件（另含材料脚本生成的 verify-keys.env）
+  (( ${#config_entries[@]} == 2 || ${#config_entries[@]} == 3 )) || {
+    printf 'Authorization config directory must contain only the YAML config, truststore and optional verify-keys.env\n' >&2
     exit 1
   }
   if [[ $(uname -s) == Darwin ]]; then
@@ -76,6 +77,17 @@ if [[ -n ${VERIFY_AUTHORIZATION_CONFIG_DIR:-} ]]; then
     exit 1
   }
   compose+=(-f "$FRONTEND_ROOT/scripts/integration/podman-verify-authorized.yml")
+  # 栈内 TLS 终结（授权中心必须 HTTPS）：证书目录与 nginx 配置由材料生成脚本产出
+  export VERIFY_AUTHORIZATION_TLS_DIR="${VERIFY_AUTHORIZATION_TLS_DIR:-$FRONTEND_ROOT/.runtime/authorization-tls}"
+  export VERIFY_AUTHORIZATION_NGINX_CONF="${VERIFY_AUTHORIZATION_NGINX_CONF:-$FRONTEND_ROOT/scripts/integration/auth-tls.conf}"
+  [[ -d $VERIFY_AUTHORIZATION_TLS_DIR ]] || {
+    printf 'TLS directory is missing: %s\nRun scripts/integration/prepare-authorization.sh first.\n' "$VERIFY_AUTHORIZATION_TLS_DIR" >&2
+    exit 1
+  }
+  [[ -f $VERIFY_AUTHORIZATION_NGINX_CONF ]] || {
+    printf 'TLS nginx config is missing: %s\n' "$VERIFY_AUTHORIZATION_NGINX_CONF" >&2
+    exit 1
+  }
 fi
 unset VERIFY_ROCKETMQ_NAMESERVER VERIFY_MQ_CONSUMER_ENABLED VERIFY_SSE_MARKER
 if [[ ${VERIFY_BROWSER_MODE:-} == --notification-push ]]; then
@@ -103,6 +115,13 @@ fi
 cleanup() {
   local status=$?
   trap - EXIT
+  # 调试保留现场：设置 VERIFY_KEEP_STACK=1 时跳过清理，便于失败后抓取容器日志。
+  # 该开关仅供诊断，正式验证不得开启（避免残留资源影响下一次隔离运行）。
+  if [[ ${VERIFY_KEEP_STACK:-} == 1 ]]; then
+    printf 'VERIFY_KEEP_STACK=1: skipping cleanup for diagnosis (project %s left running)\n' "$project"
+    release_project_lock
+    exit "$status"
+  fi
   # down 会因未启动的服务报 "no such container"；清理结果以实际资源为准，不能因该报错留下容器/网络。
   "${compose[@]}" down >/dev/null 2>&1 || true
   if ! project_is_empty; then
@@ -147,6 +166,14 @@ rsa=$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null)
 VERIFY_RSA_PRIVATE=$(printf '%s\n' "$rsa" | openssl pkcs8 -topk8 -nocrypt -outform DER | openssl base64 -A)
 VERIFY_RSA_PUBLIC=$(printf '%s\n' "$rsa" | openssl pkey -pubout -outform DER | openssl base64 -A)
 unset rsa
+# 授权材料自带固化密钥（prepare-authorization.sh 签发 reader token 所用），优先采用，
+# 保证 token 签名与验证栈 JWKS 一致；否则栈随机密钥会让 auth-service 拒绝该 token。
+if [[ -f "$config_dir/verify-keys.env" ]]; then
+  set -a
+  source "$config_dir/verify-keys.env"
+  set +a
+  printf 'Using fixed verification keys from verify-keys.env (token signature consistency)\n'
+fi
 
 install_cleanup
 "${compose[@]}" run --rm --no-deps -T browser timeout 90 node scripts/integration/browser-auth-smoke.mjs --launch-only
@@ -193,6 +220,11 @@ if [[ -n ${VERIFY_SSE_MARKER:-} ]]; then
   printf 'Isolated RocketMQ topic ready\n'
 fi
 "${compose[@]}" up -d apex-system-service apex-auth-service
+# 授权材料生效时一并启动栈内 TLS 终结（业务服务查授权快照依赖 https://apex-auth-tls）。
+# auth-service 可能未就绪导致 nginx upstream 解析失败，由容器 entrypoint 轮询 + restart 兜底。
+if [[ -n ${VERIFY_AUTHORIZATION_CONFIG_DIR:-} ]]; then
+  "${compose[@]}" up -d apex-auth-tls
+fi
 wait_port apex-system-service 8082
 wait_port apex-auth-service 8081
 if [[ -n ${VERIFY_SSE_MARKER:-} ]]; then
@@ -273,6 +305,43 @@ for check in "${checks[@]}"; do
     sleep 4
   done
 done
+
+# 授权材料生效时，在本栈内以 admin 真实登录签发 reader token，并就地更新 authorization.yml。
+# 必须在密钥与数据库就绪后进行：材料脚本预签的 token 依赖当时的 Redis 轮换密钥，
+# 栈重建（tmpfs 空库 + 新 Redis）后旧 token 会被 auth-service 以 401 拒绝。
+if [[ -n ${VERIFY_AUTHORIZATION_CONFIG_DIR:-} ]]; then
+  say_reader_token() { printf '[authorization] %s\n' "$*"; }
+  auth_port_ready() { exec_in apex-auth-service timeout 4 bash -c 'exec 3<>/dev/tcp/127.0.0.1/$1' bash 8081 2>/dev/null; }
+  deadline=$((SECONDS + 120))
+  until auth_port_ready; do
+    ((SECONDS < deadline)) || { printf 'auth-service 8081 not ready for reader login\n' >&2; exit 1; }
+    sleep 3
+  done
+  reader_login_payload='{"username":"admin","password":"admin123","loginType":"PASSWORD"}'
+  reader_login_body=$(exec_in apex-auth-service env LOGIN_PAYLOAD="$reader_login_payload" sh -ec \
+    'wget -qO- --header="Content-Type: application/json" --post-data="$LOGIN_PAYLOAD" http://127.0.0.1:8081/auth/v1/login') || {
+    printf 'reader login request failed\n' >&2; exit 1
+  }
+  READER_TOKEN=$(printf '%s' "$reader_login_body" | sed -n 's/.*"accessToken"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+  [[ -n $READER_TOKEN ]] || { printf 'reader token missing in login response\n' >&2; exit 1; }
+  READER_ID=$(sql "SELECT id FROM apex_auth.auth_user WHERE username='admin' AND tenant_id='default' AND status=1 AND deleted=0 LIMIT 1")
+  [[ -n $READER_ID ]] || { printf 'reader account not found in apex_auth\n' >&2; exit 1; }
+  python3 -I - "$config_dir/authorization.yml" "$READER_ID" "$READER_TOKEN" <<'PY'
+import re, sys
+path, reader_id, token = sys.argv[1], sys.argv[2], sys.argv[3]
+text = open(path).read()
+if f'authorization-reader-user-id: "{reader_id}"' not in text:
+    raise SystemExit(f'reader-user-id mismatch: file expects different reader than {reader_id}')
+text = re.sub(r'("default":\s*")eyJ[^"]+(")', lambda m: m.group(1) + token + m.group(2), text)
+open(path, 'w').write(text)
+PY
+  say_reader_token "reader token issued inside this stack and written into authorization.yml (tenant default)"
+  # 这些服务在启动时读取过一次旧材料（可能只有占位 token），写入新 token 后必须重启才生效
+  if podman ps --format '{{.Names}}' | grep -q "${project}_apex-integration-service_1"; then
+    "${compose[@]}" restart apex-office-service apex-workflow-service apex-file-service apex-integration-service >/dev/null
+    say_reader_token "restarted protected services to reload authorization config"
+  fi
+fi
 "${compose[@]}" up -d browser
 publish_status=0
 if [[ -n ${VERIFY_SSE_MARKER:-} ]]; then

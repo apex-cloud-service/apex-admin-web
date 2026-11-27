@@ -1,3 +1,14 @@
+# 隔离验证专用：授权材料覆盖 + 栈内 TLS 终结
+# ------------------------------------------------------------------
+# 仅在设置 VERIFY_AUTHORIZATION_CONFIG_DIR 时由 podman-verify.sh 叠加。
+# 不修改生产编排、生产 Nginx 配置或部署文档。
+#
+# 为什么需要 TLS 终结：受保护 Handler 的 *PermissionClient 要求授权中心为 HTTPS
+# （base-url 必须 https），而 auth-service 只监听 HTTP 8081。此处在栈内用 nginx
+# 把 https://apex-auth-tls:8443 转发到 auth-service；证书由 prepare-authorization.sh
+# 用单套自签 CA 生成，同一 CA 一并导入各服务 JVM truststore，信任链自洽。
+#
+# 证书与材料都放在宿主临时目录，不打进镜像、不入库。
 x-authorized-service: &authorized-service
   volumes:
     - "${VERIFY_AUTHORIZATION_CONFIG_DIR}:/run/secrets/authorization:ro"
@@ -9,6 +20,32 @@ x-authorized-service: &authorized-service
       -Djavax.net.ssl.trustStoreType=PKCS12
 
 services:
+  # 栈内 TLS 终结：https://apex-auth-tls:8443 -> http://apex-auth-service:8081
+  # auth-service 可能晚于本容器启动，DNS 尚未注册时 nginx 会因 upstream 解析失败直接退出；
+  # 因此 entrypoint 先轮询上游可达，再 exec nginx（restart 策略兜底）。
+  apex-auth-tls:
+    image: docker.io/library/nginx:alpine
+    pull_policy: never
+    entrypoint:
+      - sh
+      - -ec
+      - |
+        i=0
+        while [ $$i -lt 60 ]; do
+          if getent hosts apex-auth-service >/dev/null 2>&1; then
+            echo "[auth-tls] upstream resolved, starting nginx"
+            exec nginx -g 'daemon off;'
+          fi
+          i=$$((i+1))
+          sleep 2
+        done
+        echo "[auth-tls] upstream apex-auth-service not resolvable in 120s" >&2
+        exit 1
+    volumes:
+      - "${VERIFY_AUTHORIZATION_TLS_DIR:?set VERIFY_AUTHORIZATION_TLS_DIR}:/etc/nginx/tls:ro"
+      - "${VERIFY_AUTHORIZATION_NGINX_CONF:?set VERIFY_AUTHORIZATION_NGINX_CONF}:/etc/nginx/conf.d/default.conf:ro"
+    restart: unless-stopped
+
   apex-auth-service:
     <<: *authorized-service
   apex-office-service:
