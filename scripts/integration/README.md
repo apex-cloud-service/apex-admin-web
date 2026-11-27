@@ -43,3 +43,13 @@ bash scripts/integration/podman-verify.sh --frontend-test
 使用 `VERIFY_BROWSER_MODE=--notification-push` 只验证 RocketMQ 到 Chromium 的 SSE 投递。预先使用 Podman 准备 `docker.io/apache/rocketmq:5.3.1` 镜像和含消费者装配修复的 system JAR。入口仅启动必需的隔离服务，不发布宿主端口；等待 Broker 创建主题、通知广播消费者注册和浏览器订阅后，再向 `apex-notification-topic` 发布定向夹具。只有 Broker 确认发送且 Chromium 实际收到随机标记的 `notification` 帧，才判定通过。该用例不验证业务事件生产者、通知落库、跨实例扇出或办公站内信 WebSocket 投递。
 
 空库验证时，先确认 MySQL 的 `/var/lib/mysql` 为 tmpfs，再执行迁移。V76 后默认租户为 `default`；确保两个登录租户设置均与之匹配，且测试账号已有同租户 system 账号绑定。仅在本次临时空库补齐未绑定的测试账号，不改变租户归属。先启动 auth/system 并等待 system health UP，再启动网关和前端，避免冷启动探测触发业务熔断。结束后对专属项目执行不带 `-v` 的 `podman-compose down`。
+
+### `--integration-reads` 的前置诊断
+
+`--integration-reads` 依赖部署方授权材料。集成服务的连接器/凭据 Handler 标注 `@RequirePermission`，由 `IntegrationSecurityAspect` 调用 `IntegrationPermissionClient` 校验；该客户端在下列任一条件不满足时**直接拒绝（HTTP 403）**，不缓存、不降级、无测试放行开关：
+
+1. `integration.security.authorization.shared-user-namespace=true`（默认 `false`）；
+2. 授权中心的 **HTTPS** `base-url`（默认空）；
+3. 按真实租户 ID 精确映射的 **reader token**（默认空映射）。
+
+未设置 `VERIFY_AUTHORIZATION_CONFIG_DIR` 时，`podman-verify.sh` 会在启动栈之前直接失败并打印上述缺失项，避免跑完整栈才看到 403。这不是脚本缺陷，而是最小权限设计；占位或伪造凭据不属于验证手段。

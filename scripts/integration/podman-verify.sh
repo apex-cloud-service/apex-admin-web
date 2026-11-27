@@ -20,6 +20,28 @@ case ${VERIFY_BROWSER_MODE:-} in
   *) printf 'Invalid VERIFY_BROWSER_MODE\n' >&2; exit 1 ;;
 esac
 compose=(podman-compose -p "$project" -f "$FRONTEND_ROOT/scripts/integration/podman-verify.yml")
+
+# 受保护链路依赖部署方授权材料：integration/office/workflow 的 Handler 上
+# @RequirePermission 由 *SecurityAspect 经 IntegrationPermissionClient 校验，
+# 后者要求 shared-user-namespace=true、HTTPS base-url、按租户精确映射的 reader token，
+# 任一缺失即抛 AccessDeniedException（HTTP 403）。这些材料只能由部署方通过安全渠道提供，
+# 不能用浏览器管理员凭据替代。缺失时在此提前失败，避免跑完整栈才看到 403。
+if [[ ${VERIFY_AUTHORIZATION_CONFIG_DIR:-} == '' && ${VERIFY_BROWSER_MODE:-} == '--integration-reads' ]]; then
+  {
+    printf 'VERIFY_AUTHORIZATION_CONFIG_DIR is not set; this mode cannot pass.\n'
+    printf 'Reason: integration handlers require @RequirePermission, verified by\n'
+    printf '  IntegrationPermissionClient, which rejects (HTTP 403) unless ALL of:\n'
+    printf '    - integration.security.authorization.shared-user-namespace=true\n'
+    printf '    - a trusted HTTPS base-url for the authorization center\n'
+    printf '    - a per-tenant reader token mapped by exact tenant id\n'
+    printf 'Defaults are shared-user-namespace=false, no base-url, empty reader tokens,\n'
+    printf 'so the request is denied by design; there is no test/no-auth bypass.\n'
+    printf 'To enable: provide a 0700 dir with authorization.yml + truststore.p12 (0600)\n'
+    printf 'and export VERIFY_AUTHORIZATION_CONFIG_DIR=<that dir>. See\n'
+    printf '  scripts/integration/README.md and docs/guides/deployment.md.\n'
+  } >&2
+  exit 1
+fi
 if [[ -n ${VERIFY_AUTHORIZATION_CONFIG_DIR:-} ]]; then
   config_dir=$(cd "$VERIFY_AUTHORIZATION_CONFIG_DIR" && pwd -P) || {
     printf 'Authorization config directory is unavailable\n' >&2
