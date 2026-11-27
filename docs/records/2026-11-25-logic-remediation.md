@@ -46,7 +46,7 @@
 | `podman-verify.sh --frontend-test` | **14/14 通过**，容器/网络已清理 |
 | 真实后端 `--monitor-reads` | **连续 2 次通过**：`Monitor dashboard API and rendering: passed`，五接口 HTTP 200/code=0（已修复同路由重复导航导致的超时） |
 | 真实后端 `--system-reads` | 通过：认证/角色/权限/菜单 + 系统用户、部门、参数列表 |
-| 真实后端 `--integration-reads` | **未通过**：`/integration/v1/connectors` HTTP 403，依赖部署方授权材料（见阻塞 §3） |
+| 真实后端 `--integration-reads` | 见下文「授权链路三层根因（2026-11-27 全部定位并修复）」：浏览器冒烟单测 `Connector list: passed`（HTTP 200 / code=0）；完整脚本回归见台账 #142 |
 
 ### 修复前失败证据
 
@@ -72,28 +72,40 @@
 | reader 账号 | 栈内 `apex_auth.auth_user` 的 admin(1001)，同租户启用 |
 | reader token | 由**栈内 auth-service 真实登录签发**，且必须在栈内迁移完成后签发并就地写入配置（auth-service 走 Redis 密钥轮换，预签 token 在栈重建后失效） |
 | HTTPS base-url | 新增仅隔离验证用 nginx TLS 终结（自签 CA，栈内 `:8443`，只允许 GET） |
-| truststore.p12 | 同一 CA 用 openssl 导出，口令 changeit |
+| truststore.p12 | 同一 CA 由 **keytool 导入**（口令 changeit）。初版用 openssl `pkcs12 -export -nokeys` 导出，OpenSSL 3.x 下产物为 0 条目空 keystore，Java 报 `trustAnchors parameter must be non-empty`，是 403 的第一层根因；已修复并加「必须恰好 1 条 trustedCertEntry」自检 |
 | shared-user-namespace | 隔离栈共用 default 租户，事实成立 |
 
 新增 `prepare-authorization.sh` 生成上述材料；过程中修复 5 个真实缺陷（compose 变量未 export、未建库致迁移失败、OAuth2 公钥缺 PKCS#8 DER、`$VAR（` 在 `set -u` 下被当作变量名、TLS 代理早于上游 DNS 启动）。链路已验证：TLS 代理成功转发，auth 返回 401（非 403），证明请求确实到达认证中心。
 
-### 最终阻塞：后端租户上下文未装配（不属于本仓库可改范围）
+### 更正：前判「后端租户上下文未装配」为误判（2026-11-27）
 
-`/integration/v1/connectors` 的失败在授权通过之后，真实错误为：
+日志中 10 条 `IllegalStateException: 租户上下文未装配` 逐条溯源，触发方全部是 `DeviceCommandTimeoutScanner`（每 30s 一次的后台定时扫描），**没有任何一条来自 HTTP 请求路径**——把它当成 connectors 403 根因是误判。该后台任务缺陷仍然真实存在，移交后端（见下文交接清单第 3 项），但与本次 403 无关。
 
-```
-IllegalStateException: 租户上下文未装配，拒绝执行租户 SQL
-（DefaultTenantLineHandler.getTenantId）
-```
+connectors 403 的真实根因有三层，全部已定位并处置：
 
-成因链（后端源码定位）：租户上下文由 `IdentityRelayAuthenticationFilter` 在 JWT 验签成功后写入 Reactor Context；验签失败时该过滤器直接 `chain.filter(exchange)` 不注入上下文，随后 MyBatis `TenantLineInnerInterceptor` 拒绝执行租户 SQL。
+### 授权链路三层根因（2026-11-27 全部定位并修复）
 
-**判定：不在本仓库修复。** 理由：
-1. 位于后端仓库，属 BE-043/FE-029 契约与租户语义范围，AGENTS §0.6.2 要求先出方案并经 R3 评审；
-2. 涉及 JWT 验签与租户隔离，属安全边界，本任务红线明确“不改认证/租户/权限语义”；
-3. 前端无法在不降低安全性的前提下规避（伪造租户头或跳过租户过滤均不可接受）。
+| # | 根因 | 证据 | 处置 |
+| --- | --- | --- | --- |
+| 1 | truststore.p12 为空 keystore：`openssl pkcs12 -export -nokeys`（OpenSSL 3.6）不写入任何证书 | 容器内 `keytool -list` 显示 `contains 0 entries`；集成服务日志 `trustAnchors parameter must be non-empty`；TLS 握手失败 → `IntegrationPermissionClient.onErrorMap → AccessDeniedException` | `prepare-authorization.sh` 改用 `keytool -importcert` 导入 CA，并新增「恰好 1 条 trustedCertEntry」自检 |
+| 2 | apex_auth 库缺 `integration:*`/`iot:*` 权限码：V83/V85 只写 `apex_system.sys_permission`，而 `IntegrationPermissionClient` 查询认证中心 `apex_auth.auth_permission`（该库 V47 仅 20 条基础权限 + MFA 段），快照不含 `integration:connector:read` → 判定失败恒 403 | `apex_auth.auth_permission WHERE code LIKE 'integration:%'` 为空；快照 JSON 权限列表无 integration 项；在 apex_auth 补插 12 码并授予 ADMIN 后（37→49 条）接口立即 200 | 属**后端迁移缺口**（apex-scaffold 仓库）。本仓库不改后端代码，仅在隔离验证栈内按后端同一份权限码补种并留痕（`podman-verify.sh` fixture，带注释说明），见台账 #142 |
+| 3 | 会话数上限：重复验证累积 5 条 ACTIVE 会话达 `maxSessions` 上限，脚本内的浏览器登录在**登录阶段**被拒（HTTP 403、`code none`），冒烟误报为 connectors 403 | `auth_session WHERE user_id=1001 AND status='ACTIVE'` 计数 5；登录接口日志 `登录失败: error=BusinessException`（同 traceId 前文为 SessionMapper 查询）；清空会话后浏览器冒烟立即 `Connector list: passed` | `podman-verify.sh` 在授权流程开始前将本栈 `default` 租户的 ACTIVE 会话置 EXPIRED，消除重跑残留 |
 
-**交接建议**：按上面成因链与文件定位，在后端仓库作为缺陷登记（`IdentityRelayAuthenticationFilter` 验签失败分支的租户上下文注入，与 `DefaultTenantLineHandler` 的拒绝语义），由后端评估是补注入还是给出明确的 403 语义。
+另修复两处脚本时序缺陷（均由实测暴露）：
+
+- 受保护服务重启后端口先监听、Spring 后完成绑定，立即请求会撞上网关连接失败计数（503/code=3007）。已在重启后依次等待各服务**自身端口**（8084/8093/8085/8094；曾误写 8080 导致每个服务白等 360s）、用配置内 reader token 经 TLS 代理探授权快照 `"code":0`、再经网关探无鉴权路由 `/api/v1/auth/captcha`（不可探 `/api/v2/overview`——无令牌必然 401，条件永不成立）。
+- MySQL 就绪探活超时分支原本静默退出，现输出容器状态与末 30 行日志，便于区分初始化慢与真实故障。
+
+**验证（2026-11-27）**：
+
+- 存活栈内重放浏览器冒烟：`Connector list: passed`、`GET /integration/v1/connectors (code 0): HTTP 200`，login/identity/roles/permissions/menus 全部 200。
+- **完整脚本回归（空栈起跑）**：迁移 22+91 全成功 → 权限补种 fixture confirmed → reader token 栈内签发 → 受保护服务重启 → 授权快照可达 → 网关恢复 → 浏览器登录与菜单渲染通过 → `GET /integration/v1/connectors (code 0): HTTP 200`、`Connector list: passed` → 容器/网络清理干净。
+
+### 后端交接清单（apex-scaffold 仓库，本仓库不改后端代码）
+
+1. **权限迁移缺口（P1）**：开启 `auth-center-permission` 后，`integration:*`/`iot:*` 权限码（V83/V85 仅登记在 `apex_system.sys_permission`）在 `apex_auth.auth_permission` 不存在，集成与 IoT 接口恒 403。需补一份 auth 侧迁移（参照 V48/V50 的 `INSERT IGNORE INTO auth_permission` + 授权 ADMIN 角色模式）。
+2. **`ConnectorConfigRepositoryImpl` 租户上下文覆盖不全（P1）**：7 个方法仅 `page()` 包裹 `TenantContext.callWithTenant(...)`，`findActive/findById/insert/update/delete` 直接在 `BlockingIoSchedulers.jdbc()` 上执行租户 SQL，一旦认证成功进入写路径将复现 `租户上下文未装配`。建议统一在各仓储方法内包裹。
+3. **`DeviceCommandTimeoutScanner` 每 30s 报错（P2）**：后台定时任务无线程级租户上下文，每次执行 `DeviceCommandRepositoryImpl.findDueTimeout` 均抛 `IllegalStateException`（隔离栈日志 10+ 条）。需为扫描任务按租户遍历或临时关闭租户过滤（后端自行评估）。
 
 ### 当前可用结论
 
@@ -102,8 +114,8 @@ IllegalStateException: 租户上下文未装配，拒绝执行租户 SQL
 | `--system-reads` | 通过 |
 | `--monitor-reads` | 连续 2 次通过 |
 | 授权材料本地生成 | 已打通并可复用 |
-| `--integration-reads` | 阻塞于后端租户上下文（已定位到具体文件与方法） |
-| office / workflow / file 受保护链路 | 同源阻塞，未运行 |
+| `--integration-reads` | 浏览器冒烟已通过（`Connector list: passed`，HTTP 200/code=0）；脚本侧三层根因已修复，完整回归见台账 #142 |
+| office / workflow / file 受保护链路 | 授权材料与链路已打通（同一套 reader token/TLS/权限码），尚未逐域跑冒烟，留待后续任务 |
 | 知识库 | 隔离编排未启动 KB profile，未运行 |
 
 ## 边界与回滚

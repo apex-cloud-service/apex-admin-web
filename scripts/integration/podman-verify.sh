@@ -184,7 +184,14 @@ printf 'MySQL data mount is tmpfs\n'
 sql() { exec_in mysql timeout 8 sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -h127.0.0.1 -Nse "$1"' sh "$1"; }
 deadline=$((SECONDS + 120))
 until sql 'SELECT 1' >/dev/null 2>&1; do
-  ((SECONDS < deadline)) || { printf 'MySQL readiness timeout\n' >&2; exit 1; }
+  if ((SECONDS >= deadline)); then
+    printf 'MySQL readiness timeout\n' >&2
+    podman inspect --format 'state={{.State.Status}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}}' "${project}_mysql_1" >&2 || true
+    podman logs --tail 30 "${project}_mysql_1" >&2 || true
+    printf 'probe: ' >&2
+    sql 'SELECT 1' >&2 || true
+    exit 1
+  fi
   sleep 3
 done
 [[ $(sql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='apex_system'") == 0 ]]
@@ -270,6 +277,38 @@ fixture="FROM apex_auth.auth_user a JOIN apex_system.sys_user s ON s.username='a
 [[ $(sql "UPDATE apex_auth.auth_user a JOIN apex_system.sys_user s ON s.username='admin' AND s.deleted=0 SET a.account_id=s.id WHERE a.username='admin' AND a.deleted=0 AND a.tenant_id='default' AND s.tenant_id='default' AND a.account_id IS NULL; SELECT ROW_COUNT()") == 1 ]]
 [[ $(sql "UPDATE apex_system.sys_user s JOIN apex_auth.auth_user a ON a.username='admin' AND a.tenant_id='default' AND a.deleted=0 SET s.open_id=a.open_id WHERE s.username='admin' AND s.tenant_id='default' AND s.deleted=0 AND BINARY s.open_id<>BINARY a.open_id; SELECT ROW_COUNT()") == 1 ]]
 [[ $(sql "SELECT COUNT(*) FROM apex_auth.auth_user a JOIN apex_system.sys_user s ON s.username='admin' AND s.deleted=0 AND BINARY s.open_id=BINARY a.open_id WHERE a.username='admin' AND a.deleted=0 AND a.tenant_id='default' AND s.tenant_id='default'") == 1 ]]
+# 补偿后端迁移缺口（仅隔离验证栈）：V83/V85 把 integration:*/iot:* 权限码只写进
+# apex_system.sys_permission；开启 auth-center-permission 后，集成服务的
+# IntegrationPermissionClient 查询的是 apex_auth.auth_permission，该库仅有 V47 基础
+# 权限（20 条），因此集成与 IoT 接口恒 403。这里按后端迁移的同一份权限码在 apex_auth
+# 补齐并授予 ADMIN 角色，使验证栈反映「权限登记完整」时的预期行为。
+# 该缺口属 apex-scaffold 仓库，本仓库不得修改其后端代码，故只在验证栈内补偿并留痕。
+if [[ ${VERIFY_BROWSER_MODE:-} == --integration-reads ]]; then
+  sql "INSERT IGNORE INTO apex_auth.auth_permission (id,tenant_id,code,name,resource,action,description,enabled,created_at,updated_at) VALUES
+(2810,'default','integration:connector:read','连接器查询','integration-connector','read','查询集成连接器',1,NOW(),NOW()),
+(2811,'default','integration:connector:create','连接器创建','integration-connector','create','创建集成连接器',1,NOW(),NOW()),
+(2812,'default','integration:connector:update','连接器更新','integration-connector','update','更新集成连接器',1,NOW(),NOW()),
+(2813,'default','integration:connector:delete','连接器删除','integration-connector','delete','删除集成连接器',1,NOW(),NOW()),
+(2814,'default','integration:credential:read','凭据查询','integration-credential','read','查询租户凭据',1,NOW(),NOW()),
+(2815,'default','integration:credential:manage','凭据管理','integration-credential','manage','管理租户凭据',1,NOW(),NOW()),
+(2820,'default','iot:device:read','设备查询','iot-device','read','查询物联网设备',1,NOW(),NOW()),
+(2821,'default','iot:device:manage','设备管理','iot-device','manage','管理物联网设备',1,NOW(),NOW()),
+(2822,'default','iot:telemetry:read','遥测查询','iot-telemetry','read','查询设备遥测',1,NOW(),NOW()),
+(2823,'default','iot:rule:manage','规则管理','iot-rule','manage','管理物联网规则',1,NOW(),NOW()),
+(2824,'default','iot:rule:read','规则查询','iot-rule','read','查询物联网规则',1,NOW(),NOW()),
+(2825,'default','iot:command:send','命令下发','iot-command','send','下发设备命令',1,NOW(),NOW());
+INSERT IGNORE INTO apex_auth.auth_role_permission (id,tenant_id,role_id,permission_id,created_at)
+SELECT 6300+id,'default',1,id,NOW() FROM apex_auth.auth_permission
+WHERE tenant_id='default' AND (code LIKE 'integration:%' OR code LIKE 'iot:%');" >/dev/null || {
+    printf 'Isolated auth-center integration permissions fixture failed\n' >&2
+    exit 1
+  }
+  [[ $(sql "SELECT COUNT(*) FROM apex_auth.auth_role_permission WHERE tenant_id='default' AND role_id=1") -ge 49 ]] || {
+    printf 'Isolated auth-center integration permissions not granted\n' >&2
+    exit 1
+  }
+  printf 'Isolated auth-center integration/iot permissions fixture confirmed\n'
+fi
 if [[ ${VERIFY_BROWSER_MODE:-} == --system-reads ]]; then
   [[ $(sql "SELECT COUNT(*) FROM apex_system.sys_user s
 JOIN apex_system.sys_user_role ur ON ur.user_id=s.id AND ur.deleted=0
@@ -311,6 +350,10 @@ done
 # 栈重建（tmpfs 空库 + 新 Redis）后旧 token 会被 auth-service 以 401 拒绝。
 if [[ -n ${VERIFY_AUTHORIZATION_CONFIG_DIR:-} ]]; then
   say_reader_token() { printf '[authorization] %s\n' "$*"; }
+  # 登录会话数上限：每个 token 登录会新建一条 ACTIVE 会话（含下面的 reader 登录与浏览器登录）。
+  # 栈若在同一 tmpfs 生命周期内被重复验证，残留会话会让后续登录在认证阶段直接 403，
+  # 表现为「connectors 403」，实际是登录被拒。此处先作废本栈 admin 的历史活跃会话。
+  sql "UPDATE apex_auth.auth_session SET status='EXPIRED' WHERE tenant_id='default' AND status='ACTIVE'" >/dev/null 2>&1 || true
   auth_port_ready() { exec_in apex-auth-service timeout 4 bash -c 'exec 3<>/dev/tcp/127.0.0.1/$1' bash 8081 2>/dev/null; }
   deadline=$((SECONDS + 120))
   until auth_port_ready; do
@@ -340,6 +383,33 @@ PY
   if podman ps --format '{{.Names}}' | grep -q "${project}_apex-integration-service_1"; then
     "${compose[@]}" restart apex-office-service apex-workflow-service apex-file-service apex-integration-service >/dev/null
     say_reader_token "restarted protected services to reload authorization config"
+# 重启窗口内网关到下游的连接可能已失败计数（熔断/连接池），立即请求会拿到 503。
+    # 等每个服务端口重新监听后，再经网关探一条无鉴权路由，直到返回 HTTP 200 与 code=0。
+    # 注意：不能探 /api/v2/overview 之类受保护路由——无令牌必然 401，等待条件永不成立。
+    # 注意：端口必须写各服务自身监听端口（8084/8093/8085/8094），8080 是网关；
+    # 写成 8080 会让每个服务白等满 wait_port 的 360s 超时。
+    for pair in apex-office-service:8084 apex-workflow-service:8093 apex-file-service:8085 apex-integration-service:8094; do
+      wait_port "${pair%:*}" "${pair#*:}" || true
+    done
+    # 端口监听早于 Spring 完成配置绑定与 JWKS 拉取；此时业务请求会因授权材料尚未生效而 403。
+    # 判据不依赖启动日志（podman restart 保留旧日志行，"Started" 会误判已就绪）：
+    # 直接用配置中的 reader token 经栈内 TLS 代理确认授权快照可用，且业务端口可服务。
+    deadline=$((SECONDS + 300))
+    reader_token_in_config=$(sed -n 's/.*"default": "\([^"]*\)".*/\1/p' "$config_dir/authorization.yml" | head -1)
+    [[ -n $reader_token_in_config ]] || { printf 'reader token missing from authorization config\n' >&2; exit 1; }
+    until exec_in apex-integration-service wget --no-check-certificate -q -O- \
+        --header="Authorization: Bearer $reader_token_in_config" \
+        "https://apex-auth-tls:8443/auth/v1/authorization/users/${READER_ID}" 2>/dev/null | grep -q '"code":0'; do
+      ((SECONDS < deadline)) || { printf 'authorization snapshot not reachable from integration-service after restart\n' >&2; exit 1; }
+      sleep 3
+    done
+    say_reader_token "integration-service authorization snapshot reachable after restart"
+    deadline=$((SECONDS + 120))
+    until exec_in apex-admin-web wget -q -T 8 -O - 'http://apex-gateway:8080/api/v1/auth/captcha' 2>/dev/null | grep -q '"code":0'; do
+      ((SECONDS < deadline)) || { printf 'gateway did not recover after protected-service restart\n' >&2; exit 1; }
+      sleep 3
+    done
+    say_reader_token "gateway recovered after protected-service restart"
   fi
 fi
 "${compose[@]}" up -d browser

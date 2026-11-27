@@ -87,11 +87,16 @@ install -m 600 "$WORK/server.key" "$TLS_DIR/server.key"
 install -m 600 "$WORK/server.crt" "$TLS_DIR/server.crt"
 
 # ---------- 2. 仅含该 CA 的 truststore ----------
+# 注意：openssl pkcs12 -export -nokeys 在 OpenSSL 3.x 下导出 0 条目（证书会被丢弃），
+# Java 侧将得到空 truststore（trustAnchors non-empty → TLS 全挂）。改用 keytool 导入。
 say '导出 truststore.p12（口令 changeit，仅含上述 CA）'
 rm -f "$OUT_DIR/truststore.p12"
-openssl pkcs12 -export -nokeys -in "$WORK/ca.crt" \
-  -out "$OUT_DIR/truststore.p12" -passout pass:changeit >/dev/null 2>&1 \
+keytool -importcert -noprompt -alias apex-verify-ca -file "$WORK/ca.crt" \
+  -keystore "$OUT_DIR/truststore.p12" -storepass changeit -storetype PKCS12 >/dev/null 2>&1 \
   || die '生成 truststore.p12 失败'
+# 自检：truststore 必须恰好 1 条 trustedCert，否则后续 TLS 必挂
+keytool -list -keystore "$OUT_DIR/truststore.p12" -storepass changeit -storetype PKCS12 2>/dev/null \
+  | grep -q trustedCertEntry || die 'truststore.p12 为空（未含 CA）'
 chmod 600 "$OUT_DIR/truststore.p12"
 
 # ---------- 3. 用 auth-service 真实登录取得 reader token ----------
