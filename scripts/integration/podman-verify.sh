@@ -16,7 +16,7 @@ release_project_lock() {
 }
 trap release_project_lock EXIT
 case ${VERIFY_BROWSER_MODE:-} in
-  ''|--notification-only|--notification-push|--governance-reads|--system-reads|--monitor-reads|--integration-reads) ;;
+  ''|--notification-only|--notification-push|--governance-reads|--system-reads|--monitor-reads|--integration-reads|--office-reads|--workflow-reads|--file-reads|--knowledge-reads) ;;
   *) printf 'Invalid VERIFY_BROWSER_MODE\n' >&2; exit 1 ;;
 esac
 compose=(podman-compose -p "$project" -f "$FRONTEND_ROOT/scripts/integration/podman-verify.yml")
@@ -195,7 +195,7 @@ until sql 'SELECT 1' >/dev/null 2>&1; do
   sleep 3
 done
 [[ $(sql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='apex_system'") == 0 ]]
-sql 'CREATE DATABASE apex_auth; CREATE DATABASE apex_office; CREATE DATABASE apex_workflow; CREATE DATABASE apex_file; CREATE DATABASE apex_integration'
+sql 'CREATE DATABASE apex_auth; CREATE DATABASE apex_office; CREATE DATABASE apex_workflow; CREATE DATABASE apex_file; CREATE DATABASE apex_integration; CREATE DATABASE apex_knowledge'
 
 diagnose() {
   local container="${project}_${1}_1"
@@ -245,12 +245,12 @@ if [[ -n ${VERIFY_SSE_MARKER:-} ]]; then
 fi
 checks=('apex-gateway:远程 JWKS 合并完成' 'apex-system-service:JWKS 公钥快照已更新')
 if [[ -z ${VERIFY_SSE_MARKER:-} && ${VERIFY_BROWSER_MODE:-} != --system-reads && ${VERIFY_BROWSER_MODE:-} != --monitor-reads ]]; then
-  "${compose[@]}" up -d apex-office-service apex-workflow-service apex-file-service apex-integration-service
-  for target in apex-office-service:8084 apex-workflow-service:8093 apex-file-service:8085 apex-integration-service:8094; do
+  "${compose[@]}" up -d apex-office-service apex-workflow-service apex-file-service apex-integration-service apex-knowledge-service
+  for target in apex-office-service:8084 apex-workflow-service:8093 apex-file-service:8085 apex-integration-service:8094 apex-knowledge-service:8100; do
     wait_port "${target%:*}" "${target#*:}"
   done
   wait_port apex-integration-service 8097
-  checks+=({apex-workflow-service,apex-file-service,apex-integration-service}':JWKS 公钥快照已更新')
+  checks+=({apex-workflow-service,apex-file-service,apex-integration-service,apex-knowledge-service}':JWKS 公钥快照已更新')
 fi
 "${compose[@]}" up -d apex-gateway apex-admin-web
 wait_port apex-gateway 8080
@@ -283,7 +283,10 @@ fixture="FROM apex_auth.auth_user a JOIN apex_system.sys_user s ON s.username='a
 # 权限（20 条），因此集成与 IoT 接口恒 403。这里按后端迁移的同一份权限码在 apex_auth
 # 补齐并授予 ADMIN 角色，使验证栈反映「权限登记完整」时的预期行为。
 # 该缺口属 apex-scaffold 仓库，本仓库不得修改其后端代码，故只在验证栈内补偿并留痕。
-if [[ ${VERIFY_BROWSER_MODE:-} == --integration-reads ]]; then
+# 覆盖 integration/iot 之外，还包括 office（V81 等登记的 office:*，approval 页需
+# office:approval:pending/initiated）、workflow:definition:* 与 kb:*（知识库 V91 菜单权限）。
+# ID 段：integration/iot 2810-2825（对应 V83/V85），office 2900-2945，workflow 2950-2953，kb 2960-2969。
+if [[ -n ${VERIFY_AUTHORIZATION_CONFIG_DIR:-} ]]; then
   sql "INSERT IGNORE INTO apex_auth.auth_permission (id,tenant_id,code,name,resource,action,description,enabled,created_at,updated_at) VALUES
 (2810,'default','integration:connector:read','连接器查询','integration-connector','read','查询集成连接器',1,NOW(),NOW()),
 (2811,'default','integration:connector:create','连接器创建','integration-connector','create','创建集成连接器',1,NOW(),NOW()),
@@ -296,18 +299,80 @@ if [[ ${VERIFY_BROWSER_MODE:-} == --integration-reads ]]; then
 (2822,'default','iot:telemetry:read','遥测查询','iot-telemetry','read','查询设备遥测',1,NOW(),NOW()),
 (2823,'default','iot:rule:manage','规则管理','iot-rule','manage','管理物联网规则',1,NOW(),NOW()),
 (2824,'default','iot:rule:read','规则查询','iot-rule','read','查询物联网规则',1,NOW(),NOW()),
-(2825,'default','iot:command:send','命令下发','iot-command','send','下发设备命令',1,NOW(),NOW());
+(2825,'default','iot:command:send','命令下发','iot-command','send','下发设备命令',1,NOW(),NOW()),
+(2900,'default','office:app:list','应用列表','office-app','list','查询办公平台应用',1,NOW(),NOW()),
+(2901,'default','office:app:query','应用查询','office-app','query','查询办公平台应用详情',1,NOW(),NOW()),
+(2902,'default','office:app:create','应用创建','office-app','create','创建办公平台应用',1,NOW(),NOW()),
+(2903,'default','office:app:update','应用更新','office-app','update','更新办公平台应用',1,NOW(),NOW()),
+(2904,'default','office:app:delete','应用删除','office-app','delete','删除办公平台应用',1,NOW(),NOW()),
+(2905,'default','office:approval:list','审批列表','office-approval','list','查询审批列表',1,NOW(),NOW()),
+(2906,'default','office:approval:query','审批查询','office-approval','query','查询审批详情',1,NOW(),NOW()),
+(2907,'default','office:approval:pending','待办审批','office-approval','pending','查询待办审批',1,NOW(),NOW()),
+(2908,'default','office:approval:initiated','已发起审批','office-approval','initiated','查询本人已发起审批',1,NOW(),NOW()),
+(2909,'default','office:approval:initiate','发起审批','office-approval','initiate','发起审批流程',1,NOW(),NOW()),
+(2910,'default','office:approval:approve','审批办理','office-approval','approve','通过或拒绝审批',1,NOW(),NOW()),
+(2911,'default','office:approval:cancel','撤销审批','office-approval','cancel','撤销审批流程',1,NOW(),NOW()),
+(2912,'default','office:binding:list','绑定列表','office-binding','list','查询平台绑定',1,NOW(),NOW()),
+(2913,'default','office:binding:review','绑定审批','office-binding','review','审批平台绑定',1,NOW(),NOW()),
+(2914,'default','office:binding:unbind','解绑','office-binding','unbind','解除平台绑定',1,NOW(),NOW()),
+(2915,'default','office:calendar:list','日程列表','office-calendar','list','查询日程',1,NOW(),NOW()),
+(2916,'default','office:calendar:my','我的日程','office-calendar','my','查询本人日程',1,NOW(),NOW()),
+(2917,'default','office:calendar:query','日程查询','office-calendar','query','查询日程详情',1,NOW(),NOW()),
+(2918,'default','office:calendar:create','日程创建','office-calendar','create','创建日程',1,NOW(),NOW()),
+(2919,'default','office:calendar:update','日程更新','office-calendar','update','更新日程',1,NOW(),NOW()),
+(2920,'default','office:calendar:delete','日程删除','office-calendar','delete','删除日程',1,NOW(),NOW()),
+(2921,'default','office:document:list','文档列表','office-document','list','查询办公文档',1,NOW(),NOW()),
+(2922,'default','office:document:my','我的文档','office-document','my','查询本人文档',1,NOW(),NOW()),
+(2923,'default','office:document:query','文档查询','office-document','query','查询文档详情',1,NOW(),NOW()),
+(2924,'default','office:document:create','文档创建','office-document','create','创建办公文档',1,NOW(),NOW()),
+(2925,'default','office:document:copy','文档复制','office-document','copy','复制办公文档',1,NOW(),NOW()),
+(2926,'default','office:document:move','文档移动','office-document','move','移动办公文档',1,NOW(),NOW()),
+(2927,'default','office:document:delete','文档删除','office-document','delete','删除办公文档',1,NOW(),NOW()),
+(2928,'default','office:message:list','站内信列表','office-message','list','查询站内信',1,NOW(),NOW()),
+(2929,'default','office:message:query','站内信查询','office-message','query','查询站内信详情',1,NOW(),NOW()),
+(2930,'default','office:message:send','站内信发送','office-message','send','发送站内信',1,NOW(),NOW()),
+(2931,'default','office:message:recall','站内信撤回','office-message','recall','撤回站内信',1,NOW(),NOW()),
+(2932,'default','office:message:resend','站内信重发','office-message','resend','重发站内信',1,NOW(),NOW()),
+(2933,'default','office:notify:template:read','通知模板查询','office-notify','read','查询通知模板',1,NOW(),NOW()),
+(2934,'default','office:notify:template:manage','通知模板管理','office-notify','manage','管理通知模板',1,NOW(),NOW()),
+(2935,'default','office:notify:record:read','投递记录查询','office-notify-record','read','查询通知投递记录',1,NOW(),NOW()),
+(2936,'default','office:organization:list','组织列表','office-organization','list','查询组织信息',1,NOW(),NOW()),
+(2937,'default','office:organization:query','组织查询','office-organization','query','查询组织详情',1,NOW(),NOW()),
+(2938,'default','office:organization:dept','部门管理','office-organization','dept','管理部门',1,NOW(),NOW()),
+(2939,'default','office:organization:user','员工查询','office-organization','user','查询组织员工',1,NOW(),NOW()),
+(2940,'default','office:organization:sync','组织同步','office-organization','sync','触发组织同步',1,NOW(),NOW()),
+(2941,'default','office:sync:read','同步记录查询','office-sync','read','查询同步任务与历史',1,NOW(),NOW()),
+(2942,'default','office:sync:execute','同步执行','office-sync','execute','执行同步任务',1,NOW(),NOW()),
+(2943,'default','office:meeting-room:read','会议室查询','office-meeting-room','read','查询会议室',1,NOW(),NOW()),
+(2944,'default','office:meeting-room:book','会议室预订','office-meeting-room','book','预订会议室',1,NOW(),NOW()),
+(2945,'default','office:meeting-room:manage','会议室管理','office-meeting-room','manage','管理会议室',1,NOW(),NOW()),
+(2950,'default','workflow:definition:read','流程定义查询','workflow-definition','read','查询流程定义',1,NOW(),NOW()),
+(2951,'default','workflow:definition:edit','流程定义编辑','workflow-definition','edit','编辑流程定义',1,NOW(),NOW()),
+(2952,'default','workflow:definition:publish','流程定义发布','workflow-definition','publish','发布流程定义',1,NOW(),NOW()),
+(2953,'default','workflow:definition:lifecycle','流程定义生命周期','workflow-definition','lifecycle','启停流程定义',1,NOW(),NOW()),
+(2960,'default','kb:space:read','空间查询','kb-space','read','查询知识空间',1,NOW(),NOW()),
+(2961,'default','kb:space:create','空间创建','kb-space','create','创建知识空间',1,NOW(),NOW()),
+(2962,'default','kb:space:update','空间更新','kb-space','update','更新知识空间',1,NOW(),NOW()),
+(2963,'default','kb:space:delete','空间删除','kb-space','delete','删除知识空间',1,NOW(),NOW()),
+(2964,'default','kb:doc:read','文档查询','kb-doc','read','查询知识文档',1,NOW(),NOW()),
+(2965,'default','kb:doc:upload','文档上传','kb-doc','upload','上传知识文档',1,NOW(),NOW()),
+(2966,'default','kb:doc:delete','文档删除','kb-doc','delete','删除知识文档',1,NOW(),NOW()),
+(2967,'default','kb:doc:reindex','重建索引','kb-doc','reindex','重建文档索引',1,NOW(),NOW()),
+(2968,'default','kb:search:query','检索','kb-search','query','知识混合检索',1,NOW(),NOW()),
+(2969,'default','kb:chat:ask','问答','kb-chat','ask','知识库问答',1,NOW(),NOW());
 INSERT IGNORE INTO apex_auth.auth_role_permission (id,tenant_id,role_id,permission_id,created_at)
 SELECT 6300+id,'default',1,id,NOW() FROM apex_auth.auth_permission
-WHERE tenant_id='default' AND (code LIKE 'integration:%' OR code LIKE 'iot:%');" >/dev/null || {
-    printf 'Isolated auth-center integration permissions fixture failed\n' >&2
+WHERE tenant_id='default' AND (code LIKE 'integration:%' OR code LIKE 'iot:%'
+  OR code LIKE 'office:%' OR code LIKE 'workflow:definition:%' OR code LIKE 'kb:%');" >/dev/null || {
+    printf 'Isolated auth-center domain permissions fixture failed\n' >&2
     exit 1
   }
-  [[ $(sql "SELECT COUNT(*) FROM apex_auth.auth_role_permission WHERE tenant_id='default' AND role_id=1") -ge 49 ]] || {
-    printf 'Isolated auth-center integration permissions not granted\n' >&2
+  # 37 = V47 基础权限 + MFA 段存量；60 = 本 fixture 新增（12+46+4+10）
+  [[ $(sql "SELECT COUNT(*) FROM apex_auth.auth_role_permission WHERE tenant_id='default' AND role_id=1") -ge 97 ]] || {
+    printf 'Isolated auth-center domain permissions not granted\n' >&2
     exit 1
   }
-  printf 'Isolated auth-center integration/iot permissions fixture confirmed\n'
+  printf 'Isolated auth-center domain permissions fixture confirmed (integration/iot/office/workflow/kb)\n'
 fi
 if [[ ${VERIFY_BROWSER_MODE:-} == --system-reads ]]; then
   [[ $(sql "SELECT COUNT(*) FROM apex_system.sys_user s
@@ -381,14 +446,14 @@ PY
   say_reader_token "reader token issued inside this stack and written into authorization.yml (tenant default)"
   # 这些服务在启动时读取过一次旧材料（可能只有占位 token），写入新 token 后必须重启才生效
   if podman ps --format '{{.Names}}' | grep -q "${project}_apex-integration-service_1"; then
-    "${compose[@]}" restart apex-office-service apex-workflow-service apex-file-service apex-integration-service >/dev/null
+    "${compose[@]}" restart apex-office-service apex-workflow-service apex-file-service apex-integration-service apex-knowledge-service >/dev/null
     say_reader_token "restarted protected services to reload authorization config"
 # 重启窗口内网关到下游的连接可能已失败计数（熔断/连接池），立即请求会拿到 503。
     # 等每个服务端口重新监听后，再经网关探一条无鉴权路由，直到返回 HTTP 200 与 code=0。
     # 注意：不能探 /api/v2/overview 之类受保护路由——无令牌必然 401，等待条件永不成立。
     # 注意：端口必须写各服务自身监听端口（8084/8093/8085/8094），8080 是网关；
     # 写成 8080 会让每个服务白等满 wait_port 的 360s 超时。
-    for pair in apex-office-service:8084 apex-workflow-service:8093 apex-file-service:8085 apex-integration-service:8094; do
+    for pair in apex-office-service:8084 apex-workflow-service:8093 apex-file-service:8085 apex-integration-service:8094 apex-knowledge-service:8100; do
       wait_port "${pair%:*}" "${pair#*:}" || true
     done
     # 端口监听早于 Spring 完成配置绑定与 JWKS 拉取；此时业务请求会因授权材料尚未生效而 403。

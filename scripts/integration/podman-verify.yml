@@ -147,6 +147,25 @@ services:
       SPRING_DATASOURCE_URL: &integration jdbc:mysql://mysql:3306/apex_integration?allowPublicKeyRetrieval=true&useSSL=false
       SPRING_DATASOURCE_DYNAMIC_DATASOURCE_MASTER_URL: *integration
       APEX_CREDENTIAL_ENCRYPTION_KEY: ${VERIFY_CONFIG_KEY}
+  # 知识库（可选运行模块）：独立验签公钥走 APEX_JWKS_REMOTE_URL（KB 服务的
+  # apex.jwks.remote-url 绑定该变量名，与集成服务的 JWKS_REMOTE_URL 不同）；
+  # 授权材料由 podman-verify-authorized.yml 挂载 authorization.yml 提供。
+  # 注意：application-dev.yml 硬编码 datasource 为 localhost 且不带占位符，
+  # 因此这里必须用 SPRING_DATASOURCE_*（OS 环境变量优先级高于 profile 配置文件）。
+  apex-knowledge-service:
+    <<: *java
+    volumes: ["${BACKEND_ROOT}/apex-services-bom/apex-knowledge-service/target/apex-knowledge-service-1.3.1.jar:/input.jar:ro"]
+    environment:
+      <<: *env
+      APEX_JWKS_REMOTE_URL: http://apex-auth-service:8081/.well-known/jwks.json
+      KNOWLEDGE_AUTH_BASE_URL: https://apex-auth-tls:8443
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/apex_knowledge?allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${VERIFY_DB_PASSWORD}
+      # KB 的 application.yml 未给 apex.jwks.refresh-interval-seconds 绑定环境变量
+      # （默认 300s，首拉后 5 分钟才打"快照已更新"日志），脚本 JWKS 就绪检查会超时；
+      # 用 SPRING_APPLICATION_JSON 显式压到 10s，与其他服务口径一致。
+      SPRING_APPLICATION_JSON: '{"apex":{"jwks":{"refresh-interval-seconds":10}}}'
   apex-gateway:
     <<: *java
     volumes: ["${BACKEND_ROOT}/apex-services-bom/apex-gateway/target/apex-gateway-1.3.1.jar:/input.jar:ro"]
@@ -161,7 +180,8 @@ services:
       ROUTE_WORKFLOW_URI: http://apex-workflow-service:8093
       ROUTE_FILE_URI: http://apex-file-service:8085
       ROUTE_INTEGRATION_URI: http://apex-integration-service:8094
-      SPRING_APPLICATION_JSON: '{"resilience4j":{"timelimiter":{"instances":{"authService":{"timeout-duration":"24s"},"systemService":{"timeout-duration":"14s"},"officeService":{"timeout-duration":"10s"},"workflowService":{"timeout-duration":"12s"},"fileService":{"timeout-duration":"12s"},"integrationService":{"timeout-duration":"12s"}}}}}'
+      ROUTE_KNOWLEDGE_URI: http://apex-knowledge-service:8100
+      SPRING_APPLICATION_JSON: '{"resilience4j":{"timelimiter":{"instances":{"authService":{"timeout-duration":"24s"},"systemService":{"timeout-duration":"14s"},"officeService":{"timeout-duration":"10s"},"workflowService":{"timeout-duration":"12s"},"fileService":{"timeout-duration":"12s"},"integrationService":{"timeout-duration":"12s"},"knowledgeService":{"timeout-duration":"12s"}}}}}'
   apex-admin-web:
     image: ${VERIFY_FRONTEND_IMAGE}
     pull_policy: never

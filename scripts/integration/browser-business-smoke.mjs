@@ -12,6 +12,14 @@ const managementReads = new Map([
   ['system-users', ['/admin-api/v1/users', isPage, { page: '1', size: '20' }]],
   ['system-departments', ['/admin-api/v1/depts', Array.isArray]],
   ['system-configs', ['/admin-api/v1/configs', Array.isArray]],
+  // 受保护域读取链：office 日历区间事件（页面挂载即拉取）与知识空间列表
+  // （kb:space:read，管理面分页）。数据形状按各页面实际消费口径断言。
+  // 注意：office 审批页（ApprovalProcessRepositoryImpl 对租户 Long.valueOf）与
+  // notify/meeting-room/sync-wizard 处理器（trustedTenantId 读 request.principal()
+  // 在 office 身份中继链下恒为空）在后端修复前均 400，未纳入冒烟，
+  // 见 2026-11-25-logic-remediation.md 后端交接清单。
+  ['office-calendar', ['/api/office/calendar/events/range', Array.isArray]],
+  ['knowledge-spaces', ['/admin-api/v1/kb/spaces', isPage]],
 ])
 
 export async function exerciseBusinessSmoke(page, origin, group) {

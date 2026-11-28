@@ -54,3 +54,5 @@ services:
     <<: *authorized-service
   apex-integration-service:
     <<: *authorized-service
+  apex-knowledge-service:
+    <<: *authorized-service

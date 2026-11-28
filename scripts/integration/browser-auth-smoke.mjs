@@ -19,6 +19,10 @@ const groups = process.argv.includes('--notification-only') ? [['notification', 
   : process.argv.includes('--system-reads') ? [['system-users', '/system/user'], ['system-departments', '/system/dept'], ['system-configs', '/system/config']]
   : process.argv.includes('--monitor-reads') ? [['monitor-dashboard', '/monitor/dashboard']]
   : process.argv.includes('--integration-reads') ? [['connector', '/integration/connector']]
+  : process.argv.includes('--office-reads') ? [['office-calendar', '/office/calendar']]
+  : process.argv.includes('--workflow-reads') ? [['workflow-definitions', '/workflow/definition']]
+  : process.argv.includes('--file-reads') ? [['upload', '/demo/file-upload']]
+  : process.argv.includes('--knowledge-reads') ? [['knowledge-spaces', '/knowledge/space']]
   : process.argv.includes('--business')
   ? [['dashboard', '/dashboard'], ['dictionary', '/system/dict'], ...(process.argv.includes('--domains')
       ? [['connector', '/integration/connector'], ['upload', '/demo/file-upload']]

@@ -47,6 +47,7 @@
 | 真实后端 `--monitor-reads` | **连续 2 次通过**：`Monitor dashboard API and rendering: passed`，五接口 HTTP 200/code=0（已修复同路由重复导航导致的超时） |
 | 真实后端 `--system-reads` | 通过：认证/角色/权限/菜单 + 系统用户、部门、参数列表 |
 | 真实后端 `--integration-reads` | 见下文「授权链路三层根因（2026-11-27 全部定位并修复）」：浏览器冒烟单测 `Connector list: passed`（HTTP 200 / code=0）；完整脚本回归见台账 #142 |
+| 真实后端 `--office-reads` / `--workflow-reads` / `--file-reads` / `--knowledge-reads` | **2026-11-28 四域逐域通过**（浏览器冒烟 + 空栈完整回归，见下文「四域受保护链路逐域验证」；office 走日历链路，审批/通知页受后端缺陷阻塞已交接） |
 
 ### 修复前失败证据
 
@@ -101,11 +102,33 @@ connectors 403 的真实根因有三层，全部已定位并处置：
 - 存活栈内重放浏览器冒烟：`Connector list: passed`、`GET /integration/v1/connectors (code 0): HTTP 200`，login/identity/roles/permissions/menus 全部 200。
 - **完整脚本回归（空栈起跑）**：迁移 22+91 全成功 → 权限补种 fixture confirmed → reader token 栈内签发 → 受保护服务重启 → 授权快照可达 → 网关恢复 → 浏览器登录与菜单渲染通过 → `GET /integration/v1/connectors (code 0): HTTP 200`、`Connector list: passed` → 容器/网络清理干净。
 
+### 四域受保护链路逐域验证（2026-11-28，FE-032 延伸）
+
+在隔离栈（同一套 reader token / TLS 终结 / apex_auth 权限码 fixture）上新增四个冒烟模式并逐域通过：
+
+| 模式 | 页面 | 受保护读接口 | 结果 |
+| --- | --- | --- | --- |
+| `--office-reads` | `/office/calendar` | `GET /api/office/calendar/events/range` | **passed**（code 0，HTTP 200） |
+| `--workflow-reads` | `/workflow/definition`（侧边栏导航） | `GET /api/v2/workflow-definitions`（workflow:definition:read） | **passed** |
+| `--file-reads` | `/demo/file-upload` | `POST /api/v1/files/generic` 真实 multipart 上传 | **passed**（code 0，返回 fileName/bucket/url） |
+| `--knowledge-reads` | `/knowledge/space` | `GET /admin-api/v1/kb/spaces`（kb:space:read） | **passed** |
+
+配套改动：
+
+- `browser-auth-smoke.mjs` 新增四模式入口；`browser-business-smoke.mjs` 新增 `office-calendar` / `knowledge-spaces` 管理读取组（数据形状按页面实际消费口径断言）。
+- `podman-verify.yml` 新增 `apex-knowledge-service`（apex_knowledge 建库；KB 的 `apex.jwks.remote-url` 绑定 `APEX_JWKS_REMOTE_URL`，与通用 `JWKS_REFRESH_INTERVAL_SECONDS` 不同名；`application-dev.yml` 硬编码 datasource 无占位符，须用 `SPRING_DATASOURCE_*` 环境变量覆盖）；网关补 `ROUTE_KNOWLEDGE_URI` 与 knowledgeService 熔断超时；`podman-verify-authorized.yml` 将 KB 纳入授权材料挂载。
+- `podman-verify.sh`：apex_knowledge 建库、KB 纳入启动/等待/重启序列、权限码 fixture 扩展至 office(46)+workflow(4)+kb(10)（ID 段 2900-2945/2950-2953/2960-2969，断言 role_id=1 授权数 ≥97）。
+- 完整脚本回归（空栈起跑，`--knowledge-reads`）：迁移 22+91 全成功 → fixture confirmed → reader token 栈内签发 → 五服务重启后授权快照可达 → 网关恢复 → 浏览器冒烟 `knowledge-spaces: passed` → 容器/网络清理干净。
+
+**office 域冒烟入口选择说明**：审批页（pending）与通知/会议室/同步向导页均因后端缺陷在本栈 400（见交接清单 4、5），日历页处理器不依赖这两条路径，故 `--office-reads` 走日历区间事件。缺陷修复后可切换回审批链路。
+
 ### 后端交接清单（apex-scaffold 仓库，本仓库不改后端代码）
 
 1. **权限迁移缺口（P1）**：开启 `auth-center-permission` 后，`integration:*`/`iot:*` 权限码（V83/V85 仅登记在 `apex_system.sys_permission`）在 `apex_auth.auth_permission` 不存在，集成与 IoT 接口恒 403。需补一份 auth 侧迁移（参照 V48/V50 的 `INSERT IGNORE INTO auth_permission` + 授权 ADMIN 角色模式）。
 2. **`ConnectorConfigRepositoryImpl` 租户上下文覆盖不全（P1）**：7 个方法仅 `page()` 包裹 `TenantContext.callWithTenant(...)`，`findActive/findById/insert/update/delete` 直接在 `BlockingIoSchedulers.jdbc()` 上执行租户 SQL，一旦认证成功进入写路径将复现 `租户上下文未装配`。建议统一在各仓储方法内包裹。
 3. **`DeviceCommandTimeoutScanner` 每 30s 报错（P2）**：后台定时任务无线程级租户上下文，每次执行 `DeviceCommandRepositoryImpl.findDueTimeout` 均抛 `IllegalStateException`（隔离栈日志 10+ 条）。需为扫描任务按租户遍历或临时关闭租户过滤（后端自行评估）。
+4. **审批仓储对非数字租户码 400（P1，2026-11-28）**：`ApprovalProcessRepositoryImpl.withTenantScoped` 将租户 `Long.valueOf(trusted)`，平台默认租户码 `default`（sys_tenant/auth_user 种子口径）直接 `NumberFormatException` → 审批 pending/initiated 恒 HTTP 400 code=-1（trace `2dbb9f9b8c9d45afb025f674d662ae4f`）。表结构 tenant_id 为 VARCHAR(64)，与其余 office 仓储的字符串租户口径不一致；需明确租户模型（数值化或改字符串比较）。
+5. **office `trustedTenantId` 读 exchange principal 恒空（P1，2026-11-28）**：`OfficeNotifyHandler`/`OfficeMeetingRoomHandler`/`OfficeSyncWizardHandler` 的 `trustedTenantId` 用 `request.principal()` 取 `AuthenticatedUser`，但 office 身份中继链只写 Reactor SecurityContext 不填充 exchange principal——同一请求切面审计能取到 `userId=1001`，principal 却为空 → `BusinessException(UNAUTHORIZED)` → HTTP 400 code=401（trace `b5f7cc3e05d147c6bb38b1b160a99bbb`、`e4e6ac2d3cd446b688bc805503dbcfb8`）。建议改读 Reactor Context 租户键（与 integration `IntegrationResponses.currentTenant` 同口径）或注册 `SecurityContextServerWebExchangeWebFilter`。
 
 ### 当前可用结论
 
@@ -114,9 +137,9 @@ connectors 403 的真实根因有三层，全部已定位并处置：
 | `--system-reads` | 通过 |
 | `--monitor-reads` | 连续 2 次通过 |
 | 授权材料本地生成 | 已打通并可复用 |
-| `--integration-reads` | 浏览器冒烟已通过（`Connector list: passed`，HTTP 200/code=0）；脚本侧三层根因已修复，完整回归见台账 #142 |
-| office / workflow / file 受保护链路 | 授权材料与链路已打通（同一套 reader token/TLS/权限码），尚未逐域跑冒烟，留待后续任务 |
-| 知识库 | 隔离编排未启动 KB profile，未运行 |
+| `--integration-reads` | 通过（台账 #142：完整回归 `Connector list: passed`，HTTP 200/code=0） |
+| `--office-reads` / `--workflow-reads` / `--file-reads` / `--knowledge-reads` | **四域逐域通过（2026-11-28，台账 #143）**：日历区间事件 / 流程定义分页 / 真实 multipart 上传 / KB 空间分页均 HTTP 200 code=0；office 的审批与通知页受后端缺陷阻塞（见交接清单 4、5），冒烟走日历链路 |
+| 知识库 | **已纳入隔离编排并验证**：`podman-verify.yml` 新增 `apex-knowledge-service`（apex_knowledge 建库、独立 JWKS 变量名、SPRING_DATASOURCE_* 覆盖 dev 硬编码 datasource、`SPRING_APPLICATION_JSON` 压 JWKS 刷新间隔至 10s），网关加 `ROUTE_KNOWLEDGE_URI`，授权材料叠加 KB 服务 |
 
 ## 边界与回滚
 
