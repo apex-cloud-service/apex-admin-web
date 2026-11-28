@@ -1,4 +1,6 @@
 classDiagram
+    direction LR
+
     class Result~T~ {
         +number code
         +string msg
@@ -18,11 +20,32 @@ classDiagram
         +string id
         +string nickname
         +string avatarUrl
+        +number gender
         +string phone
         +number status
+        +string onboardingStatus
+        +string activityStatus
+        +string lastLoginTime
+        +string createdAt
         +AdminRole[] roles
     }
+    class AdminUserDetail {
+        +string birthday
+        +string country
+        +string province
+        +string city
+        +string language
+        +string lastHeartbeatTime
+        +string updatedAt
+        +Record profile
+        +Record profileDetails
+    }
     class AdminRole {
+        +string id
+        +string name
+        +string code
+    }
+    class StaffRole {
         +string id
         +string name
         +string code
@@ -35,8 +58,11 @@ classDiagram
         +string path
         +string component
         +string perms
+        +string icon
+        +number sort
         +number visible
         +number status
+        +string createTime
         +MenuNode[] children
     }
     class DeptNode {
@@ -45,6 +71,8 @@ classDiagram
         +string name
         +number orderNum
         +string leader
+        +string phone
+        +string email
         +number status
         +DeptNode[] children
     }
@@ -85,8 +113,12 @@ classDiagram
         +string title
         +string status
         +number initiatorId
+        +string initiatorName
         +string businessKey
         +string currentNodeId
+        +string startTime
+        +string endTime
+        +string createTime
         +boolean suspended
     }
     class WorkflowTask {
@@ -106,9 +138,16 @@ classDiagram
         +number version
     }
 
+    Result~T~ <.. PageResponse~T~ : 分页响应包装
+    AdminUserDetail --|> AdminUser : 继承
     AdminUser "1" o-- "0..*" AdminRole : roles
-    MenuNode "1" --> "0..*" MenuNode : children
-    DeptNode "1" --> "0..*" DeptNode : children
-    TenantInfo ..> TenantPackage : packageCode 引用套餐
-    TenantPackage ..> CapabilityInfo : features 订阅（空集合=未订阅）
-    WorkflowInstance "1" *-- "0..*" WorkflowTask : tasks（实例详情聚合）
+    MenuNode "1" *-- "0..*" MenuNode : children（递归树）
+    DeptNode "1" *-- "0..*" DeptNode : children（递归树）
+    TenantInfo ..> TenantPackage : packageCode 引用
+    TenantPackage ..> CapabilityInfo : features 订阅
+    WorkflowInstance "1" *-- "0..*" WorkflowTask : tasks（详情聚合）
+    AdminUser ..> OfficeBindingResponse : userId 关联
+
+    note for TenantPackage "menuIds/permissionCodes 空集合 = 全量放行\nfeatures 空集合 = 未订阅"
+    note for MenuNode "menuType: 0 目录 / 1 菜单 / 2 按钮\nvisible: 0 隐藏 / 1 显示\nstatus 不参与路由过滤"
+    note for Result "不含数字 code 的响应（裸数组/Blob/登录裸响应）\n由 request.ts 原样返回，不套此壳"

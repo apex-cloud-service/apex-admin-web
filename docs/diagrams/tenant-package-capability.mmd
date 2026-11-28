@@ -1,0 +1,36 @@
+flowchart TD
+    subgraph Tenancy["租户与订阅"]
+        T1["租户 TenantInfo<br/>packageCode 引用套餐"] --> T2["租户套餐 TenantPackage<br/>menuIds / permissionCodes / features"]
+        T2 --> T3["能力目录 CapabilityInfo<br/>code · center · component · openScopes"]
+        T2 --> T4["租户订阅 CapabilitySubscription<br/>GET /api/v2/capabilities/subscribed"]
+    end
+
+    subgraph Semantics["三类集合字段的语义差异（最易踩坑）"]
+        S1["menuIds 空集合 = 菜单维度全量放行"]
+        S2["permissionCodes 空集合 = 权限维度全量放行"]
+        S3["features 空集合 = 未订阅（并非全量）"]
+    end
+    T2 -.-> Semantics
+
+    subgraph Save["套餐保存链路"]
+        P1["套餐页读取菜单树"] --> P2["勾选后补全菜单父链<br/>utils/tenant-package.ts#withParentChain"]
+        P2 --> P3["选择「全量能力」时<br/>提交能力目录全部编码"]
+        P3 --> P4["buildPackagePayload 组装请求体"]
+        P4 --> P5["PUT /api/v2/tenant-packages（无路径参数）<br/>后端按请求体 packageCode 定位"]
+    end
+
+    subgraph Consume["能力消费侧（前端仅只读）"]
+        C1["GET /api/v2/capabilities（权限码 tenant:read）"] --> C2["能力目录展示"]
+        C3["POST /api/v2/capability-usage<br/>capability 必填 · 区间 ≤92 天 · 只读不计费"] --> C4["用量查询"]
+    end
+
+    subgraph Failure["常见失败与定位"]
+        F1["调用报 403「能力未开通」或含 scope"] --> F2["showError 追加引导：<br/>可在能力运营页查看当前租户订阅"]
+        F3["选了全量能力但仍 403"] --> F4["features 空集合不等于全量<br/>能力目录新增后须重新保存套餐"]
+    end
+
+    T4 -.-> F1
+    P5 -.-> F3
+
+    NOTE["套餐保存后菜单少一层：<br/>menuIds 必须含父链（前后端双侧补链）"]
+    P2 -.-> NOTE

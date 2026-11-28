@@ -7,11 +7,18 @@
 约定：
 1. 结论必须可验证（给出命令、日志片段或接口返回）。
 2. 已验证的结论若影响架构或契约，应升级为 `docs/specs/` 方案或 `docs/reference/` 参考文档。
+3. **本目录不收执行记录与评审结论**：执行留痕 → `docs/records/`；评审/审计结论 → `docs/reviews/`。
 
 ## 索引
 
 | 日期 | 文件 | 说明 |
 | --- | --- | --- |
-| 2026-11-16 | [2026-11-16-orphan-views.md](./2026-11-16-orphan-views.md) | FE-004：67 个页面中 6 个未被路由导入，5 个子组件 + 1 个未接线遗留页 |
-| 2026-11-16 | [2026-11-16-chart-assets.md](./2026-11-16-chart-assets.md) | FE-007：图表资产体检，docs 内 0 个 .mmd/.svg，27 处 Mermaid 内嵌，无孤立文件 |
-| 2026-11-16 | [2026-11-16-doc-dedup-audit.md](./2026-11-16-doc-dedup-audit.md) | FE-001：段落级/行级复核均 0 重复，仅补交叉链接 |
+| — | （暂无） | 2026-11-28 归位：原 3 篇分别迁入 `docs/records/`（2 篇执行记录）与 `docs/reviews/`（1 篇审计结论） |
+
+### 已迁出（2026-11-28，FE-033 受控归位）
+
+| 原文件 | 现位置 | 理由 |
+| --- | --- | --- |
+| `2026-11-16-orphan-views.md` | [records/2026-11-16-orphan-views.md](../records/2026-11-16-orphan-views.md) | 内容为 FE-004 执行留痕（含处置动作与取证数据），属记录而非调研 |
+| `2026-11-16-chart-assets.md` | [records/2026-11-16-chart-assets.md](../records/2026-11-16-chart-assets.md) | 内容为 FE-007 执行留痕（抽取规则、导出命令、踩坑），属记录 |
+| `2026-11-16-doc-dedup-audit.md` | [reviews/2026-11-16-doc-dedup-audit.md](../reviews/2026-11-16-doc-dedup-audit.md) | 内容为去重复核的**审计结论**，属评审 |

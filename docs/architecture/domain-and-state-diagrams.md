@@ -74,4 +74,6 @@
 
 ---
 
-**最后更新时间**：2026-11-13
+**最后更新时间**：2026-11-28（FE-033 对照 `src/types/workflow.ts:103`、`src/api/tenant.ts:69`、`src/api/office-platform.ts` 复核：工作流实例枚举 7 值、租户 5 值、绑定审批/解绑 `version` 乐观锁均与代码一致；补记任务级操作端点归属）
+
+> 相关：权限三层（菜单可见 / 按钮权限 / 后端鉴权）的边界见 [认证与路由 §9](auth-and-routing.md)与 `AGENTS.md` 附录 A §4.5；状态机总览图见 [diagrams/state-machine-overview.mmd](../diagrams/state-machine-overview.mmd)。

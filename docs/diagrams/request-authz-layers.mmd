@@ -1,0 +1,31 @@
+flowchart LR
+    subgraph L1["第一层：菜单可见性（后端菜单树）"]
+        A1["GET /admin-api/v1/menus"] --> A2{"menuType / visible"}
+        A2 -- "menuType=2 按钮" --> A3["不生成路由"]
+        A2 -- "visible=0" --> A4["meta.hidden：侧边栏不显示<br/>但路由仍注册，URL 可直接访问"]
+        A2 -- "component 未在 VIEW_REGISTRY" --> A5["静默跳过，页面 404"]
+    end
+
+    subgraph L2["第二层：按钮显隐（前端指令）"]
+        B1["v-permission=\"'system:user:create'\""] --> B2["permission store 检查<br/>逗号分隔多码满足任一即放行"]
+        B2 -- 无权限 --> B3["从 DOM 移除元素"]
+        B2 -- "权限列表为空" --> B4["直接放行（视为未配置）"]
+        B4 --> B5["AdminLayout 顶栏显示「未获得权限码」警告"]
+    end
+
+    subgraph L3["第三层：后端鉴权（真正的边界）"]
+        C1["@RequirePermission 精确匹配权限码"] --> C2["逗号分隔多码按 Logical.OR / AND 组合<br/>无通配符"]
+        C2 --> C3["权限来源：用户 → 角色 → 权限 RBAC 查询"]
+        C2 --> C4["开启 apex.features.auth-center-permission 后<br/>改由认证中心统一授权（≤30s 短期缓存）"]
+        C1 -- 拒绝 --> C5["403：前端隐藏不能替代服务端校验"]
+    end
+
+    A4 --> X["⚠️ 三层相互独立：<br/>前端隐藏 ≠ 无权限<br/>URL 可访问 ≠ 接口放行<br/>按钮可见 ≠ 后端接受"]
+    B4 --> X
+    C5 --> X
+
+    subgraph Evidence["权限核对方法"]
+        E1["「我的权限明细」个人中心按模块分组"] --> E2["以权限码实际下发结果为准"]
+        E2 --> E3["前端空列表放行属容错设计<br/>不代表已授权"]
+    end
+    X -.-> Evidence

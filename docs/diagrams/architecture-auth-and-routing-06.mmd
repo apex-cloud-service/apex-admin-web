@@ -1,10 +1,27 @@
 flowchart TD
-    A[登录成功/刷新页面] --> B[GET /admin-api/v1/menus 菜单树]
-    B --> C[buildDynamicRoutes 递归遍历]
-    C --> D{menuType?}
-    D -- "0 目录" --> E[作为分组父节点<br/>继续递归 children]
-    D -- "1 菜单" --> F{component 在<br/>VIEW_REGISTRY 中?}
-    F -- 是 --> G[注册路由挂到 AdminLayout<br/>meta: title/icon/hidden]
-    F -- 否 --> H[跳过并告警<br/>页面不可达 404]
-    D -- "2 按钮" --> I[不生成路由<br/>仅作为权限码]
-    E & G --> J[router.addRoute 批量注册]
+    A["登录成功 / 刷新页面 / 首次导航"] --> B["GET /admin-api/v1/menus<br/>拉取菜单树"]
+    B --> C["buildDynamicRoutes(_permissions)<br/>⚠️ permissions 参数当前不参与过滤"]
+    C --> D["递归 map(toRouteRecord) → filter(null)"]
+    D --> E{"node.menuType"}
+    E -- "2 按钮" --> F["返回 null<br/>不生成路由，仅作为权限码来源"]
+    E -- "0 目录" --> G["递归处理 children"]
+    G --> G1{"有效子路由数 = 0?"}
+    G1 -- 是 --> F
+    G1 -- 否 --> G2["生成目录路由<br/>path=node.path 或 /{id}<br/>redirect 首个 child<br/>meta: title/icon/hidden"]
+    E -- "其他值（含 1 菜单）" --> H{"VIEW_REGISTRY[component] 存在?"}
+    H -- 否 --> F2["返回 null<br/>静默跳过（无降级视图）"]
+    H -- 是 --> I["生成页面路由<br/>path=node.path 或 /{id}<br/>name=menu-{id}<br/>meta: title/icon/perms/hidden"]
+
+    G2 --> J["返回路由记录数组"]
+    I --> J
+    J --> K["setupDynamicRoutes：逐条 router.addRoute('Root', route)<br/>同步 push 到 rootRecord.children"]
+    K --> L{"任一步骤抛错?"}
+    L -- 是 --> M["逆序回滚已注册路由<br/>console.warn；dynamicRoutesAdded 保持 false"]
+    L -- 否 --> N["dynamicRoutesAdded=true"]
+    N --> O["路由可匹配"]
+    N --> P["AdminLayout 遍历 Root.children 渲染侧边栏"]
+    P --> Q{"有 title 且非 hidden?"}
+    Q -- 否 --> R["该 Root 直接子项不展示"]
+    Q -- 是 --> S["渲染菜单；目录子项直接渲染（未再过滤 hidden）"]
+
+    D -.-> NOTE6["status 字段不参与过滤（避免历史种子不一致导致菜单全丢）<br/>visible=0 只写 meta.hidden，路由仍可直接访问<br/>侧边栏仅过滤 Root 直接子项，不递归过滤更深层级"]

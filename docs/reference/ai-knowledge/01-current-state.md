@@ -1,6 +1,6 @@
-# 01 · 前端现状（2026-11-25）
+# 01 · 前端现状（2026-11-28）
 
-> 采集：2026-11-25，`package.json` + `src/` 实测 + `git log`。数字会漂移，结论比数字寿命长。
+> 采集：2026-11-28（FE-033），`package.json` + `src/` 实测 + `git log`。数字会漂移，结论比数字寿命长。
 
 ## 1. 技术与规模
 
@@ -12,9 +12,9 @@
 | 接口层 | `src/api` **40 个业务文件**（另有 31 个 `*.test.ts` 契约测试），无统一 `index.ts` |
 | 状态 | `src/stores` 4 个：`user` / `permission` / `app` / `office` |
 | 复用 | `src/composables` 5 个（`useCrud` / `useTableConfig` / `useFormDraft` / `useBreakpoint` / `useAgenda`）+ `src/components`（分页、全局搜索、空态、上传） |
-| 测试 | 单元 **66 个**：`src/api/` **31 个** `*.test.ts` 契约测试（40 个 API 模块全覆盖），另有 35 个 `*.spec.ts` 单测（`utils/__tests__` 18、`stores` 4、`composables` 5、`components` 6、`directives`/`router` 各 1）；另 3 个 Playwright E2E 文件（`e2e/`）；Vitest + happy-dom，11-13 实测 475 用例全绿（11-14 未复跑） |
-| 文档 | `docs/` 下 **104 个 Markdown**（11-24 发布批次后含 `api/`、`architecture/`、`features/`、`guides/`、`reference/`、`archived/`、`notes/`、`plans/`、`records/`、`reviews/`、`specs/`、`tasks/`、`diagrams/`） |
-| 工作树 | 23 项在途（11-21 实测：17 项已跟踪文件修改 + 6 项未跟踪新增文档，含 11-23 前端韧性/契约矩阵方案与记录）；最后提交 2026-11-21 `aec9c44` |
+| 测试 | 单元 **68 个**：`src/api/` 31 个 `*.test.ts` 契约测试（**40 个模块中 31 个**有直接用例）+ 37 个 `*.spec.ts`（`utils/__tests__` 18、`components` 6、`composables` 5、`stores` 4、`views/knowledge` 2、`router`/`directives` 各 1）；另 **6 个** Playwright E2E spec（`e2e/`，`playwright.config.ts` 已配置）；**2026-11-28 实测 68 文件 / 592 用例全绿** |
+| 文档 | `docs/` 下 **110 个 Markdown** + 图表资产 58 对 `.mmd`/`.svg`（13 个一级目录；含 `diagrams/` 与治理六目录） |
+| 工作树 | FE-033 交付在途（2026-11-28：150 项已暂存——docs/scripts/门面文档，零 `src/`）；最后提交 2026-11-27 `d4db4d1` |
 
 ## 2. 启动与验证
 
@@ -27,7 +27,7 @@ npx vitest run         # 单次测试
 ```
 
 - **无** `npm run lint`、**无**独立 typecheck 脚本 —— 汇报中不得出现不存在的命令。
-- 覆盖率无阈值；Playwright 已装但**无配置、无 E2E 用例**。
+- 覆盖率无阈值；Playwright 已配置（`playwright.config.ts`，6 个 spec，`npm run test:e2e`，接口层打桩）。
 - 开发代理覆盖 `/api`、`/admin-api` 与 OAuth2 授权/令牌路径，`/api` 已开 `ws: true`。
 
 ## 3. 构建与部署
@@ -76,7 +76,9 @@ npx vitest run         # 单次测试
 5. `utils/` 下的缓存、XSS、性能监控工具**不是全局生效**，是否执行要看调用点。
 6. Mock 仅 `import.meta.env.DEV` 动态加载，不得当生产数据源。
 
-## 6. 近期交付（2026-11-19）
+## 6. 近期交付（2026-11-28）
+
+- 11-28（**FE-033 文档治理与图表重制**）：治理规范升 v1.3（§3.2 受控归位五项准入、§3.5 允许重制 + `_legacy/` 归档）；`AGENTS.md` 第 0 章新增 **§0.10 附录 A 事实勘误表**（附录 A 正文冻结，700 行哈希 `9e9f3cda…` 复验一致）；`docs/` 受控归位 4 文件（notes 2 篇→records、1 篇→reviews、guides `frontend-backend-integration.md`→`database-config-integration.md`）+ 3 对图表资产随名迁移；图表 **27 对全量重制 + 新增 9 张专题图**，根下共 **36 对（31 现行 + 5 历史证据）**；旧版 22 对入 `docs/diagrams/_legacy/`（5 张 `archived-*` 刻意不重制）；`scripts/` 补总索引与 7 子目录 README（共 8 个）。`docs/` 文件 161→**226**（md 110、svg 58、mmd 58，含 `_legacy/` 44 个历史资产 + 1 个归档 README）；`src/views` 仍 65、`src/api` 仍 40、`*.test.ts` 仍 31——**`src/` 零改动**。
 
 - 11-18（注释评审 + 死代码清理 + 复核收口）：`38e23fc` 全仓注释质量评审整改（仅注释行，零逻辑变更）；`62855d2` 删除 0 引用页 `views/workflow/components/TaskActions.vue`，`src/views` 66→**65**（业务目录仍 15、`src/api` 仍 40、`*.test.ts` 仍 31）；`c611f56`～`93bd38f` 登记 FE-026/027/028 复核要点并置「已完成」，新增 `docs/reviews/2026-11-18-fe026-028-review.md`、`docs/records/2026-11-18-comment-quality-audit.md`，`docs/` Markdown 93→**95**。
 

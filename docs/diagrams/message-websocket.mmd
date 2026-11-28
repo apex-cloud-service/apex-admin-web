@@ -1,0 +1,41 @@
+sequenceDiagram
+    autonumber
+    participant A as AdminLayout（未读角标）
+    participant S as utils/message-socket.ts
+    participant API as api/message.ts
+    participant B as 后端 office-service
+    participant GW as 网关 / Nginx
+
+    Note over A,B: 首次挂载：注册监听并建立连接
+    A->>S: subscribeMessagePush(cb) + subscribeMessageSocketState(cb)
+    S->>API: issueMessageSocketTicket()
+    API->>B: POST /api/v1/messages/ws-ticket（Bearer）
+    Note over B: 签发一次性票据，30 秒有效
+    B-->>API: {ticket}
+    API-->>S: ticket
+    S->>GW: WS 握手 GET /api/v1/messages/ws?ticket=...
+    Note over GW: Nginx/Vite 必须支持 Upgrade<br/>协议为 ws:// 或 wss://（随页面协议）
+    GW->>B: 转发
+    alt 握手成功
+        B-->>S: 101 Switching Protocols
+        S->>S: reconnectDelay 重置为最小值
+        S-->>A: 连接状态 = open
+    else 握手失败（如票据过期 / Origin 未在白名单）
+        B-->>S: 403 / 关闭
+        S->>S: 按指数退避重连（RECONNECT_DELAY_MIN → MAX 翻倍封顶）
+    end
+
+    loop 服务端每 20 秒
+        B-->>S: {"type":"ping"}
+        S->>B: 回文本 pong
+        Note over B: 60 秒未收到 pong 即断开
+    end
+
+    B-->>S: 新消息事件
+    S-->>A: 触发监听回调
+    A->>API: 重新拉取未读数
+    API->>B: GET /api/v1/messages/unread/count
+    B-->>API: 数量
+    API-->>A: 更新角标
+
+    Note over A,B: 兜底：AdminLayout 另有 60s 轮询刷新未读数<br/>WS 不可用时角标仍能更新（延迟更高）<br/>生产需后端配置 ROUTE_OFFICE_WS_URI 与 allowed-origins

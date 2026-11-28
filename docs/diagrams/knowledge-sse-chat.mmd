@@ -1,0 +1,37 @@
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant P as knowledge/chat/index.vue
+    participant F as fetch（非 Axios）
+    participant S as 后端 /api/v1/kb/chat
+
+    U->>P: 输入问题并发送
+    P->>P: 获取锁（防并发提问）
+    P->>F: POST /api/v1/kb/chat/ask
+    Note over F,S: 携带 Authorization: Bearer<br/>Accept: text/event-stream（后端据此豁免 30s 响应超时）
+    F->>S: 流式请求
+
+    S-->>F: event: citations（引用 JSON）
+    F-->>P: 解析事件 → 渲染引用来源
+
+    loop delta 增量
+        S-->>F: event: delta（文本片段）
+        F-->>P: 追加到答案文本
+    end
+
+    alt 正常完成
+        S-->>F: event: done（完成 JSON）
+        F-->>P: 标记完成
+    else 错误
+        S-->>F: data: {code, message}（统一错误 JSON）
+        F-->>P: 兼容旧纯文本错误<br/>保留已收到的部分答案并显示失败
+        Note over P: 终止读取、取消 reader、释放锁<br/>不自动重连
+    end
+
+    P->>P: 释放锁
+
+    Note over F,S: 该通道不经过 utils/request.ts：<br/>无 401 单飞刷新、无 Result 解包<br/>地址由 utils/api-base.ts#apiUrl 拼接
+
+    participant H as api/knowledge（Axios）
+    U->>H: 空间/文档/会话管理
+    Note over H: 这些走统一请求层：page/size → list/total

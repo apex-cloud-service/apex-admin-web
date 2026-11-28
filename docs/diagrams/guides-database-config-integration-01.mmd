@@ -1,0 +1,21 @@
+flowchart TD
+    A["进入配置采集 Tab"] --> A1["页面挂载：getCurrentDatabaseInfo()<br/>GET /admin-api/v1/database/current"]
+    A1 --> A2["展示当前数据库类型与版本（只读）"]
+    A --> B["填写 dbType(mysql/postgresql) · host · port · 库名 · 账号 · 密码"]
+    B --> C{"表单校验通过?"}
+    C -- 否 --> C1["显示字段校验信息"]
+    C -- 是 --> D{"选择操作"}
+    D --> E["POST /admin-api/v1/database/test"]
+    D --> F["POST /admin-api/v1/database/generate-config"]
+
+    E --> G{"success?"}
+    G -- true --> H["展示成功信息与数据库版本"]
+    G -- false --> I["展示 message"]
+
+    F --> J["打开配置结果弹窗"]
+    J --> K["YAML / env / docker-compose 三个 Tab"]
+
+    NOTE["密码仅随表单提交用于测试与生成<br/>后端不回显明文"]
+    B -.-> NOTE
+    PERM["权限码 system:database:view<br/>菜单由 scripts/database/menu-init.sql 补充<br/>（非后端正式种子）"]
+    A1 -.-> PERM

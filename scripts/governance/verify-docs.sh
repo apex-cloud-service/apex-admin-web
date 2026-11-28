@@ -98,7 +98,7 @@ if [ -f scripts/governance/check-doc-layout.sh ]; then
   if [ "$LAYOUT_EXIT" -ne 0 ]; then
     warn "目录结构检查执行失败（exit ${LAYOUT_EXIT}）"
   elif echo "$LAYOUT_OUT" | grep -q "自检通过"; then
-    pass "目录结构规范（13 个 docs 一级目录均有 README 且被总览覆盖，reports 已分层）"
+    pass "目录结构规范（docs 一级目录 README 齐全且被总览覆盖；scripts 子目录均有 README；同层文档已被所在目录 README 登记；reports 已分层）"
   else
     warn "目录结构有问题：$(echo "$LAYOUT_OUT" | grep '\[WARN\]' | tr '\n' ' ')"
   fi

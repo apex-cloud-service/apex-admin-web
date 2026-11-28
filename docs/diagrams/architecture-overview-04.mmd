@@ -1,18 +1,28 @@
 flowchart LR
-    subgraph Dev["开发环境 npm run dev (:5173)"]
-        V["Vite Dev Server<br/>host 0.0.0.0"] -->|"proxy /api /admin-api /auth/v1&#124;v2 /integration/v1 /oauth2"| D["VITE_API_PROXY_TARGET<br/>(默认 http://127.0.0.1:8080)"]
+    SRC["源码 + 构建期 VITE_*<br/>（.env.production / --build-arg）"] --> TC["vue-tsc --noEmit<br/>类型检查（构建前置，失败即终止）"]
+    TC --> BUILD["vite build<br/>terser（drop_console/debugger）<br/>manualChunks 分包"]
+    BUILD --> DIST["dist/<br/>js/ css/ images/ fonts/ media/ + stats.html"]
+
+    DIST --> N1["部署形态 A：静态托管 + Nginx"]
+    DIST --> IMG1["部署形态 B：容器镜像"]
+
+    subgraph Runtime["运行期注入（不重写已打包 JS）"]
+        ENV1["API_PROXY_PASS<br/>（Nginx upstream）"]
+        ENV2["TLS 证书 / 端口映射"]
     end
 
-    subgraph Prod["生产环境（同域部署，推荐）"]
-        U["用户浏览器"] --> N["Nginx (前端静态资源 + 反代)"]
-        N -->|"/ try_files → index.html"| SPA["SPA 静态产物"]
-        N -->|"/api/ /admin-api/ /auth/v1&#124;v2/ /integration/v1/ ^/oauth2/(authorize&#124;token)<br/>= /oauth2/consent 仅 POST"| BE2["API_PROXY_PASS<br/>(默认 http://apex-scaffold:8080)"]
-        N -->|"= /api/v1/messages/ws<br/>Upgrade + 3600s"| BE2
-        N -->|"= /api/v1/notifications/stream<br/>SSE buffering off"| BE2
-        N -->|"/assets/ 等产物目录 30 天 immutable"| U
-    end
+    ENV1 --> TPL["container-entrypoint.sh<br/>envsubst 仅展开 API_PROXY_PASS"]
+    TPL --> CONF["/etc/nginx/conf.d/default.conf"]
+    CONF --> NGX
 
-    subgraph Docker["Docker 部署"]
-        DC["docker-compose.yml"] --> IMG["apex-admin-web 镜像<br/>两阶段: node:18 构建产物 → nginx:1.27 运行"]
-        IMG --> NET["外部网络 apex-scaffold_apex-network<br/>按服务名访问后端"]
-    end
+    IMG1 --> IMG2["多阶段镜像<br/>build：node:22-alpine + npm ci + npm run build<br/>runtime：nginx:1.27-alpine"]
+    IMG2 --> NGX["Nginx 静态服务"]
+
+    N1 --> NGX
+    NGX --> A1["assets/ 30 天 immutable"]
+    NGX --> A2["location / try_files 回退 index.html<br/>支撑 history 路由"]
+    NGX --> A3["精确 location：<br/>= /api/v1/messages/ws（Upgrade，3600s）<br/>= /api/v1/notifications/stream（SSE，buffering off）<br/>置于 /api/ 之前"]
+    NGX --> A4["前缀反代：/api/ · /admin-api/ · /auth/v1|v2/<br/>/integration/v1/ · /oauth2/（consent 仅 POST）"]
+    A4 --> BE["后端网关 upstream<br/>默认 http://apex-gateway:8080"]
+
+    HC["容器 HEALTHCHECK：wget /<br/>仅证明静态首页可访问"] -.不覆盖.-> A4

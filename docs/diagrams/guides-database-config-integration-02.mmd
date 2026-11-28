@@ -1,0 +1,22 @@
+flowchart TD
+    A["进入数据源管理 Tab"] --> B["listDataSources(pageNum, pageSize)<br/>GET /admin-api/v1/database/datasources"]
+    B --> C["读取 list / total"]
+    C --> D["展示分页列表<br/>（url / username 由后端脱敏）"]
+    D --> E{"用户操作"}
+
+    E --> F["新增或编辑"]
+    F --> G["填写 DataSourcePayload<br/>密码必填"]
+    G --> H["POST 或 PUT<br/>/admin-api/v1/database/datasources[/{id}]"]
+    H --> I["成功则刷新列表；失败展示错误"]
+
+    E --> J{"删除确认?"}
+    J -- 取消 --> D
+    J -- 确认 --> K["DELETE /admin-api/v1/database/datasources/{id}"]
+    K --> I
+
+    E --> L["查看连接池指标"]
+    L --> M["GET /admin-api/v1/database/datasources/{id}/metrics"]
+    M --> N["展示该数据源连接池指标"]
+
+    NOTE["更新与删除分别管理 loading<br/>取消确认不算接口失败"] -.-> J
+    NOTE2["密码只在创建/更新时上行<br/>列表与详情响应均不回显明文"] -.-> H

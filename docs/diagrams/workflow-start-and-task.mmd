@@ -1,0 +1,54 @@
+sequenceDiagram
+    autonumber
+    actor U as 操作用户
+    participant M as workflow/monitor/index.vue
+    participant W as api/workflow.ts
+    participant B as 后端
+
+    Note over U,B: 一、发起流程（pageNum/pageSize 之外的独立入口）
+    U->>M: 打开「发起流程」对话框
+    M->>M: 调用方手输 workflowCode（不联动流程定义列表）
+    U->>M: 填写 businessKey（必填 ≤200）与 contextJson（选填）
+    M->>M: 校验 contextJson 为合法 JSON（≤10000 字符）
+    alt 校验不通过
+        M-->>U: 字段级提示，不发起
+    else 通过
+        M->>W: startWorkflowInstance(workflowCode, {businessKey, contextJson?})
+        W->>B: POST /api/v1/workflows/{workflowCode}/instances
+        Note over B: 发起人取当前登录用户；实例固定 RUNNING
+        B-->>W: 实例
+        W-->>M: 成功
+        M->>M: 重新挂载实例列表 Tab 并切换页签
+    end
+
+    Note over U,B: 二、待办任务中办理与流转（同一页「待办任务」Tab）
+    U->>M: 查看待办（pageNum/pageSize）
+    M->>W: getMyPendingTasks({pageNum, pageSize})
+    W->>B: GET /api/v1/workflows/tasks/pending
+    B-->>W: PageResponse{list, total}
+    W-->>M: 读 list/total 渲染
+
+    alt 通过（办理）
+        U->>M: 填 comment 并确认
+        M->>W: completeTask(taskId, comment)
+        W->>B: POST /api/v1/workflows/tasks/{taskId}/complete
+        Note over B: 仅 complete + comment，语义固定为「通过」
+    else 回退
+        U->>M: 选择目标节点（取自实例详情的流程定义）并填写原因
+        M->>W: rollbackTask(taskId, {targetNodeId, reason})
+        W->>B: POST /api/workflow/tasks/{taskId}/rollback
+    else 转办
+        M->>W: transferTask(taskId, payload)
+        W->>B: POST /api/workflow/tasks/{taskId}/transfer
+    else 委派
+        M->>W: delegateTask(taskId, payload)
+        W->>B: POST /api/workflow/tasks/{taskId}/delegate
+    end
+
+    alt 操作成功
+        M->>W: 重新拉取待办与实例列表
+    else 操作失败
+        M-->>U: 展示错误（含 traceId）
+    end
+
+    Note over M,B: 前端未封装任务驳回与 tasks/my<br/>回退/转办/委派均在监控页内实现，无独立任务组件

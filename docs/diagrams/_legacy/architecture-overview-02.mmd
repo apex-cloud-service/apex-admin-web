@@ -1,0 +1,42 @@
+flowchart TB
+    subgraph Views["视图层 src/views"]
+        V1["system / monitor / data / office / workflow<br/>integration / iot<br/>(动态路由，VIEW_REGISTRY 解析)"]
+        V2["login / dashboard / oauth2 / office-callback<br/>(静态路由)"]
+    end
+
+    subgraph Layout["布局与通用组件"]
+        L1["layouts/AdminLayout.vue<br/>侧边栏 · 顶栏 · 面包屑 · 主题切换 · 权限码告警"]
+        L2["components/<br/>Pagination · FileUpload(Enhanced)<br/>GlobalSearch · NotificationCenter · EmptyState"]
+    end
+
+    subgraph State["状态层"]
+        S1["stores/user.ts 用户会话"]
+        S2["stores/permission.ts 按钮权限"]
+        S3["stores/app.ts UI 偏好"]
+        S4["stores/office.ts 办公平台状态"]
+    end
+
+    subgraph Compose["组合式函数 src/composables"]
+        C1["useCrud · useTableConfig · useFormDraft · useBreakpoint<br/>（已实现，当前无页面调用点）<br/>useAgenda（工作台我的事项，AgendaPanel 调用）"]
+    end
+
+    subgraph Api["接口层 src/api"]
+        A1["按业务域拆分的类型化模块<br/>auth/user/system/monitor/office/workflow<br/>tenant/mfa/operations/masking/message/..."]
+    end
+
+    subgraph Infra["基础设施"]
+        I1["utils/request.ts<br/>Axios 封装 + Token 刷新"]
+        I2["utils/auth.ts 会话存取"]
+        I3["types/ 与后端 DTO 对齐"]
+        I4["settings.ts 常量收敛"]
+        I5["directives/permission.ts<br/>v-permission 指令"]
+    end
+
+    V1 & V2 --> L2
+    V1 & V2 --> S1 & S2 & S3 & S4
+    V1 & V2 --> C1
+    V1 & V2 & L2 & C1 --> A1
+    A1 --> I1
+    I1 --> I2 & I4
+    S1 & S2 --> I2
+    I1 --> I3

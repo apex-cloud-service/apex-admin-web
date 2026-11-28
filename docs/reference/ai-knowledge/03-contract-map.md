@@ -9,7 +9,7 @@
 | --- | --- | --- |
 | 逐个接口的路径/方法/参数/响应字段 | [`docs/api/README.md`](../../api/README.md)（35 个业务域小节，含 §1.3 分页口径） | 本篇只做「前端文件 ↔ 后端契约」的**速查映射**，不复制接口清单 |
 | 认证链路、领域模型、状态机 | [`docs/architecture/overview.md`](../../architecture/overview.md)、[`auth-and-routing.md`](../../architecture/auth-and-routing.md)、[`domain-and-state-diagrams.md`](../../architecture/domain-and-state-diagrams.md) | 本篇只给入口链接 |
-| 结论是否重复 | 见 [`docs/notes/2026-11-16-doc-dedup-audit.md`](../../notes/2026-11-16-doc-dedup-audit.md)（2026-11-16 复核：0 重复段落） | — |
+| 结论是否重复 | 见 [`docs/reviews/2026-11-16-doc-dedup-audit.md`](../../reviews/2026-11-16-doc-dedup-audit.md)（2026-11-16 复核：0 重复段落） | — |
 
 ## 1. 路径前缀总览
 

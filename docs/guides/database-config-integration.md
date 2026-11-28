@@ -309,21 +309,21 @@ interface DataSourcePayload {
 
 ### 7.1 配置采集流程
 
-![7.1 配置采集流程](../diagrams/guides-frontend-backend-integration-01.svg)
+![7.1 配置采集流程](../diagrams/guides-database-config-integration-01.svg)
 
-> 图源：[guides-frontend-backend-integration-01.mmd](../diagrams/guides-frontend-backend-integration-01.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
+> 图源：[guides-database-config-integration-01.mmd](../diagrams/guides-database-config-integration-01.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 ### 7.2 数据源管理流程
 
-![7.2 数据源管理流程](../diagrams/guides-frontend-backend-integration-02.svg)
+![7.2 数据源管理流程](../diagrams/guides-database-config-integration-02.svg)
 
-> 图源：[guides-frontend-backend-integration-02.mmd](../diagrams/guides-frontend-backend-integration-02.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
+> 图源：[guides-database-config-integration-02.mmd](../diagrams/guides-database-config-integration-02.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 ### 7.3 页面与接口时序
 
-![7.3 页面与接口时序](../diagrams/guides-frontend-backend-integration-03.svg)
+![7.3 页面与接口时序](../diagrams/guides-database-config-integration-03.svg)
 
-> 图源：[guides-frontend-backend-integration-03.mmd](../diagrams/guides-frontend-backend-integration-03.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
+> 图源：[guides-database-config-integration-03.mmd](../diagrams/guides-database-config-integration-03.mmd)（Mermaid 源码；导出件同名 `.svg`，由 `mmdc` 生成）
 
 ## 8. 错误处理与安全边界
 

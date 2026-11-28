@@ -1,0 +1,10 @@
+flowchart TD
+    A[登录成功/刷新页面] --> B[GET /admin-api/v1/menus 菜单树]
+    B --> C[buildDynamicRoutes 递归遍历]
+    C --> D{menuType?}
+    D -- "0 目录" --> E[作为分组父节点<br/>继续递归 children]
+    D -- "1 菜单" --> F{component 在<br/>VIEW_REGISTRY 中?}
+    F -- 是 --> G[注册路由挂到 AdminLayout<br/>meta: title/icon/hidden]
+    F -- 否 --> H[跳过并告警<br/>页面不可达 404]
+    D -- "2 按钮" --> I[不生成路由<br/>仅作为权限码]
+    E & G --> J[router.addRoute 批量注册]

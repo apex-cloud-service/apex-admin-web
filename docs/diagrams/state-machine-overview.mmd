@@ -1,0 +1,67 @@
+stateDiagram-v2
+    direction LR
+    state "工作流实例与任务" as WF {
+        [*] --> W_RUNNING : 发起（固定 RUNNING）
+        W_RUNNING --> W_SUSPENDED : 挂起
+        W_SUSPENDED --> W_RUNNING : 恢复
+        W_RUNNING --> W_APPROVED : 引擎驱动
+        W_RUNNING --> W_REJECTED : 引擎驱动
+        W_RUNNING --> W_CANCELLED : 引擎驱动
+        W_RUNNING --> W_TERMINATED : 引擎驱动
+        W_APPROVED --> [*]
+        W_REJECTED --> [*]
+        W_CANCELLED --> [*]
+        W_TERMINATED --> [*]
+
+        state "任务" as TASK {
+            [*] --> T_PENDING
+            T_PENDING --> T_APPROVED : complete（固定通过语义）
+            T_PENDING --> T_ROLLED_BACK : rollback
+            T_PENDING --> T_DELEGATED : delegate
+            T_PENDING --> T_REJECTED : 引擎驱动
+            T_PENDING --> T_CANCELLED : 引擎驱动
+            T_APPROVED --> [*]
+            T_ROLLED_BACK --> [*]
+            T_DELEGATED --> [*]
+            T_REJECTED --> [*]
+            T_CANCELLED --> [*]
+        }
+    }
+
+    state "租户生命周期" as TENANT {
+        [*] --> TN_ACTIVE : 创建（套餐必选）
+        TN_ACTIVE --> TN_DISABLED : disable
+        TN_DISABLED --> TN_ACTIVE : enable
+        TN_ACTIVE --> TN_FROZEN : freeze
+        TN_FROZEN --> TN_ACTIVE : unfreeze
+        TN_ACTIVE --> TN_DEACTIVATED : deactivate
+        TN_DEACTIVATED --> TN_ARCHIVED : archive
+        TN_DEACTIVATED --> [*]
+        TN_ARCHIVED --> [*]
+    }
+
+    state "办公平台账号绑定" as BIND {
+        [*] --> B_PENDING : 后端在平台授权登录时生成
+        B_PENDING --> B_APPROVED : review approved=true
+        B_PENDING --> B_REJECTED : review approved=false
+        B_APPROVED --> B_REVOKED : unbind（version 乐观锁）
+        B_APPROVED --> [*]
+        B_REJECTED --> [*]
+        B_REVOKED --> [*]
+    }
+
+    note right of WF
+        前端只提供：发起 / 挂起 / 恢复
+        + 任务级 complete / rollback / transfer / delegate
+        其余迁移由后端引擎驱动
+    end note
+
+    note right of TENANT
+        动作枚举仅小写；expectedVersion 可选
+        配额调整不改变状态（null = 不限）
+    end note
+
+    note right of BIND
+        审批与解绑均携带 version
+        冲突由后端拒绝
+    end note

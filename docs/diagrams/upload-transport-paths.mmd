@@ -1,0 +1,43 @@
+flowchart TB
+    subgraph Axios["通道 A：Axios（src/utils/request.ts）"]
+        A0["src/api/*.ts 类型化函数"] --> A1["request / get / post / put / del"]
+        A1 --> A2["Bearer 注入 · X-Tenant-Id<br/>30s 超时 · Result 解包"]
+        A2 --> A3["HTTP 401：单飞刷新 + 单次重放"]
+        A2 --> A4["x-new-access-token 响应头静默换令牌"]
+        A2 --> A5["ApiError（msg / code / traceId）"]
+    end
+
+    subgraph NonAxios["通道 B：绕过 Axios 拦截器的三条专用链路"]
+        B1["ElUpload（FileUpload.vue）<br/>multipart + Bearer 头，走组件自身传输"]
+        B2["独立 XHR（FileUploadEnhanced.vue）<br/>裁剪/粘贴/压缩产物上传 + 分片"]
+        B3["fetch 流式（notification-stream.ts）<br/>SSE：Accept text/event-stream"]
+        B4["fetch 流式（knowledge/chat）<br/>SSE：citations → delta → done"]
+        B5["WebSocket（message-socket.ts）<br/>一次性 ticket 握手 + ping/pong"]
+    end
+
+    subgraph Shared["共用工具"]
+        S1["utils/api-base.ts<br/>apiBaseUrl() / apiUrl(path)<br/>跨域部署自动带 VITE_API_BASE_URL"]
+        S2["utils/auth.ts<br/>读取令牌（唯一合法来源）"]
+    end
+
+    B1 --> S1
+    B2 --> S1
+    B3 --> S1
+    B4 --> S1
+    B5 --> S1
+    B1 --> S2
+    B2 --> S2
+    B3 --> S2
+    B4 --> S2
+
+    subgraph Gaps["通道 B 不具备的能力（必须自行处理）"]
+        G1["无 401 自动刷新<br/>令牌过期即失败"]
+        G2["无统一 Result 解包<br/>需自行判断 code"]
+        G3["无统一错误转换<br/>需自行识别纯文本 / JSON 错误"]
+        G4["无 traceId 附加提示"]
+    end
+
+    NonAxios -.-> Gaps
+
+    RULE["新增常规文件 API 仍应复用 api/file.ts 与请求封装<br/>不得在页面新建 Axios 实例"]
+    Axios -.-> RULE

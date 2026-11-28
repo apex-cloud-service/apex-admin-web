@@ -26,3 +26,8 @@
 | 2026-11-23 | [2026-11-23-task-ownership-handoff.md](./2026-11-23-task-ownership-handoff.md) | FE-029 租约接管与 FE-030 独立优化任务登记 |
 | 2026-11-23 | [2026-11-23-fe030-wave-a-test-report.md](./2026-11-23-fe030-wave-a-test-report.md) | FE-030 Wave A 历史产物审计、隔离复验与独立 R5 结论 |
 | 2026-11-25 | [2026-11-25-comment-review-handover.md](./2026-11-25-comment-review-handover.md) | 全仓代码注释事实评审、JSDoc 补全、验证与未修逻辑交接；未提交、待主控补登 |
+| 2026-11-16 | [2026-11-16-chart-assets.md](./2026-11-16-chart-assets.md) | FE-007 图表资产体检与抽取留痕（原 `docs/notes/`，2026-11-28 归位） |
+| 2026-11-16 | [2026-11-16-github-remote-onboarding.md](./2026-11-16-github-remote-onboarding.md) | GitHub 远端接入（唯一正文在后端仓；本仓为副本） |
+| 2026-11-16 | [2026-11-16-governance-alignment-remediation.md](./2026-11-16-governance-alignment-remediation.md) | BE-020 / FE-015 治理评审整改（唯一正文在后端仓；本仓为副本） |
+| 2026-11-16 | [2026-11-16-orphan-views.md](./2026-11-16-orphan-views.md) | FE-004 孤儿页面盘点与处置（原 `docs/notes/`，2026-11-28 归位） |
+| 2026-11-28 | [2026-11-28-docs-reorg-and-diagram-rebuild.md](./2026-11-28-docs-reorg-and-diagram-rebuild.md) | FE-033 文档/脚本/配置目录重组、文档对照代码评审与图表重制（执行中） |

@@ -13,8 +13,8 @@ docs/archived/ai-sessions/zcode-plans/README.md
 MEMORY-CARD.md
 CHANGELOG.md
 
-# —— 跨仓评审指针说明 ——
-docs/reviews/README.md
-
 # —— 规则说明文档（本身需要列出被禁的路径模式） ——
 scripts/governance/README.md
+
+# 2026-11-28 移除 docs/reviews/README.md 豁免：该文件已修表格破损，
+# 跨仓路径改为纯文本（不构成相对 .md 链接），本仓链接全部可达。

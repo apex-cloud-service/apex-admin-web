@@ -1,0 +1,37 @@
+sequenceDiagram
+    autonumber
+    participant A as AdminLayout / NotificationCenter
+    participant H as utils/notification-stream.ts
+    participant GW as 网关 / Nginx
+    participant B as 后端 apex-system
+
+    Note over A,B: 挂载：建立 SSE 长连接
+    A->>H: subscribeNotificationPush(cb)
+    H->>GW: fetch GET /api/v1/notifications/stream
+    Note over H,GW: EventSource 不可用（网关仅认 Authorization 头）<br/>改用 fetch 流式读取 + 手工 SSE 解析<br/>必须带 Accept: text/event-stream
+    GW->>B: 转发（需 breaker-free 路由 + response-timeout 放宽）
+    B-->>H: 200 text/event-stream
+
+    loop 服务端事件
+        B-->>H: event: notification / data: 通知正文
+        H->>H: createSseParser：字段行累积、空行分发
+        H-->>A: 回调（仅处理 event=notification）
+        A->>A: 刷新通知列表与未读角标
+    end
+
+    alt 连接中断
+        GW--xH: 断流 / 网络异常 / 30s 超时
+        H->>H: 退避重连：5s 起，逐次翻倍至 30s 封顶
+        H->>GW: 重新建连
+    else 组件卸载
+        A->>H: 取消订阅
+        H->>H: 中止 reader 与重连定时器
+    end
+
+    participant API as api/notification.ts
+    A->>API: 兜底轮询（60s）
+    API->>B: GET /api/v1/notifications/inbox · /unread-count
+    B-->>API: Result 包装数据
+    API-->>A: 列表与未读数
+
+    Note over GW,B: 网关必须有 notification-stream 精确路由<br/>否则被 /api 兜底路由的响应超时/熔断掐断<br/>本通道与 office 域站内信是两套独立系统

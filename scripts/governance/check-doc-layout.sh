@@ -7,6 +7,12 @@
 #   4) 仓库根目录无散落业务 Markdown（白名单之外报缺）
 #   5) reports/ 的 e2e/unit/coverage/lighthouse/stress 目录与 reports/README.md 存在。
 #      audit 目录可选；不检查各子目录自己的说明件。
+#   6) scripts/ 下每个一级子目录（除 __tests__）有 README.md，且 scripts/README.md 总索引存在。
+#   7) docs/ 每个一级目录的 README 覆盖该目录下全部 .md（防「只建文件不登记」）。
+# 已知盲区（有意为之，避免对归档区噪音告警）：
+#   - 第 6 项只扫 scripts 一级子目录，scripts/database/archive/ 等 depth-2 不检查；
+#   - 第 7 项只扫 docs 一级目录，docs/archived/project-reports/、
+#     docs/archived/ai-sessions/、docs/diagrams/_legacy/ 等 depth-2 不检查。
 # 只读；默认警告，--strict exit 1
 set -uo pipefail
 cd "$(dirname "$0")/../.." || exit 2
@@ -58,6 +64,41 @@ done
 if [ -n "${missing_sub}" ]; then warn "reports 缺子目录：${missing_sub}（运行对应测试即可生成）"; else pass "reports 子目录齐全（e2e/unit/coverage/lighthouse/stress）"; fi
 [ -d reports/audit ] && pass "reports/audit 存在（npm run audit 生成）" || echo "  提示：reports/audit 尚未生成（可选，npm run audit 后出现）"
 [ -f reports/README.md ] && pass "reports/README.md 存在" || warn "缺 reports/README.md"
+
+echo "== 6. scripts/ 二级目录均有 README =="
+miss_scripts=""
+for d in scripts/*/; do
+  [ -d "$d" ] || continue
+  case "$(basename "$d")" in __tests__) continue ;; esac
+  [ -f "$d/README.md" ] || miss_scripts="$miss_scripts $(basename "$d")"
+done
+if [ -z "$miss_scripts" ]; then
+  pass "scripts 各子目录均有 README"
+else
+  warn "scripts 子目录缺 README：${miss_scripts}"
+fi
+[ -f scripts/README.md ] && pass "scripts/README.md 总索引存在" || warn "缺 scripts/README.md 总索引"
+
+echo "== 7. 目录 README 索引覆盖（只建文件不登记；仅扫 docs 一级目录） =="
+noindex_files=""
+for d in docs/*/; do
+  d=${d%/}
+  [ "$(basename "$d")" = "_archive" ] && continue
+  readme="$d/README.md"
+  [ -f "$readme" ] || continue
+  body="$(cat "$readme")"
+  for f in "$d"/*.md; do
+    [ -f "$f" ] || continue
+    name="$(basename "$f")"
+    [ "$name" = "README.md" ] && continue
+    printf '%s' "$body" | grep -qF "$name" || noindex_files="$noindex_files ${f#docs/}"
+  done
+done
+if [ -z "$noindex_files" ]; then
+  pass "docs 一级目录 README 已覆盖全部同层文档"
+else
+  warn "文档未在所在目录 README 登记：${noindex_files}"
+fi
 
 echo
 if [ "$FAIL" -eq 0 ]; then echo "  目录结构自检通过（0 项）"; exit 0; fi

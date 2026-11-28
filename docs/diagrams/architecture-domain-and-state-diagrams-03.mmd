@@ -1,12 +1,28 @@
 stateDiagram-v2
-    [*] --> ACTIVE : createTenant（套餐必选，可同时创建管理员）
+    direction LR
+    [*] --> ACTIVE : createTenant(payload)<br/>packageCode 必选（不可手输编码）<br/>可同时提交 adminUsername + adminPassword（后端成对使用）
 
-    ACTIVE --> DISABLED : disable
-    DISABLED --> ACTIVE : enable
-    ACTIVE --> FROZEN : freeze
-    FROZEN --> ACTIVE : unfreeze
-    ACTIVE --> DEACTIVATED : deactivate
-    DEACTIVATED --> ARCHIVED : archive
+    ACTIVE --> DISABLED : action=disable
+    DISABLED --> ACTIVE : action=enable
+    ACTIVE --> FROZEN : action=freeze
+    FROZEN --> ACTIVE : action=unfreeze
+    ACTIVE --> DEACTIVATED : action=deactivate
+    DEACTIVATED --> ARCHIVED : action=archive
 
     DEACTIVATED --> [*]
     ARCHIVED --> [*]
+
+    note right of ACTIVE
+        动作枚举只接受小写：
+        disable / enable / freeze / unfreeze
+        / deactivate / archive
+        迁移合法性由后端状态机校验
+        expectedVersion 可选（乐观锁）
+        图中仅画主要路径，DISABLED/FROZEN
+        出发的 deactivate/archive 以后端实现为准
+    end note
+
+    note left of ACTIVE
+        配额调整 PUT /{id}/quota 不改变状态
+        maxUsers / maxStorageMb 提交 null = 不限
+    end note

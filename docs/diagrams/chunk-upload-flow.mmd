@@ -1,0 +1,48 @@
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant C as FileUploadEnhanced.vue
+    participant F as api/file.ts
+    participant S as 后端 file-service
+
+    U->>C: 选择 / 拖拽 / 粘贴文件
+    C->>C: beforeUpload：MIME 与大小校验
+    C->>C: 图片且启用压缩 → Canvas 等比缩小<br/>图片且启用裁剪 → Cropper
+
+    C->>C: 判定单发上限<br/>fileSize > chunkMaxSizeMB ? 分片 : 单发
+
+    alt 走分片（enableChunk=true）
+        C->>F: initChunkUpload({fileName, fileSize, chunkSize, totalChunks})
+        F->>S: POST /api/v1/file/chunk/init
+        Note over S: 校验分片 ≤64MB（max-chunk-bytes）<br/>总数上限（max-total-chunks）<br/>chunkSize × totalChunks ≥ fileSize
+        S-->>F: {fileId, ...}
+        F-->>C: fileId
+
+        C->>F: getChunkStatus(fileId)
+        F->>S: GET /api/v1/file/chunk/status/{fileId}
+        S-->>F: uploaded 集合
+        Note over C: 已上传分片直接跳过（断点续传）<br/>uploaded 齐全可秒传
+
+        loop 每个未上传分片
+            C->>F: uploadChunk({fileId, chunkIndex, chunkSize, md5?}, blob)
+            F->>S: POST /api/v1/file/chunk/upload?query 参数<br/>（请求体 = 原始字节流）
+            Note over S: 校验单片不超过 init chunkSize 与剩余字节<br/>计算并校验分片 MD5（32 位 hex）<br/>(file_id, chunk_index, deleted) 唯一约束保证幂等
+            S-->>F: ChunkUploadResult
+            C->>C: 更新进度对话框
+        end
+
+        C->>F: mergeChunks({fileId, fileName?})
+        F->>S: POST /api/v1/file/chunk/merge
+        Note over S: 上传流中计算最终 MD5<br/>不匹配则删除最终对象并释放会话
+        S-->>F: ChunkMergeResult{url, ...}
+        F-->>C: 合并结果
+        C-->>U: emit success（data）
+    else 单发
+        C->>F: uploadFile(formData)（经 Element Plus el-upload 或独立 XHR）
+        F->>S: POST /api/v1/files/generic（multipart）
+        S-->>F: FileUploadResponse
+        F-->>C: 结果
+        C-->>U: emit success
+    end
+
+    Note over C,S: 两条通道都不经过 utils/request.ts 拦截器<br/>无 401 自动刷新、无统一错误转换<br/>上传地址由 utils/api-base.ts#apiUrl 拼接

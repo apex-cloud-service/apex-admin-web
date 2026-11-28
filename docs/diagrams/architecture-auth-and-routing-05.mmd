@@ -1,19 +1,41 @@
-sequenceDiagram
-    autonumber
-    participant U as 用户
-    participant LP as 登录页
-    participant OA as 标准 OAuth2
-    participant OC as /oauth2/callback
-    participant OI as 办公平台接口能力
-    participant B as 后端
-    participant P as 平台(飞书/钉钉/企微)
+flowchart TD
+    subgraph StdOAuth["标准 OAuth2（当前登录页社交入口的实际链路）"]
+        S1["登录页点击社交登录"] --> S2["buildAuthUrl：state + S256 PKCE"]
+        S2 --> S3["跳转 /oauth2/authorize"]
+        S3 --> S4["外部 IdP 授权"]
+        S4 --> S5["回调 /oauth2/callback?code&state"]
+        S5 --> S6["consumeAuthorization 一次性消费"]
+        S6 --> S7["POST /oauth2/token（不含 client_secret）"]
+        S7 --> S8["保存会话 + loadIdentity"]
+        S8 --> S9["进入 /dashboard"]
+    end
 
-    U->>LP: 点击社交登录
-    LP->>OA: 构建授权 URL（state + PKCE）
-    OA->>P: 跳转标准 OAuth2 授权页
-    P-->>OC: 回调 code + state
-    OC->>B: POST /oauth2/token
-    B-->>OC: 会话令牌
-    OC->>LP: 保存会话并进入工作台
-    Note over OI,B: /api/v1/office/status、/api/v1/office/login<br/>及 /api/v1/office/callback 为独立办公平台接口能力
-    Note over OI,B: /office/callback 由独立公开回调页承接，<br/>不属于当前登录页社交入口链路
+    subgraph OfficeAPI["办公平台接口能力（独立，不由登录页社交入口调用）"]
+        O1["api/office-platform.ts"]
+        O1 -.接口能力.-> O2["GET /api/v1/office/status"]
+        O1 -.接口能力.-> O3["GET /api/v1/office/login?platform="]
+        O3 -.返回授权地址；跳转需调用方接入.-> O4["平台授权（飞书/钉钉/企微）"]
+        O4 -.外部回跳.-> O5["/office/callback.vue"]
+        O5 --> O6{"code 与 state 均存在?"}
+        O6 -- 否 --> O7["展示登录失败"]
+        O6 -- 是 --> O8["GET /api/v1/office/callback<br/>（缺 platform 时默认 FEISHU）"]
+        O8 --> O9{"返回结果"}
+        O9 -- 会话令牌 --> O10["保存令牌 + loadIdentity"]
+        O10 --> O11{"身份加载成功?"}
+        O11 -- 是 --> O12["进入 /dashboard"]
+        O11 -- 否 --> O7
+        O9 -- message 含等待审批或 PENDING --> O13["展示等待管理员审批"]
+        O9 -- 其他错误 --> O7
+    end
+
+    subgraph AdminReview["管理员侧（独立管理流程）"]
+        R1["绑定审批页：必选 platform + 可选 status"] --> R2["GET /admin-api/v1/office/bindings/page<br/>真实 total + status 过滤"]
+        R2 --> R3["reviewBinding(id, {approved, version})"]
+        R3 --> R4{"成功?"}
+        R4 -- 是 --> R5["提示成功并重新查询"]
+        R4 -- 版本冲突或业务失败 --> R6["展示错误"]
+        R2 --> R7["DELETE /bindings/{id}/unbind?version="]
+    end
+
+    OfficeAPI -.管理员操作.-> AdminReview
+    O1 -.-> NOTE5["两条链路互不替代：标准 OAuth2 面向 IdP，办公平台回调面向企业平台授权<br/>前端无自动轮询登录；等待审批由管理员在绑定审批页处理"]

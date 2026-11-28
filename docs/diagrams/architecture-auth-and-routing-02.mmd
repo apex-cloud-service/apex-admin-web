@@ -1,20 +1,22 @@
 flowchart TD
-    A[路由跳转触发 beforeEach] --> B{to.meta.public?}
-    B -- 是 --> Z[放行<br/>公开页含 login / oauth2/callback /<br/>office/callback / password-recovery / share]
-    B -- 否 --> C{已有 Token?}
-    C -- 否 --> D[重定向 /login<br/>携带 redirect=to.fullPath]
-    C -- 是 --> E{身份已初始化?<br/>user store initialized}
-    E -- 否 --> F[loadIdentity：并行拉取<br/>user/info + roles/my + permissions/my]
-    F --> G{用户信息加载成功?}
-    G -- 否 --> I[clearLocal 并跳转 /login<br/>该分支不携带 redirect]
-    G -- 是 --> J{动态路由已添加?}
-    E -- 是 --> J
-    J -- 否 --> K[setupDynamicRoutes<br/>菜单树 → VIEW_REGISTRY 注册]
-    K --> L{注册成功?}
-    L -- 否 --> M[降级为静态路由并记录警告]
-    L -- 是 --> N[重新解析 to.fullPath]
-    M --> N
-    J -- 是 --> N
-    N --> O{解析结果非 NotFound?}
-    O -- 是 --> P[replace 原目标，重新匹配后放行]
-    O -- 否 --> Z
+    A["路由跳转触发 beforeEach"] --> B{"to.meta.public?"}
+    B -- 是 --> Z["直接放行<br/>login · oauth2/callback · oauth2/consent<br/>office/callback · password-recovery · share"]
+    B -- 否 --> C{"getToken() 存在?"}
+    C -- 否 --> D["重定向 /login<br/>携带 query.redirect = to.fullPath"]
+    C -- 是 --> E{"user.initialized?"}
+    E -- 否 --> F["loadIdentity()<br/>并行：user/info + roles/my + permissions/my"]
+    F --> G{"加载成功?"}
+    G -- 否 --> H["clearLocal() 并跳转 /login<br/>该分支不携带 redirect"]
+    G -- 是 --> J
+    E -- 是 --> J{"dynamicRoutesAdded?"}
+    J -- 否 --> K["setupDynamicRoutes()<br/>菜单树 → VIEW_REGISTRY → addRoute('Root')"]
+    K --> K1{"注册抛错?"}
+    K1 -- 是 --> K2["逆序回滚已 addRoute 的路由<br/>console.warn 降级为静态路由"]
+    K1 -- 否 --> L
+    K2 --> L["解析目标 fullPath"]
+    J -- 是 --> L
+    L --> M{"to.name 为 NotFound<br/>且 resolve(fullPath) 已可匹配?"}
+    M -- 是 --> N["replace 到真实路径<br/>保留 query / hash"]
+    M -- 否 --> Z2["放行"]
+    N --> Z2
+    K -.-> NOTE2["双重检查：并发/重入时仅首个完成注册<br/>失败后 dynamicRoutesAdded 仍为 false，后续导航可重试"]

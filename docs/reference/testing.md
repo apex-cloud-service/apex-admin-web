@@ -35,7 +35,7 @@ npm run test:stress     # 压测（vite preview + autocannon，报告到 reports
 
 ## 3. 现有用例清单
 
-共 65 个测试文件、475 个用例（2026-11-13 实测 `npx vitest run` 全绿），分布于 `src/**/__tests__/`（工具、Store、组件、指令、路由）与 `src/api/`（业务 API 契约）。下表为 2026-11-05 基线时已存在的用例；此后新增的 37 文件 / 254 用例（23 个 API 契约、7 个 utils、office Store、2 个 composables、4 个组件）与逐文件用例数见[测试报告（2026-11-13）](../archived/project-reports/test-report-2026-11-13.md) §3：
+共 **68 个测试文件、592 个用例**（2026-11-28 实测 `npx vitest run` 全绿：31 个 `*.test.ts` + 37 个 `*.spec.ts`），分布于 `src/**/__tests__/`（工具、Store、组件、指令、路由）与 `src/api/`（业务 API 契约）。下表为 2026-11-05 基线时已存在的用例；此后新增的 40 文件 / 371 用例（23 个 API 契约、7 个 utils、office Store、2 个 composables、4 个组件，以及 FE-026/031/032 的补强用例）与逐文件用例数见[测试报告（2026-11-13）](../archived/project-reports/test-report-2026-11-13.md) §3：
 
 | 用例文件 | 用例数 | 覆盖内容 |
 |----------|-------|---------|
@@ -103,8 +103,8 @@ describe('auth-config api', () => {
 ### 4.3 优先级建议
 
 1. **必须测**：`utils/request.ts`（解包/刷新/401）、`api/oauth2.ts`（PKCE/state）、权限指令、`composables/useCrud` 等有状态的复用逻辑——已于 2026-11-05 补齐；
-2. **建议测**：表单校验规则、脱敏/XSS 工具、`validate-rules.ts`、`message-socket.ts`、`request-cache.ts`、`error-handler.ts`、`useFormDraft.ts`、`useBreakpoint.ts`、全部 API 契约与通用组件——已于 2026-11-13 补齐（39 个 API 模块全部有直接契约用例）；
-3. **待补**：`src/views/**` 页面组件交互（63 个视图组件暂无用例，核心链路由 `e2e/` 打桩集成抽样覆盖）。
+2. **建议测**：表单校验规则、脱敏/XSS 工具、`validate-rules.ts`、`message-socket.ts`、`request-cache.ts`、`error-handler.ts`、`useFormDraft.ts`、`useBreakpoint.ts`、API 契约与通用组件——**40 个 `src/api/*.ts` 模块中 31 个有直接契约用例**（`src/api/*.test.ts`）；未覆盖 9 个模块：`auth-config`、`capability`、`integration`、`iot`、`notify`、`oauth2`、`open-app`、`overview`、`session`（`tenant-package` 另有工具层用例 `utils/tenant-package.spec.ts` 间接覆盖）；
+3. **待补**：`src/views/**` 页面组件交互（63 个视图组件暂无用例，核心链路由 `e2e/` 打桩集成抽样覆盖）；上述 9 个 API 模块的直接契约用例。
 
 ## 5. 覆盖率
 

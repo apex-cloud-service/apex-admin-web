@@ -40,7 +40,9 @@ src/
 └── test/         Vitest 全局准备
 ```
 
-业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `knowledge` `oauth2` `profile` `public` `login` `demo` `error`。单元测试文件 **66 个**（31 个 `src/api/*.test.ts` 契约测试，覆盖全部 40 个 API 模块；另 35 个 `*.spec.ts` 单测：`utils/__tests__` 18、`components/__tests__` 6、`composables/__tests__` 5、`stores/__tests__` 4、`router`/`directives` 各 1）；2026-11-13 实测 475 用例全绿，11-14 新增知识库后未复跑。另有 Playwright E2E 3 文件 6 用例（`npm run test:e2e`，接口层打桩）、Lighthouse（`test:perf`）与 autocannon 压测（`test:stress`）。
+业务目录：`dashboard` `system` `monitor` `data` `office` `workflow` `integration` `iot` `knowledge` `oauth2` `profile` `public` `login` `demo` `error`。单元测试文件 **68 个**（31 个 `src/api/*.test.ts` 契约测试，覆盖 40 个 API 模块中的 31 个；另 37 个 `*.spec.ts` 单测：`utils/__tests__` 18、`components/__tests__` 6、`composables/__tests__` 5、`stores/__tests__` 4、`router`/`directives` 各 1、`views/knowledge` 2）；**2026-11-28 实测 592 用例全绿**。另有 Playwright E2E **6 个 spec**（`npm run test:e2e`，接口层打桩）、Lighthouse（`test:perf`）与 autocannon 压测（`test:stress`）。
+
+文档与图表：`docs/` 共 13 个一级目录（含 `diagrams/`）；图表资产 **36 对 `.mmd`+`.svg`**，旧件 22 对在 `docs/diagrams/_legacy/`（勿引用）；`docs/` 文件总数 226。脚本 9 个子目录，总索引 `scripts/README.md`。
 
 ## 4. 契约前缀（后端改路径必查这里）
 
@@ -94,8 +96,9 @@ src/
 | 集成/IoT/在线会话/密码找回页 404 或返回 HTML | 代理须覆盖 `/integration/v1`、`/auth/v1\|v2`（带版本前缀，勿用裸 `/integration` 撞菜单路由）；`/oauth2/consent` 仅 POST 反代 |
 | 站内信模板编辑/删除 404 | 网关 office 路由须含 `/admin-api/v1/message-templates/**`（后端已修，环境需滚动新配置） |
 
-## 7. 当前状态（2026-11-25）
+## 7. 当前状态（2026-11-28）
 
+- 11-28（**FE-033 文档治理与图表重制**）：治理规范升 **v1.3**（§3.2 受控归位五项准入、§3.5 允许重制 + `_legacy/` 归档）；`AGENTS.md` 第 0 章新增 **§0.10 附录 A 事实勘误表**，附录 A 正文冻结不变（700 行哈希 `9e9f3cda…` 复验通过）；`docs/` 受控归位 4 文件 + 3 对图表资产随名迁移；**图表 27 对全量重制 + 新增 9 张专题图**，根下共 **36 对（31 现行 + 5 历史证据）**；旧版 22 对入 `docs/diagrams/_legacy/`（5 张 `archived-*` 刻意不重制）；`scripts/` 补总索引 + 7 子目录 README。`docs/` 文件 161→**226**、Markdown 107→**110**、图表资产 27→**36 对**；`src/views` 仍 **65**、`src/api` 仍 **40**、`*.test.ts` 仍 **31**（`src/` 零改动）；测试实测 **68 文件 / 592 用例全绿**。
 - 11-24～11-25（发布聚合与请求缓存修复）：`8a839cb` 发布工作区更新，新增 6 篇 `docs/specs|plans|records|reviews` 文档（11-23 前端韧性方案、API 契约矩阵、FE-030 Wave A 基线与测试报告、任务归属交接），`docs/` Markdown 98→**104**；`748a8f6` 澄清历史 AI 缓存引用口径；`71d8230` 修复 `utils` 请求缓存并发缺陷（仅 `src/utils`，页面与接口文件数不变）。`src/views` 仍 **65**、`src/api` 仍 **40**、`*.test.ts` 仍 **31**。
 - 11-19～11-21（全栈联调与记忆同步）：`a0be46bb`/`52a4e5c` 提交全栈联调验证变更（容器化与联调脚本收口）、`f41e385` 隔离 Podman 验证、`aec9c44` 登记三仓全栈分支同步留痕，新增 `docs/specs/2026-11-18-fullstack-integration.md`、`docs/records/2026-11-19-fullstack-integration.md`、`docs/records/2026-11-19-api-route-matrix.md`，`docs/` Markdown 95→**98**；`src/views` 仍 **65**、`src/api` 仍 **40**、`*.test.ts` 仍 **31**。
 - 11-18（注释评审 + 死代码清理 + 复核收口）：`38e23fc` 全仓注释质量评审整改（仅注释行，零逻辑变更）；`62855d2` 清理范围外死代码并修复无效加载态，删除 0 引用页 `views/workflow/components/TaskActions.vue`，`src/views` 66→**65**（业务目录仍 15、`src/api` 仍 **40**、`*.test.ts` 仍 **31**）；`c611f56`～`93bd38f`/`371095d`/`f03bb68` 登记 FE-026/027/028 复核要点、三卡置「已完成」并将协作规则升级 v1.2，新增 `docs/reviews/2026-11-18-fe026-028-review.md`、`docs/records/2026-11-18-comment-quality-audit.md`，`docs/` Markdown 93→**95**。

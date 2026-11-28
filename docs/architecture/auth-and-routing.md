@@ -97,21 +97,25 @@ UI 偏好通过 `utils/storage.ts` 读写（app store 不直接触碰 localStora
 | `status` | 0=停用 / 1=正常 | **不受影响** | **不受影响** | 历史种子数据取值与后端枚举不一致，路由生成刻意不按 status 过滤，避免全量菜单丢失 |
 | `visible` | 0=隐藏 / 1=显示 | 仍注册、可直接访问 | 仅 `visible=1` 显示 | 隐藏只写 `meta.hidden` |
 
-### VIEW_REGISTRY 全量清单（与 dynamic.ts:21-69 一致）
+### VIEW_REGISTRY 全量清单（与 dynamic.ts:21-72 一致，共 51 项）
 
-系统管理：`system/user/index`、`system/role/index`、`system/menu/index`、`system/dept/index`、`system/dict/index`、`system/config/index`、`system/database/index`、`system/job/index`、`system/job/query`、`system/generator/index`、`system/auth/index`、`system/sso/index`、`system/masking/index`、`system/tenant/index`、`system/tenant-package/index`、`system/capability/index`、`system/open-app/index`、`system/security/index`
+系统管理（18）：`system/user/index`、`system/role/index`、`system/menu/index`、`system/dept/index`、`system/dict/index`、`system/config/index`、`system/database/index`、`system/job/index`、`system/job/query`、`system/generator/index`、`system/auth/index`、`system/sso/index`、`system/masking/index`、`system/tenant/index`、`system/tenant-package/index`、`system/capability/index`、`system/open-app/index`、`system/security/index`
 
-监控：`monitor/loginlog/index`、`monitor/audit/index`、`monitor/api-call-log/index`、`monitor/online/index`、`monitor/dashboard/index`、`monitor/runtime-log/index`、`monitor/operations/index`、`monitor/business-log/index`、`monitor/session/index`
+监控（9）：`monitor/loginlog/index`、`monitor/audit/index`、`monitor/api-call-log/index`、`monitor/online/index`、`monitor/dashboard/index`、`monitor/runtime-log/index`、`monitor/operations/index`、`monitor/business-log/index`、`monitor/session/index`
 
-数据管理：`data/document/index`、`data/chart/index`、`data/file-share/index`
+数据管理（3）：`data/document/index`、`data/chart/index`、`data/file-share/index`
 
-办公平台：`office/message/index`、`office/approval/index`、`office/config/index`、`office/bindings/index`、`office/console/index`、`office/organization/index`、`office/calendar/index`、`office/document/index`、`office/meeting-room/index`、`office/notify/index`
+办公平台（10）：`office/message/index`、`office/approval/index`、`office/config/index`、`office/bindings/index`、`office/console/index`、`office/organization/index`、`office/calendar/index`、`office/document/index`、`office/meeting-room/index`、`office/notify/index`
 
-集成与物联网：`integration/connector/index`、`iot/device/index`、`iot/device-rule/index`
+集成与物联网（3）：`integration/connector/index`、`iot/device/index`、`iot/device-rule/index`
 
-工作流：`workflow/monitor/index`、`workflow/definition/index`
+知识库（4）：`knowledge/space/index`、`knowledge/document/index`、`knowledge/search/index`、`knowledge/chat/index`
 
-其他：`profile/index`、`dashboard/index`
+工作流（2）：`workflow/monitor/index`、`workflow/definition/index`
+
+其他（2）：`profile/index`、`dashboard/index`
+
+> 注意：`knowledge/chat/index` 等 4 个知识库视图已注册在 `dynamic.ts:69-72`，早期文档清单漏列；`workflow/monitor/index` 同时是静态路由，注册表存在不代表仅支持动态路由。
 
 > **新增页面三步**：建视图文件 → 在 VIEW_REGISTRY 登记 loader → 后端菜单 `component` 字段同名。缺一步即 404。
 
@@ -154,4 +158,4 @@ UI 偏好通过 `utils/storage.ts` 读写（app store 不直接触碰 localStora
 
 ---
 
-**最后更新**：2026-11-11（依据 src/ 当前实现核对：登录时序补 MFA 二步分支、OAuth2 节补 consent 公开页与提交通道、VIEW_REGISTRY 清单补套餐/能力/开放平台/在线会话/统一通知/集成/IoT 并对齐 dynamic.ts:21-69、静态路由补 /oauth2/consent）
+**最后更新**：2026-11-28（FE-033 对照 `src/router/dynamic.ts` 复核实证：VIEW_REGISTRY 实际 51 项、行号范围 21-72；补列漏记的 4 个 `knowledge/*` 键，并对各域标注条目数）

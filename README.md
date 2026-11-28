@@ -186,9 +186,15 @@ sequenceDiagram
     participant B as 后端
     U->>L: 账号 / 密码 / 验证码
     L->>A: login()
-    A->>Q: POST /api/v1/auth/login
+    A->>Q: POST /auth/v1/login（统一认证中心）
     Q->>B: 提交凭证
-    B-->>S: accessToken / refreshToken? / tenantId?
+    alt mfaRequired=true
+        B-->>S: challengeToken（不签发正式令牌）
+        S->>B: POST /auth/v1/mfa/verify
+        B-->>S: 正式令牌
+    else 未开启 MFA
+        B-->>S: accessToken / refreshToken? / tenantId?
+    end
     S->>S: 保存会话 + loadIdentity()
     par 并行身份接口
         S->>B: GET /api/v1/user/info
@@ -205,7 +211,7 @@ sequenceDiagram
     A->>Q: request()
     Q->>B: Bearer Token
     alt HTTP 401 且可刷新
-        Q->>B: POST /api/v1/auth/refresh（共享 Promise）
+        Q->>B: POST /auth/v1/refresh（共享 Promise）
         Q->>B: 用新 Token 重放一次
     else 刷新失败
         Q->>Q: 清理会话并跳转登录页

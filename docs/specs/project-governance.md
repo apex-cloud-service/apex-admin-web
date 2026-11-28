@@ -2,11 +2,18 @@
 
 | 项 | 值 |
 | --- | --- |
-| 文档版本 | v1.2（2026-11-18 多智能体协作增补版） |
-| 生效日期 | 2026-11-18 |
+| 文档版本 | v1.3（2026-11-28 受控归位与图表重制版） |
+| 生效日期 | 2026-11-28 |
 | 适用范围 | apex-admin-web 全部目录、全部参与者（人 + 任意 AI 智能体） |
 | 权威关系 | 本文件与 `AGENTS.md` 第 0 章同源：`AGENTS.md` 为入口索引，本文件为可独立阅读的完整正文；技术事实以 `AGENTS.md` 附录 A 与代码为准 |
 | 维护人 | 主控智能体（默认 Trae）；变更需在 `docs/records/` 留痕 |
+
+**v1.3 相对 v1.2 的修订点**（2026-11-28，FE-033）：
+
+1. §3.2 由「既有目录不搬迁」改为「受控归位」：允许**逐文件**把错分类文档迁到职责目录，条件是同批更新全部引用、断链归零、并在 `docs/records/` 留迁移清单。
+2. §3.5 由「禁止覆盖重绘」改为「允许重制 + 原文件归档」：旧图整体移入 `docs/diagrams/_legacy/` 并成对保留，新版同名重生成。
+3. §3.5 与 §9.5 修正「本仓无独立 SVG/MMD」的过期陈述（实际根下 36 对 + `_legacy/` 22 对）。
+4. §8 补 `scripts/` 各子目录 README 要求与 `scripts/README.md` 总索引。
 
 ---
 
@@ -102,9 +109,19 @@
 | `docs/reviews/` | 方案评审、代码评审结论 | `docs/reviews/README.md` |
 | `docs/notes/` | 调研、对接备忘、风险纪要 | `docs/notes/README.md` |
 
-### 3.2 既有目录继续有效
+### 3.2 既有目录与受控归位
 
-`docs/api`、`docs/architecture`、`docs/features`、`docs/guides`、`docs/reference`、`docs/archived` 保持原位、原名、原内容；新产出按职责归位，属于既有分类的**放回既有分类**，不强行搬迁。
+`docs/api`、`docs/architecture`、`docs/features`、`docs/guides`、`docs/reference`、`docs/archived` **目录名与位置保持不变**（目录名被治理脚本与 CI 硬编码，重命名收益为零且断链风险最高）。新产出按职责归位，属于既有分类的**放回既有分类**。
+
+**受控归位（v1.3 新增）**：允许把**单个**错分类文档从其所在目录迁到职责目录，前提是同时满足以下五项：
+
+1. 迁移理由可一句话说清（「文件职责 ≠ 所在目录职责」），并写进 `docs/records/` 的迁移清单（原路径 → 新路径 → 理由）。
+2. 同一批次内完成**全部**引用更新（正文链接、`docs/README.md` 索引、`docs/diagrams/README.md` 清单、治理脚本白名单）。
+3. `bash scripts/governance/check-doc-refs.sh --strict` 在批次结束时归 0。
+4. 涉及改名时，旧名不得复用；确需保留可发现性时，在原目录留 `MIGRATED.md` 指针。
+5. 禁止「为整齐而批量移动整个目录」——只做逐文件归位，且每次归位都要能单独 `git revert`。
+
+> 判定口径：目录级重组按本节五项执行；文件级归位不得以「目录整齐」为唯一理由，必须能指出该文件被放错了哪个目录职责。
 
 ### 3.3 唯一正文原则
 
@@ -121,13 +138,18 @@
 | 评审 | `YYYY-MM-DD-主题-review.md` |
 | 笔记 | `主题.md`（短名，无需日期） |
 
-### 3.5 图表资产保护（刚性）
+### 3.5 图表资产：成对、可重制、旧件归档（v1.3 修订）
 
-1. 架构图、UML、时序图、业务流程图、状态机图：**禁止删除、禁止覆盖、禁止重绘替代**。
-2. **禁止为「目录整齐」批量移动**图表文件（会打断既有引用）。
-3. 更新图表：新增版本文件（`_v2`）并在 `docs/records/` 写明差异与受影响引用。
-4. 源文件与导出件成对（`.mmd` ↔ `.svg`）；新增图必须两者齐备。
-5. 本仓现状：`docs/` 无独立 SVG/MMD，图表以内嵌 Mermaid 形式存在于 md 中；后续新增按上述执行。
+1. 架构图、UML、时序图、业务流程图、状态机图**一律成对**：`.mmd` 源 + 同名 `.svg` 导出件，两者缺一视为未完成。
+2. **正常维护**：修正图内容时**新增版本文件**（`_v2`）并在 `docs/records/` 写明差异与受影响引用；`_v1` 保留。
+3. **全量重制（v1.3 新增）**：允许对全部图表做同名重制，条件是：
+   - 旧件**整体迁入** `docs/diagrams/_legacy/`，`.mmd` 与 `.svg` 成对保留，**不得删除**；
+   - 新版沿用原文件名重写，正文引用路径不变（从而零断链）；
+   - `_legacy/` 在 `docs/diagrams/README.md` 登记来源、迁移日期与「历史件，勿引用」标注；
+   - 重制后在 `docs/records/` 列出「图名 / 变更要点 / 依据的源码位置」。
+4. **禁止**：只为目录整齐而移动图表文件（会打断既有引用）；禁止删除任何历史图。
+5. **本仓现状**：`docs/diagrams/` 根下现共 **36 对** = 22 对重制 + 9 对本次新增（分片上传/知识库 SSE/站内信 WS/工作流发起待办/租户套餐能力/通知 SSE/权限三层/上传通道/状态机总览）+ 5 对 `archived-*` 历史证据图（刻意不重制）；被重制的 22 对旧版存于 `docs/diagrams/_legacy/`；`AGENTS.md` §3–§7 与 `README.md` 的「架构概览」仍保留内嵌 Mermaid 编码块，其抽取件与正文引用同步维护。
+6. 新增图必须同时提交 `.mmd` 与 `.svg`；`scripts/governance/check-diagram-assets.sh` 校验配对（`_legacy/` 同样要求成对，但单独统计）。
 
 ### 3.6 历史归档的旧路径与断链（豁免口径）
 
@@ -356,12 +378,13 @@ git branch test master && git push -u origin test
 
 | 规则 | 内容 |
 | --- | --- |
-| 唯一索引 | `docs/README.md` 的「🗂 目录总览」是 13 个一级目录的唯一索引；新增目录必须先登记该表 |
-| 必带 README | `docs/` 下每个一级目录必须有 `README.md`（用途 / 收什么 / 不收什么·新去向 / 索引） |
+| 唯一索引 | `docs/README.md` 的「🗂 目录总览」是全部一级目录的唯一索引；新增目录必须先登记该表 |
+| 必带 README | `docs/` 下每个一级目录必须有 `README.md`（用途 / 收什么 / 不收什么·新去向 / 索引）；`scripts/` 下每个子目录同样必须有 `README.md`，并在 `scripts/README.md` 总索引登记 |
+| 同层文档必登记 | 目录内每个 `.md` 必须在**同目录 `README.md`** 出现其文件名（防「只建文件不登记」），由 `check-doc-layout.sh` 第 7 项机器校验 |
 | 一个主题一个家 | 架构 → `docs/architecture/`；接口 → `docs/api/`；功能 → `docs/features/`；操作 → `docs/guides/`；测试命令 → `docs/reference/testing.md`；图表源 → `docs/diagrams/` |
 | 测试报告分层 | `reports/{e2e,unit,coverage,lighthouse,stress,audit}/`，文件名固定；只有机器可读汇总件入库（见 `reports/README.md`） |
 | 根目录洁净 | 根目录只放门面/许可文档；业务 Markdown 一律进 `docs/` |
-| 机器校验 | `scripts/governance/check-doc-layout.sh`（`verify-docs.sh` 第 10 项） |
+| 机器校验 | `scripts/governance/check-doc-layout.sh`（`verify-docs.sh` 第 10 项）：一级目录 README、总览覆盖、根目录散落、reports 分层、**scripts 子目录 README、同层文档登记覆盖** |
 
 
 ---
@@ -394,15 +417,17 @@ git branch test master && git push -u origin test
 5. `.gitignore` 补私有目录标记块，明确「docs 全量入库」。
 6. 本文档（规范正文）与 `docs/records/2026-11-16-docs-governance.md`（执行留痕）入仓。
 
-### 9.2 回归证据
+### 9.2 回归证据（2026-11-16 时点快照）
 
-| 项 | 结果 |
+> 本节数值为 v1.0 落地当时的实测值，**不代表现状**。现状口径见 §9.4。
+
+| 项 | 结果（2026-11-16） |
 | --- | --- |
 | 基线 46 个 docs 文件 | 45 个逐字节一致；`docs/README.md` 纯追加（34 行新增、0 删除） |
 | AGENTS.md 原文 | 712 行 / `ae5e19db9675ad33556faae36ea7007fa2011fefa7cdb35ee703bccec49db53a` 一致 |
 | 业务代码 | `src/` 与构建配置 0 文件改动 |
 | 治理自检 | `verify-docs.sh` 0 问题；`audit-frontend-rules.sh` 无阻断 |
-| 技术债实测 | `: any` 51 处（FE-005）、越权 Axios 0、绕过 `auth.ts` 0 |
+| 技术债实测 | `: any` 51 处（FE-005 三批已收敛至 0）、越权 Axios 0、绕过 `auth.ts` 0 |
 
 ### 9.3 未完成与后续
 
@@ -411,8 +436,20 @@ git branch test master && git push -u origin test
 | FE-005 `: any` 清理 | 待规划，按模块分批 |
 | FE-014 规范正文入仓（v1.1） | 已完成（2026-11-16） |
 | FE-015 治理评审整改（死指针 1 处 / 断链 3 条 / 规范 §9 范围 / 离线归档条款） | 已完成（2026-11-16，见 `docs/records/2026-11-16-governance-alignment-remediation.md`） |
-| 图表基线 | 本仓无独立 SVG/MMD；后续新增按 §3.5 执行 |
+| 图表基线 | 根下 36 对 `.mmd`+`.svg`（31 现行 + 5 历史证据），`_legacy/` 另存 22 对旧版；「本仓无独立 SVG/MMD」为 2026-11-16 时点陈述，已失效 |
 | 插件（OpenAPI/GitHub 等） | 待用户授权后安装，非治理必需 |
+
+### 9.4 现状口径（2026-11-28 实测，FE-033）
+
+| 项 | 结果 | 命令 |
+| --- | --- | --- |
+| `docs/` 文件总数 | 226（md 110 / svg 58 / mmd 58） | `find docs -type f \| wc -l` |
+| 图表资产 | 根下 36 对（31 现行 + 5 历史证据）+ `_legacy/` 22 对旧版 | `bash scripts/governance/check-diagram-assets.sh` |
+| 断链 / 私有路径残留 | 0 | `bash scripts/governance/check-doc-refs.sh` |
+| 目录结构 | 13 个一级目录 README 齐全且被总览覆盖 | `bash scripts/governance/check-doc-layout.sh` |
+| 前端红线 | 无阻断；TS `: any` **0** 处 | `bash scripts/governance/audit-frontend-rules.sh` |
+| 单元/组件测试 | 68 文件 / 592 用例全绿 | `npx vitest run` |
+| E2E | 6 spec 全绿（接口层打桩） | `npx playwright test` |
 
 ---
 

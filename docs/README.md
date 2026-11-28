@@ -34,7 +34,7 @@
 - [总体架构](architecture/overview.md) - 技术栈、分层架构、请求时序、部署架构、质量保障
 - [认证与路由架构](architecture/auth-and-routing.md) - 登录、令牌无感刷新、OAuth2/PKCE、动态路由全流程图
 - [领域模型与状态机图](architecture/domain-and-state-diagrams.md) - 核心领域模型类图、工作流实例/租户生命周期/办公绑定状态机、我的事项与数据总览聚合时序图
-- [图表资产（Mermaid 源 + SVG）](diagrams/README.md) - 27 张图的 `.mmd` 源与同名 `.svg` 导出件、重导出命令与语法注意点
+- [图表资产（Mermaid 源 + SVG）](diagrams/README.md) - 36 对图的 `.mmd` 源与同名 `.svg`（31 现行 + 5 历史证据）、`_legacy/` 22 对旧版、重导出命令与语法注意点
 
 ### API 文档
 
@@ -43,7 +43,7 @@
 ### 开发指南
 
 - [部署指南](guides/deployment.md) - 生产环境部署配置与上线验证
-- [数据库配置接口联调](guides/frontend-backend-integration.md) - 数据库配置采集与数据源管理的前后端接口对接（历史文件名，内容为数据库专用联调指南）
+- [数据库配置接口联调](guides/database-config-integration.md) - 数据库配置采集与数据源管理的前后端接口对接（历史文件名，内容为数据库专用联调指南）
 - [统一权限认证与多租户适配](guides/auth-tenant-adaptation.md) - 后端统一权限认证/多租户评审结论与前端适配说明
 - [功能配置与数据维护覆盖](guides/config-maintenance-coverage.md) - 配置/维护能力清单、前端接入状态与外部核验项
 - [数据库配置验证](guides/database-config-verification.md) - 数据库配置功能说明
@@ -96,78 +96,104 @@
 
 ```
 apex-admin-web/
-├── README.md                    # 项目主文档
-├── AGENTS.md                    # 开发规范
-├── docs/                        # 文档中心
-│   ├── README.md               # 本文档
-│   ├── guides/                 # 开发指南
-│   ├── features/               # 功能文档
-│   ├── archived/               # 归档文档
-│   │   ├── project-reports/    # 项目报告
-│   │   └── *.md                # 历史预归档文档（含日期后缀）
-│   ├── architecture/           # 架构文档（总体架构、认证与路由）
-│   ├── api/                    # API 接口目录（与 src/api/ 对齐）
-│   └── reference/              # 参考文档（测试指南、工具库参考、注释规范）
-├── scripts/                     # 脚本目录
-│   ├── build/                  # 构建脚本
-│   ├── database/               # 数据库脚本（archive/ 存历史增量菜单 SQL）
-│   ├── performance/            # 性能测试脚本
-│   ├── quality/                # 质量检查脚本（注释规范检查、测试报告归一化）
-│   ├── security/               # 安全扫描脚本
-│   ├── integration/            # API 路由静态审计与 Podman Compose 联调冒烟
-│   └── verify/                 # 上线后验证脚本（post-deploy-check.sh，npm run verify:deploy）
-└── src/                        # 源代码
+├── README.md                    # 项目主文档（门面）
+├── AGENTS.md                    # 开发规范：第 0 章治理 + 附录 A 技术事实
+├── MEMORY-CARD.md               # 一页式记忆卡（结论 + 指针）
+├── CONTRIBUTING.md / CHANGELOG.md / LICENSE
+├── docs/                        # 文档中心（全量入库，禁止 ignore）
+│   ├── README.md               # 本文档（唯一目录索引）
+│   ├── architecture/           # 总体架构 / 认证与路由 / 领域与状态机
+│   ├── api/                    # API 接口目录（README.md 即全量接口文档）
+│   ├── features/               # 单功能实现说明（上传 / 数据库 / 文档图表）
+│   ├── guides/                 # 操作指南（部署 / 联调 / Mock / 分支保护）
+│   ├── reference/              # 参考手册（测试 / 工具包 / 注释风格）+ ai-knowledge/
+│   ├── diagrams/               # 图表资产：36 对 .mmd + .svg；_legacy/ 存 22 对历史件
+│   ├── tasks/                  # 任务大盘（唯一可信源）
+│   ├── specs/                  # 规范正文 + 技术方案 + AI 角色卡 R1–R5
+│   ├── plans/                  # 实施 / 迁移计划
+│   ├── records/                # 变更记录与执行留痕
+│   ├── reviews/                # 方案评审 / 代码评审
+│   ├── notes/                  # 调研备忘（不收执行记录与评审结论）
+│   └── archived/               # 历史归档（project-reports/、ai-sessions/）只读
+├── scripts/                     # 脚本（总索引见 scripts/README.md）
+│   ├── build/                  # 镜像构建（Podman + Containerfile）
+│   ├── database/               # 菜单 SQL 手工补充（非后端正式种子）
+│   ├── dev/                    # 一键开工预检
+│   ├── governance/             # 文档治理与前端红线自检 + 自测
+│   ├── integration/            # API 路由静态审计 + Podman 联调冒烟
+│   ├── performance/            # Lighthouse / autocannon
+│   ├── quality/                # 注释检查 / 测试报告归一化
+│   ├── security/               # 依赖安全扫描
+│   └── verify/                 # 上线后端到端验证（C1–C13）
+├── container/                   # nginx.conf 模板 + container-entrypoint.sh
+├── Containerfile / .containerignore
+├── e2e/                         # Playwright 打桩集成测试（6 spec）
+├── reports/                     # 测试报告（分层 + 白名单入库，见 reports/README.md）
+└── src/                         # 源代码
 ```
 
 ## 🔍 按场景查找文档
 
 ### 新人入门
 1. 阅读[项目主文档](../README.md)了解项目概况
-2. 阅读[开发规范](../AGENTS.md)了解编码约定
+2. 阅读[开发规范](../AGENTS.md)第 0 章了解治理约定（附录 A 遇到不一致先查第 0.10 节勘误表）
 3. 参考[部署指南](guides/deployment.md)搭建开发环境
-4. 查接口对接与联调约定 → [API 接口目录](api/README.md)与[数据库配置接口联调](guides/frontend-backend-integration.md)
+4. 查接口对接与联调约定 → [API 接口目录](api/README.md)与[数据库配置接口联调](guides/database-config-integration.md)
+5. 查脚本用法 → [scripts/README.md](../scripts/README.md)
 
 ### 功能开发
-- 需要文件上传功能 → [基础文件上传](features/file-upload-basic.md) 或 [增强文件上传](features/file-upload-enhanced.md)
+- 需要文件上传功能 → [基础文件上传](features/file-upload-basic.md) 或 [增强文件上传](features/file-upload-enhanced.md)（分片链路见 [图](diagrams/chunk-upload-flow.svg)）
 - 需要数据库配置 → [数据库配置](features/database-config.md)
 - 需要文档管理 → [文档图表管理](features/document-chart-management.md)
 - 查接口定义 → [API 接口目录](api/README.md)
 - 理解登录/路由机制 → [认证与路由架构](architecture/auth-and-routing.md)
+- 理解权限三层边界 → [权限三层图](diagrams/request-authz-layers.svg)
 - 写测试 → [测试指南](reference/testing.md)
 
 ### 问题排查
 - 认证问题 → [认证与路由架构](architecture/auth-and-routing.md)
+- 令牌刷新/单飞 → [并发 401 单飞刷新时序](diagrams/architecture-auth-and-routing-03.svg)
+- 站内信无实时推送 → [站内信 WebSocket 时序](diagrams/message-websocket.svg)
+- 通知 SSE 被掐断 → [通知中心 SSE 时序](diagrams/notification-sse-stream.svg)
 - 部署问题 → [部署指南](guides/deployment.md)
-- 数据库配置联调 → [数据库配置接口联调](guides/frontend-backend-integration.md)
+- 数据库配置联调 → [数据库配置接口联调](guides/database-config-integration.md)
+- 上传 401 与其他请求不一致 → [上传通道差异图](diagrams/upload-transport-paths.svg)
+- 套餐选了全量能力仍 403 → [租户套餐与能力运营图](diagrams/tenant-package-capability.svg)
+- 待办任务相关 → [工作流发起与办理时序](diagrams/workflow-start-and-task.svg)
 
 ## 📝 文档规范
 
 ### 文档分类说明
 
-- **guides/** - 面向开发者的操作指南,包含部署、集成、配置等实践指导
-- **features/** - 功能特性说明,从用户角度描述功能和使用方法
-- **architecture/** - 系统架构设计文档（含 Mermaid 架构图/流程图/时序图）
+- **architecture/** - 系统架构设计（图已资产化到 `diagrams/`）
 - **api/** - API 接口目录（按前端 API 封装、类型、页面调用和代理配置核对）
-- **reference/** - 参考文档（测试指南、工具库与组合式函数参考）
-- **archived/** - 已完成或过时的历史文档归档
+- **features/** - 功能特性说明，从实现与使用角度描述单个功能
+- **guides/** - 面向开发者的操作指南，含部署、联调、配置等实践指导
+- **reference/** - 参考手册（测试命令、工具包、注释风格）+ 受控 AI 知识库
+- **diagrams/** - 图表资产（`.mmd` 源 + 同名 `.svg`，必须成对）
+- **tasks/ specs/ plans/ records/ reviews/ notes/** - 治理六目录（任务/规范/计划/记录/评审/调研）
+- **archived/** - 已完成或过时的历史文档归档（只读，不追加）
   - **project-reports/** - 项目报告、更新记录等临时性文档
+  - **ai-sessions/** - 迁入的会话计划
 
 ### 文档命名规范
 
 - 使用小写字母和连字符: `file-upload-basic.md`
-- 见名知意: 文件名应清晰表达文档内容
+- 治理六目录用日期前缀: `2026-11-28-主题.md`（记录/方案/计划/评审），笔记可用短名
 - 归档文档添加日期: `agents-update-summary-2026-09-13.md`
+- 图表资产: `<文档相对路径以 - 连接>-<两位序号>`，专题图用语义名
 
 ## 🚀 贡献指南
 
 ### 添加新文档
-1. 根据文档类型选择合适的目录
+1. 根据文档类型选择合适的目录（先查上方「🗂 目录总览」）
 2. 遵循文档命名规范
 3. 在本 README 中更新相应的导航链接
 4. 确保文档包含清晰的标题和目录结构
+5. 涉及图表的，必须同时提交 `.mmd` 与同名 `.svg`
 
 ### 更新现有文档
-1. 保持文档与代码同步
+1. 保持文档与代码同步（不一致以代码为准并回改文档）
 2. 重大更新时更新文档修订日期
 3. 过时文档移动到 archived/ 目录
 
@@ -184,7 +210,7 @@ apex-admin-web/
 
 ---
 
-**最后更新**: 2026-11-13  
+**最后更新**: 2026-11-28（FE-033：项目结构与文档分类按 13 个一级目录重建；补按场景跳转到新增专题图）  
 **维护者**: Apex Admin Web Team
 
 ---
@@ -221,7 +247,7 @@ apex-admin-web/
 | `docs/features/` | 单功能实现说明（上传、数据库配置、图表管理等） | 功能 | 是 | [README](features/README.md) |
 | `docs/guides/` | 操作指南（部署、联调、Mock、分支保护等） | 指南 | 是 | [README](guides/README.md) |
 | `docs/reference/` | 参考手册（测试命令、注释风格、工具包）+ `ai-knowledge/` | 参考（受控） | 是（`ai-knowledge/` 强制台账） | [README](reference/README.md) |
-| `docs/diagrams/` | 图表资产：`.mmd` 源 + 同名 `.svg`（27 对） | 资产 | 是（必须成对） | [README](diagrams/README.md) |
+| `docs/diagrams/` | 图表资产：`.mmd` 源 + 同名 `.svg`（根下 36 对 = 31 现行 + 5 历史证据；`_legacy/` 另存 22 对旧版） | 资产 | 是（必须成对） | [README](diagrams/README.md) |
 | `docs/tasks/` | 任务大盘（唯一任务登记处） | 规范六目录 | 是（强制） | [README](tasks/README.md) |
 | `docs/specs/` | 规范正文与角色卡 | 规范六目录 | 是 | [README](specs/README.md) |
 | `docs/plans/` | 方案/计划 | 规范六目录 | 是 | [README](plans/README.md) |

@@ -1,8 +1,23 @@
 flowchart LR
-    A[确认删除] --> B[持久化删除意图并隐藏文档]
-    B --> C[后台清理任务]
-    C --> D{索引与对象清理确认?}
-    D -->|成功| E[COMPLETED 保留凭证]
-    D -->|失败或未知| F[FAILED 安全错误摘要]
-    F --> G[后台或手动重试]
-    G --> C
+    A["用户在文档页确认删除"] --> B["deleteDocument(docId)<br/>DELETE /admin-api/v1/kb/documents/{docId}"]
+    B --> C["布尔结果 = 删除意图已被接受<br/>文档从列表隐藏"]
+    C --> D["后台清理任务（前端不驱动）"]
+
+    D --> E{"索引与对象清理确认?"}
+    E -- 成功 --> F["cleanup 记录 COMPLETED<br/>保留凭证供定向复核"]
+    E -- 失败 --> G["cleanup 记录 FAILED<br/>安全错误摘要"]
+    E -- 未确认 --> H["PENDING / PROCESSING"]
+
+    G --> I["文档页手动重试<br/>POST /admin-api/v1/kb/document-cleanups/{docId}/retry"]
+    I --> D
+
+    F --> J["listDocumentCleanups 分页查询<br/>GET /admin-api/v1/kb/document-cleanups"]
+    G --> J
+    H --> J
+    J --> K["getDocumentCleanup(docId)<br/>查询单文档清理状态"]
+
+    NOTE["COMPLETED 不表示历史对象已物理擦除<br/>也不表示不会再有晚到的索引任务<br/>前端无法确认外部存储已彻底清理"]
+    F -.-> NOTE
+
+    PERM["重试需 kb:doc:delete<br/>查询需 kb:doc:read"]
+    I -.-> PERM

@@ -1,38 +1,36 @@
 sequenceDiagram
     autonumber
     participant P as AgendaPanel.vue
-    participant U as useAgenda
+    participant C as useAgenda.ts
     participant W as api/workflow
     participant A as api/office-approval
     participant M as api/message
-    participant C as api/office-calendar
+    participant K as api/office-calendar
     participant N as api/notification
 
-    P->>U: loadAll()
-    par 五域并行（Promise.allSettled，互不阻塞）
-        U->>W: getMyPendingTasks(pageNum=1, pageSize=5)
-        W-->>U: PageResponse{list, total}
-    and
-        U->>A: getPendingApprovals(approverId, pageNum=1, pageSize=5)
-        A-->>U: PageResponse{list, total}
-    and
-        U->>M: listInboxMessages(1, 5)
-        M-->>U: 裸数组（无 total）
-    and
-        U->>C: getCalendarEvents(未来 7 天窗口, pageNum=1, pageSize=5)
-        C-->>U: PageResponse{list, total}
-    and
-        U->>N: listNotifications(page=1, size=5)
-        N-->>U: PageResponse{list, total}
+    P->>C: 挂载 / 手动刷新
+    C->>C: refresh()：五个域并行<br/>Promise.allSettled（失败隔离）
+
+    par 工作流待办
+        C->>W: getMyPendingTasks({pageNum:1, pageSize})
+        W-->>C: PageResponse（读 list/total）
+    and 办公审批
+        C->>A: listPendingApprovals({approverId = 当前用户 identity.id})
+        A-->>C: 裸数组（客户端计数）
+    and 站内信
+        C->>M: getInbox()
+        M-->>C: 裸数组（totalHint「总数未知」）
+    and 近期日程
+        C->>K: getCalendarEvents({range, platform})
+        K-->>C: 事件数组（本地时间换算）
+    and 系统通知
+        C->>N: getNotificationInbox()
+        N-->>C: Result 包装列表
     end
 
-    Note over U,P: 单域失败→该区块级 error「暂时无法加载」+ 重试入口（reload(domain)），不弹全局提示
-    Note over P: 审批区块 approverId 取 identity.id，缺失→区块错误态；站内信 totalHint「总数未知」；通知标题超 50 字截断
+    C->>C: 逐域记录 {data, error}：任一失败置该域 error
+    C-->>P: 返回五域结果（区块级降级）
+    P->>P: 渲染各区块；失败区块显示 error + 单域重试入口
+    P->>P: 手动刷新按钮触发整体 refresh
 
-    P->>U: markRead(item)
-    U->>N: markNotificationRead(id)
-    alt 成功
-        N-->>U: 本地 unread=false
-    else 失败
-        N-->>P: 行内「标记已读失败」
-    end
+    Note over P,N: 只做展示 / 跳转 / 通知标记已读<br/>无轮询、无办理操作（办理在原域页面）<br/>审批区块需当前用户身份，identity.id 缺失时该域报错

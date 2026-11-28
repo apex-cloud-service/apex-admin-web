@@ -1,23 +1,41 @@
 sequenceDiagram
     autonumber
-    participant C as 业务请求
-    participant R as request.ts 拦截器
-    participant B as /auth/v1/refresh
+    participant C1 as 业务请求 A
+    participant C2 as 业务请求 B
+    participant R as request.ts
+    participant B as 后端
     participant S as 会话存储
 
-    C->>R: 请求返回 401
-    R->>R: 条件校验通过，标记 authRetried
-    alt 已有进行中的刷新（refreshPromise 非空）
-        Note over R: 并发 401 共享同一个刷新 Promise
-    else 首个触发
-        R->>B: POST refreshToken(refreshToken)
-        B-->>R: 裸 TokenPair{accessToken, refreshToken, expiresIn}
-        R->>S: setToken；若返回新 refreshToken 则一并更新
-    end
-    alt 刷新成功
-        R->>R: 重放原请求（更新 Authorization 头）
-        R-->>C: 返回重放结果
-    else 刷新失败
+    C1->>R: 普通请求（Bearer 旧令牌）
+    R->>B: HTTP 请求
+    B-->>R: HTTP 401
+    R->>R: 条件校验（config/authRetried/refreshToken/非排除端点）<br/>标记 authRetried
+
+    Note over R: refreshPromise 为空 → 本请求创建刷新
+
+    C2->>R: 另一请求也返回 401
+    R->>R: 标记自身 authRetried
+    R->>R: refreshPromise 非空 → 等待同一 Promise（单飞）
+
+    R->>B: POST /auth/v1/refresh（仅一次）
+    alt 刷新成功且含 accessToken
+        B-->>R: 裸 TokenPair
+        R->>S: setToken；返回新 refreshToken 时一并更新
+        R->>R: 刷新 Promise 的 finally 置空 refreshPromise
+        R->>B: 用新令牌重放 A
+        B-->>R: A 的结果
+        R-->>C1: A 重放结果
+        R->>B: 用新令牌重放 B
+        B-->>R: B 的结果
+        R-->>C2: B 重放结果
+        Note over R: 重放再次 401 不再刷新（authRetried 已置位）
+    else 刷新失败或缺少 accessToken
+        B-->>R: 错误 / 无效刷新结果
+        R->>R: finally 置空 refreshPromise
         R->>S: clearSession()
-        R--xC: 跳转 /login?redirect=... 并抛出<br/>ApiError('登录状态已失效，请重新登录')
+        R--x C1: ApiError 登录失效
+        R--x C2: ApiError 登录失效
+        Note over R: 跳转 /login 并保留当前回跳地址
     end
+
+    Note over R,B: 单飞仅覆盖当前页面实例，不跨标签页/客户端<br/>刷新令牌一次性消费，不应对同一令牌并行刷新

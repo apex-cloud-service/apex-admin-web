@@ -1,0 +1,30 @@
+sequenceDiagram
+    autonumber
+    participant View as 页面/组件
+    participant Api as api 层函数
+    participant Req as utils/request.ts
+    participant BE as 后端服务
+
+    View->>Api: 调用类型化函数（如 listMenuTree()）
+    Api->>Req: get/post/put/del(url, params)
+    Req->>Req: 请求拦截：注入 Authorization: Bearer <token>
+    Req->>BE: 发起 HTTP 请求（超时 30s）
+    BE-->>Req: HTTP 响应（包装响应、裸数组或文件数据）
+
+    alt HTTP 401 且满足自动刷新条件
+        Req->>BE: 共享刷新请求；成功后原请求最多重放一次
+        BE-->>Req: 刷新结果
+        Req-->>Api: 返回重放结果或抛出对应 ApiError
+    else HTTP / 网络 / 超时错误
+        Req--xApi: 转换并抛出 ApiError
+    else 响应含数字 code
+        alt code === 0
+            Req-->>Api: 解包返回 data
+            Api-->>View: Promise<T> 业务数据
+        else code !== 0
+            Req--xApi: 抛出 ApiError(message, code, traceId)
+        end
+    else 响应不含数字 code
+        Req-->>Api: 原样返回 response.data
+        Api-->>View: 裸数组、Blob 或其他原始响应
+    end

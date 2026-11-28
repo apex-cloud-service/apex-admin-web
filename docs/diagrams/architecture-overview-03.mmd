@@ -1,30 +1,43 @@
 sequenceDiagram
     autonumber
     participant View as 页面/组件
-    participant Api as api 层函数
+    participant Api as src/api 函数
     participant Req as utils/request.ts
-    participant BE as 后端服务
+    participant BE as 后端
 
-    View->>Api: 调用类型化函数（如 listMenuTree()）
-    Api->>Req: get/post/put/del(url, params)
-    Req->>Req: 请求拦截：注入 Authorization: Bearer <token>
-    Req->>BE: 发起 HTTP 请求（超时 30s）
-    BE-->>Req: HTTP 响应（包装响应、裸数组或文件数据）
+    View->>Api: 调用类型化函数（如 listMenuTree）
+    Api->>Req: get / post / put / del
+    Req->>Req: 请求拦截：注入 Authorization Bearer<br/>会话存在 tenantId 时注入 X-Tenant-Id（仅匹配声明）
+    Req->>BE: HTTP 请求（baseURL=VITE_API_BASE_URL，超时 30s）
 
-    alt HTTP 401 且满足自动刷新条件
-        Req->>BE: 共享刷新请求；成功后原请求最多重放一次
-        BE-->>Req: 刷新结果
-        Req-->>Api: 返回重放结果或抛出对应 ApiError
+    alt HTTP 401 且满足刷新条件
+        Note over Req: 条件：有 config、未标 authRetried、<br/>有 refreshToken、非排除端点
+        Req->>BE: POST /auth/v1/refresh（并发 401 共享同一 Promise）
+        alt 刷新成功且含 accessToken
+            BE-->>Req: 裸 TokenPair
+            Req->>Req: 更新 access/refresh 令牌并标记 authRetried
+            Req->>BE: 原请求重放（仅一次）
+            BE-->>Req: 重放结果
+        else 刷新失败或缺少 accessToken
+            BE-->>Req: 错误或无效结果
+            Req->>Req: clearSession 并跳转 /login 保留回跳地址
+            Req--xApi: 抛出「登录状态已失效」
+        end
+    else 响应头含 x-new-access-token
+        Req->>Req: 静默更新访问令牌
     else HTTP / 网络 / 超时错误
-        Req--xApi: 转换并抛出 ApiError
+        Req--xApi: 抛出 ApiError（含 traceId 时保留）
     else 响应含数字 code
-        alt code === 0
+        alt code 等于 0
             Req-->>Api: 解包返回 data
-            Api-->>View: Promise<T> 业务数据
-        else code !== 0
-            Req--xApi: 抛出 ApiError(message, code, traceId)
+        else code 不等于 0
+            Req--xApi: 抛出 ApiError（message, code, traceId）
         end
     else 响应不含数字 code
-        Req-->>Api: 原样返回 response.data
-        Api-->>View: 裸数组、Blob 或其他原始响应
+        Req-->>Api: 原样返回 response.data（裸数组 / Blob / 登录裸响应）
     end
+
+    Api-->>View: Promise 业务数据
+    View->>View: 调用方按模块约定处理错误提示（showError）
+
+    Note over Req,BE: 认证端点 401/403 为纯文本原因，直接透传不触发登出。<br/>排除列表：/api/v1/auth/login|refresh、/auth/v1/login|refresh、/oauth2/token

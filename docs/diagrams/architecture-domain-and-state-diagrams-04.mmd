@@ -1,10 +1,24 @@
 stateDiagram-v2
-    [*] --> PENDING : 平台授权登录（后端生成绑定申请）
+    direction LR
+    [*] --> PENDING : 平台授权登录后由后端生成绑定申请<br/>（前端不创建绑定，只在回调页提示等待审批）
 
-    PENDING --> APPROVED : review(approved=true, version)
-    PENDING --> REJECTED : review(approved=false, version)
-    APPROVED --> REVOKED : DELETE /bindings/{id}/unbind（version 乐观锁）
+    PENDING --> APPROVED : reviewBinding(id, {approved: true, version})
+    PENDING --> REJECTED : reviewBinding(id, {approved: false, version})
+
+    APPROVED --> REVOKED : DELETE /bindings/{id}/unbind?version=
 
     APPROVED --> [*]
     REJECTED --> [*]
     REVOKED --> [*]
+
+    note right of PENDING
+        过滤枚举 PENDING/APPROVED/REJECTED/REVOKED
+        列表走 GET /admin-api/v1/office/bindings/page
+        （platform 必选、status 可选，返回真实 total）
+        旧的 /bindings 数组口径仍并存
+    end note
+
+    note right of APPROVED
+        审批与解绑都携带 version 乐观锁
+        版本冲突由后端拒绝，前端展示错误并重查
+    end note

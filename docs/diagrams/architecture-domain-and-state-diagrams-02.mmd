@@ -1,15 +1,22 @@
 stateDiagram-v2
-    [*] --> RUNNING : startWorkflowInstance（businessKey 必填，固定 RUNNING）
+    direction LR
+    [*] --> RUNNING : startWorkflowInstance(workflowCode)<br/>businessKey 必填不超过 200 字符<br/>contextJson 选填但须为合法 JSON<br/>发起人取当前登录用户；固定 RUNNING
 
-    RUNNING --> SUSPENDED : suspend（原因必填）
-    SUSPENDED --> RUNNING : resume（原因必填）
+    RUNNING --> SUSPENDED : suspendInstance(id, reason)<br/>前端校验 reason 非空
+    SUSPENDED --> RUNNING : resumeInstance(id, reason)<br/>前端校验 reason 非空
 
-    RUNNING --> APPROVED : 后端引擎驱动
-    RUNNING --> REJECTED : 后端引擎驱动
-    RUNNING --> CANCELLED : 后端引擎驱动
-    RUNNING --> TERMINATED : 后端引擎驱动
+    RUNNING --> APPROVED
+    RUNNING --> REJECTED
+    RUNNING --> CANCELLED
+    RUNNING --> TERMINATED
 
     APPROVED --> [*]
     REJECTED --> [*]
     CANCELLED --> [*]
     TERMINATED --> [*]
+
+    note right of RUNNING
+        4 条终态迁移由后端引擎驱动
+        前端只提供发起 / 挂起 / 恢复
+        （挂起用 suspended 布尔与 SUSPENDED 状态共同表达）
+    end note

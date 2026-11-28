@@ -1,0 +1,38 @@
+sequenceDiagram
+    autonumber
+    participant P as AgendaPanel.vue
+    participant U as useAgenda
+    participant W as api/workflow
+    participant A as api/office-approval
+    participant M as api/message
+    participant C as api/office-calendar
+    participant N as api/notification
+
+    P->>U: loadAll()
+    par 五域并行（Promise.allSettled，互不阻塞）
+        U->>W: getMyPendingTasks(pageNum=1, pageSize=5)
+        W-->>U: PageResponse{list, total}
+    and
+        U->>A: getPendingApprovals(approverId, pageNum=1, pageSize=5)
+        A-->>U: PageResponse{list, total}
+    and
+        U->>M: listInboxMessages(1, 5)
+        M-->>U: 裸数组（无 total）
+    and
+        U->>C: getCalendarEvents(未来 7 天窗口, pageNum=1, pageSize=5)
+        C-->>U: PageResponse{list, total}
+    and
+        U->>N: listNotifications(page=1, size=5)
+        N-->>U: PageResponse{list, total}
+    end
+
+    Note over U,P: 单域失败→该区块级 error「暂时无法加载」+ 重试入口（reload(domain)），不弹全局提示
+    Note over P: 审批区块 approverId 取 identity.id，缺失→区块错误态；站内信 totalHint「总数未知」；通知标题超 50 字截断
+
+    P->>U: markRead(item)
+    U->>N: markNotificationRead(id)
+    alt 成功
+        N-->>U: 本地 unread=false
+    else 失败
+        N-->>P: 行内「标记已读失败」
+    end

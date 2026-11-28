@@ -26,9 +26,13 @@
    | `docs/reviews/` | 方案评审、代码评审、检查清单结果 | `docs/reviews/README.md` |
    | `docs/notes/` | 调研、第三方对接、风险纪要、临时结论 | `docs/notes/README.md` |
 
-3. 既有目录（`docs/api`、`docs/architecture`、`docs/features`、`docs/guides`、`docs/reference`、`docs/archived`）**继续有效**，本次不做搬迁、不改文件名、不改内容；新产出按上表归位，属于既有分类的按既有分类存放。
+3. 既有目录（`docs/api`、`docs/architecture`、`docs/features`、`docs/guides`、`docs/reference`、`docs/archived`）**目录名与位置保持不变**（目录名被治理脚本与 CI 硬编码）；新产出按上表归位，属于既有分类的按既有分类存放。
+   - **受控归位**（2026-11-28 v1.3）：允许把**单个**错分类文档迁到职责目录，须同时满足五项——迁移理由写进 `docs/records/` 清单（原路径 → 新路径 → 理由）、同批改完全部引用、`check-doc-refs.sh --strict` 归 0、改名后旧名不复用（必要时留 `MIGRATED.md` 指针）、禁止「为整齐而批量移动整个目录」。详见 `docs/specs/project-governance.md` §3.2。
 4. 新增文档必须同步在 `docs/README.md` 索引登记；不允许「只建文件不登记」。
-5. 图表类资产（架构图、UML、时序图、业务流程图、状态机图）一律**成对保留源文件与导出件**（`.mmd`/`.svg`/`.puml` 与说明 md 放同一目录），**禁止删除、覆盖、重绘既有历史图**；确需更新时新增版本文件并在 `docs/records/` 说明差异。
+5. 图表类资产（架构图、UML、时序图、业务流程图、状态机图）一律**成对保留源文件与导出件**（`.mmd` + 同名 `.svg`），禁止删除任何历史图。
+   - **正常更新**：新增 `_v2` 版本文件，`_v1` 保留，并在 `docs/records/` 说明差异。
+   - **全量重制**（2026-11-28 v1.3）：旧件整体迁入 `docs/diagrams/_legacy/` 成对保留，新版沿用原文件名重写（引用路径不变）；`_legacy/` 在 `docs/diagrams/README.md` 登记「历史件，勿引用」。详见 `docs/specs/project-governance.md` §3.5。
+   - **禁止**：为目录整齐移动图表文件；删除历史图。
 
 ### 0.3 多智能体隔离（目录边界）
 
@@ -88,8 +92,10 @@
 ### 0.7 文档与任务的自检命令
 
 ```bash
-bash scripts/governance/verify-docs.sh      # 目录/索引/任务大盘/私有目录边界自检
+bash scripts/governance/verify-docs.sh            # 目录/索引/任务大盘/私有目录边界/图表配对/断链自检
 bash scripts/governance/audit-frontend-rules.sh   # 前端红线静态扫描（默认只警告）
+bash scripts/governance/check-doc-layout.sh       # 目录结构：一级目录 README、总览覆盖、根目录散落、
+                                                  #   reports 分层、scripts 子目录 README、同层文档登记覆盖
 ```
 
 自检不通过时先修复，再进入下一步；`--strict` 模式才产生非零退出码（默认只警告）。
@@ -110,6 +116,23 @@ bash scripts/governance/audit-frontend-rules.sh   # 前端红线静态扫描（�
 ### 0.9 当前容器构建入口（2026-11-19）
 
 当前前端容器构建使用 `Containerfile`、`.containerignore` 与 `container/`，镜像构建命令使用 Podman；全栈编排唯一入口为后端仓库 `podman-compose.yml`。附录 A 的旧部署描述仅为不可改写的历史原文，实际操作以本节、`docs/guides/deployment.md` 和执行脚本为准。
+
+### 0.10 附录 A 事实勘误表（2026-11-28 增补）
+
+附录 A 是**冻结的原文**（`apex-preflight.sh` 以 700 行 SHA-256 校验，不得改动）。当其实测数字或路径与当前实现不一致时，**不在附录 A 内修改**，而是登记在本表；阅读附录 A 遇到下列条目时以本表为准。
+
+| 附录 A 位置 | 原文写法 | 当前事实 | 取证 |
+| --- | --- | --- | --- |
+| §1 阅读导航「部署」行 | `Dockerfile`、`docker/nginx.conf` | `Containerfile`、`container/nginx.conf`、`container/container-entrypoint.sh`（镜像构建用 Podman） | 仓库根实文件；第 0.9 节 |
+| §4.1 密码登录时序图 | 无 MFA 分支，登录直接返回 `accessToken` | `mfaRequired=true` 时后端不签发令牌，须用 `challengeToken` 调 `POST /auth/v1/mfa/verify` 换取正式令牌（挑战一次性消费） | `src/stores/user.ts` `login()`/`verifyMfaChallenge()`；`src/api/auth.ts` `login()`/`verifyMfaChallenge()` |
+| §9「截至 2026-11-15，共 66 个测试文件、486 个用例；E2E 3 文件 6 用例」 | 66 文件 / 486 用例；E2E 3 文件 | **68 个测试文件（31 `*.test.ts` + 37 `*.spec.ts`）/ 592 用例全绿；E2E 6 个 spec** | `npx vitest run` → `Test Files 68 passed / Tests 592 passed`（2026-11-28）；`find e2e -name '*.spec.ts'` → 6 |
+| §9「39 个 API 模块全部有契约测试」 | 39 个模块全部有 | `src/api/` 共 **40 个**模块，其中 **31 个**有直接契约用例（`src/api/*.test.ts`）；`SsoProvider` 等 9 个模块仅由工具/组件层间接覆盖 | `ls src/api/*.ts` / `ls src/api/*.test.ts` |
+| §9 覆盖率段「63 个页面组件无组件级用例」「API/工具/组件层已全部有直接用例」 | 63 个页面；三层全覆盖 | `src/views/**` 实为 **65 个** `.vue`；API 层 31/40 有直接用例 | `find src/views -name '*.vue' \| wc -l` |
+| §9.2 引用段「`: any` 51 处（FE-005）」 | 51 处 | **0 处**（FE-005 三批已清零；`audit-frontend-rules.sh` 第 3 项实测；唯一命中是 CSS `overflow-wrap: anywhere` 的关键字误报） | `bash scripts/governance/audit-frontend-rules.sh` |
+
+> 校验方法：`tail -n 700 AGENTS.md | shasum -a 256` 应等于 `9e9f3cda9cd00e8eab7aff3da8eadb95fe998cb12d75931939f6328862611aa3`。若不一致，说明附录 A 被误改，须先恢复再改本表。
+
+---
 
 ## 附录 A：原始仓库开发规范（原文完整保留，未删改）
 

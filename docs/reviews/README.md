@@ -10,21 +10,25 @@
 
 历史评审材料仍保留在 `docs/archived/project-reports/`，不搬迁。
 
-## FE-030
+## 索引
 
-- [2026-11-23 Wave A 前端静态基线](./2026-11-23-fe030-wave-a-baseline.md)
-- Wave A 报告范围审计：[回归证据记录](../records/2026-11-23-fe030-wave-a-test-report.md)；增量 R5 `APPROVE_WITH_NITS`，FE-030 自有报告仍待独立租约。
+| 日期 | 文档 | 说明 |
+| --- | --- | --- |
+| 2026-11-16 | [2026-11-16-doc-dedup-audit.md](./2026-11-16-doc-dedup-audit.md) | FE-001 文档去重收敛复核：段落级/行级均 0 重复（原 `docs/notes/`，2026-11-28 归位） |
+| 2026-11-16 | [2026-11-16-dev-branch-governance-audit.md](./2026-11-16-dev-branch-governance-audit.md) | 两仓 `dev` 分支治理一致性（前端基线 `d957e6f`）：有条件通过（P1 5 / P2 1） |
+| 2026-11-18 | [2026-11-18-fe026-028-review.md](./2026-11-18-fe026-028-review.md) | FE-026/027/028 三卡复核：APPROVE / APPROVE / APPROVE_WITH_NITS（R5 角色卡子代理独立复核） |
+| 2026-11-23 | [2026-11-23-fe030-wave-a-baseline.md](./2026-11-23-fe030-wave-a-baseline.md) | FE-030 Wave A 前端静态基线；报告范围审计见[回归证据记录](../records/2026-11-23-fe030-wave-a-test-report.md)，增量 R5 `APPROVE_WITH_NITS` |
 
 ## 跨仓评审（正文在 apex-scaffold）
 
-两仓共用的治理评审只有一份正文，避免双份口径：
+两仓共用的治理评审只有一份正文，避免双份口径。
 
 | 日期 | 对象 | 结论 | 正文位置 |
 | --- | --- | --- | --- |
 | 2026-11-16 | 前后端两仓治理规范对齐（前端 `1455fbc` / 后端 `14f6bc2a`） | 有条件通过 | `apex-scaffold/docs/reviews/2026-11-16-governance-alignment-review.md` |
+| 2026-11-17 | FE-026 联调修复复核要点 | 复核要点清单 | `apex-scaffold/docs/reviews/2026-11-17-integration-review-checklist.md` |
 
 配套整改方案：`apex-scaffold/docs/plans/2026-11-16-governance-alignment-plan.md`（待业主确认）。
-本仓相关整改项：`database-config.md:153` 死指针、`docs/archived/project-reports/` 3 条断链、规范 §9 任务范围。
-| 2026-11-16 | 两仓 `dev` 分支治理一致性（前端基线 `d957e6f`） | 有条件通过（P1 5 / P2 1） | [2026-11-16-dev-branch-governance-audit.md](./2026-11-16-dev-branch-governance-audit.md) |
-| 2026-11-17 | [2026-11-17-integration-review-checklist.md](./2026-11-17-integration-review-checklist.md) | FE-026 联调修复复核要点（正文在 apex-scaffold `docs/reviews/`，跨仓链接） |
-| 2026-11-18 | [2026-11-18-fe026-028-review.md](./2026-11-18-fe026-028-review.md) | FE-026/027/028 三卡复核：APPROVE / APPROVE / APPROVE_WITH_NITS（R5 角色卡子代理独立复核，业主授权；三卡据此置「已完成」） |
+本仓相关整改项（历史记录，已完成）：`database-config.md:153` 死指针、`docs/archived/project-reports/` 3 条断链、规范 §9 任务范围——对应 [FE-015 整改记录](../records/2026-11-16-governance-alignment-remediation.md)。
+
+> 上述跨仓路径属外部仓库，本仓不做可达性校验；正文以 apex-scaffold 当前版本为准。

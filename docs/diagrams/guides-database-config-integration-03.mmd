@@ -1,0 +1,47 @@
+sequenceDiagram
+    autonumber
+    actor U as 操作用户
+    participant V as 数据库配置页
+    participant R as utils/request.ts
+    participant B as 后端 /admin-api/v1/database
+
+    U->>V: 打开数据库配置页（配置采集 Tab）
+    V->>R: getCurrentDatabaseInfo()
+    R->>B: GET /current
+    B-->>R: CurrentDatabaseInfo
+    R-->>V: 解包 data（Result code=0）
+    V-->>U: 展示当前数据库类型与版本
+
+    U->>V: 提交连接测试
+    V->>R: testDatabaseConnection(config)
+    R->>B: POST /test（含密码）
+    B-->>R: DatabaseTestResult
+    R-->>V: 成功或抛出 ApiError
+    V-->>U: 展示版本或错误 message
+
+    U->>V: 生成部署配置
+    V->>R: generateDeploymentConfig(config)
+    R->>B: POST /generate-config
+    B-->>R: DeploymentConfigResult（yaml/env/compose）
+    R-->>V: 解包结果
+    V-->>U: 弹窗展示三个格式 Tab
+
+    U->>V: 切到数据源管理 Tab
+    V->>R: listDataSources(pageNum, pageSize)
+    R->>B: GET /datasources?pageNum=&pageSize=
+    B-->>R: PageResponse{list, total}
+    R-->>V: list / total
+    V-->>U: 渲染分页列表
+
+    U->>V: 新增 / 编辑 / 删除 / 查看指标
+    V->>R: createDataSource / updateDataSource / deleteDataSource / getDataSourceMetrics
+    R->>B: POST /datasources · PUT /{id} · DELETE /{id} · GET /{id}/metrics
+    B-->>R: 业务结果
+    R-->>V: 数据或 ApiError
+    alt 变更成功
+        V->>R: 重新 listDataSources()
+    else 失败
+        V-->>U: 展示错误（含 traceId）
+    end
+
+    Note over R,B: 全部走统一请求层：Bearer 注入、Result 解包、<br/>401 单飞刷新；页面不新建 Axios 实例

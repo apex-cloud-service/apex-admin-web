@@ -1,9 +1,25 @@
 flowchart LR
-    U[用户浏览器] -->|GET / 及静态资源| N[Nginx / 静态服务器<br/>托管 dist]
-    U -->|/api/** 业务接口| N
-    U -->|/admin-api/** 管理接口| N
-    U -->|/oauth2/authorize 与 /oauth2/token| N
-    U <.->|WS 升级 /api/v1/messages/ws| N
-    N -->|回退 index.html| U
-    N -->|proxy_pass| B[Apex Scaffold 后端 :8080<br/>健康检查 /api/v1/health]
-    N -->|/js/ /css/ /assets/ 等 30d immutable| U
+    U["用户浏览器"] -->|"GET / 与静态资源"| N["Nginx（容器内 :80）<br/>托管 dist"]
+    U -->|"/api/** · /admin-api/**"| N
+    U -->|"/auth/v1/** · /auth/v2/** · /integration/v1/**"| N
+    U -->|"/oauth2/authorize · /oauth2/token<br/>/oauth2/consent（仅 POST）"| N
+    U <-->|"WS 升级：= /api/v1/messages/ws"| N
+    U -->|"SSE：= /api/v1/notifications/stream"| N
+
+    N -->|"assets/ 30 天 immutable"| U
+    N -->|"location / try_files 回退 index.html"| U
+    N -->|"proxy_pass（API_PROXY_PASS）"| B["后端网关<br/>默认 http://apex-gateway:8080"]
+
+    subgraph Order["location 匹配优先级（关键）"]
+        L1["精确前缀 = /api/v1/messages/ws<br/>Upgrade/Connection，读超时 3600s"]
+        L2["精确前缀 = /api/v1/notifications/stream<br/>buffering off"]
+        L3["前缀 /api/ · /admin-api/ · /auth/ · /integration/<br/>/oauth2/"]
+        L1 -.-> L2 -.-> L3
+    end
+
+    N -.-> Order
+
+    Note1["未配置 WS location：站内信实时推送退化<br/>为 60s 轮询兜底"]
+    Note2["未配置 SSE location 或缺少<br/>Accept: text/event-stream：被 30s 响应超时掐断<br/>或网关 breaker 拦截"]
+    L1 -.-> Note1
+    L2 -.-> Note2

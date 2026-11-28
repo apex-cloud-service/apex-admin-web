@@ -63,7 +63,7 @@
 | 压缩 | terser，生产移除 `console`/`debugger` | vite.config.ts:193-200 |
 | Chunk 警告阈值 | 1000 KB | vite.config.ts:191 |
 | 产物分析 | rollup-plugin-visualizer → `dist/stats.html`（`npm run analyze` 打开） | vite.config.ts:71-77 |
-| 路径别名 | `@` → `src/` | vite.config.ts:80 |
+| 路径别名 | `@` → `src/` | vite.config.ts:81 |
 
 ## 6. 部署架构
 
@@ -85,8 +85,8 @@
 | 手段 | 命令/位置 | 说明 |
 |------|-----------|------|
 | 类型检查 | `vue-tsc --noEmit`（build 前置） | tsconfig `strict` + `noUnusedLocals` + `noUnusedParameters` |
-| 单元测试 | `npm run test`（Vitest + happy-dom） | 65 个测试文件（2026-11-13 实测 475 用例全绿）：39 个 API 模块全部有契约用例，utils/stores/composables/通用组件全覆盖，详见 [测试指南](../reference/testing.md) |
-| E2E | `npm run test:e2e`（Playwright + chromium） | `e2e/` 6 条核心链路打桩集成测试（未登录跳转/登录/退出/动态菜单/401 刷新），后端接口在用例内 `page.route` 打桩 |
+| 单元测试 | `npm run test`（Vitest + happy-dom） | 68 个测试文件 / 592 用例全绿（2026-11-28 实测）：40 个 API 模块中 31 个有契约用例，utils/stores/composables/通用组件全覆盖，详见 [测试指南](../reference/testing.md) |
+| E2E | `npm run test:e2e`（Playwright + chromium） | `e2e/` 6 个 spec 打桩集成测试（未登录跳转/登录/退出/动态菜单/401 刷新/工作流/租户/办公审批），后端接口在用例内 `page.route` 打桩 |
 | 产物分析 | `npm run analyze` | rollup-plugin-visualizer |
 | 性能测试 | `npm run test:perf`（Lighthouse desktop） | 构建产物静态基线口径，报告输出 `./reports/lighthouse`（`scripts/performance/lighthouse-test.sh` 为其底层脚本） |
 | 压力测试 | `npm run test:stress`（autocannon） | 静态服务两档并发承载基线，报告输出 `./reports/stress`；业务接口压测属后端/网关范畴 |
@@ -94,14 +94,14 @@
 | 上线验证 | `npm run verify:deploy` | `scripts/verify/post-deploy-check.sh`（C1–C13 检查项，需 `BASE_URL`） |
 | API 契约 | `npm run generate:api` | openapi-generator-cli（typescript-axios）；当前 `src/api/*.ts` 为手写封装，生成目录不参与运行时 |
 
-> 仓库当前**未配置** ESLint/Prettier/Husky/CI 流水线；代码风格靠 [AGENTS.md](../../AGENTS.md) 约定与 `.editorconfig` 约束。
+> 仓库当前**未配置** ESLint/Prettier/Husky；代码风格靠 [AGENTS.md](../../AGENTS.md) 约定与 `.editorconfig` 约束。CI 已配置：`.github/workflows/ci.yml` 含两个 job——`docs-and-rules`（治理脚本全部 `--strict` + 治理自测 + 记忆台账范围校验）与 `build`（Node 24 + `npm ci` + `npm run build`）。
 
 ## 8. 关联文档
 
 - [认证与路由架构](auth-and-routing.md) — 登录、令牌刷新、OAuth2、动态路由全流程图
 - [API 接口目录](../api/README.md) — 与代码对齐的全量接口清单
 - [测试指南](../reference/testing.md) · [工具库参考](../reference/toolkit.md)
-- [部署指南](../guides/deployment.md) · [前后端集成](../guides/frontend-backend-integration.md)
+- [部署指南](../guides/deployment.md) · [前后端集成](../guides/database-config-integration.md)
 
 ---
 
