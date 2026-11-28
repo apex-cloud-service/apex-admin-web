@@ -241,3 +241,5 @@ memory: docs/reference/ai-knowledge/04-change-memory.md#145
 memory: docs/reference/ai-knowledge/04-change-memory.md#146
 | 147 | 2026-11-28 | 治理 | **FE-033 关闭**：业主确认后由执行体代登翻转任务状态（业主直派口径）→「已完成」，移入大盘 §2；11 项 R5 nits 全部处置完毕；全部改动随本条提交入库（docs(governance)，含治理规范 v1.3、附录 A 勘误表、docs 归位与索引重建、16 项漂移修正、图表 27 重制 + 9 新增、scripts README 体系与两项新机器校验） | 本条提交 | 治理 5 脚本 `--strict` 全过；selftest 33/0；`vue-tsc` 0；`vitest` 68 文件 592 用例全绿；E2E 串行 14/14；附录 A 哈希 `9e9f3cda…` 不变；暂存区零 `src/` 零构建配置 | 文档/脚本/图表与治理脚本；业务代码零改动；FE-029/FE-030 不受影响 |
 memory: docs/reference/ai-knowledge/04-change-memory.md#147
+| 148 | 2026-11-28 | 治理 | **P2-5 悬置闭环（业主追问触发）**：业主追问 FE-033 遗留的「P2-5 范围补登待主控确认或拆独立补强卡」是否需修复。评估后由业主确认：**补登有效、不拆独立卡**——理由为治理脚本改动与交付同提交（`a79e202`）不可拆分、已经 R5 复核覆盖、方向为收紧无回归、追溯性已在卡/记录/台账三处达成。任务卡 §2 行表述精确化；执行记录按 append-only 追加「P2-5 闭环」小节（不改 §7 表原文） | 未提交（工作区交付） | 涉改仅 `docs/tasks/project-tasks.md`（1 处措辞）与 `docs/records/2026-11-28-docs-reorg-and-diagram-rebuild.md`（追加小节）；零代码改动 | 纯文书闭环；消除「待主控确认」悬置态，FE-033 关闭链路完整收口 |
+memory: docs/reference/ai-knowledge/04-change-memory.md#148
